@@ -130,6 +130,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             preferences,
             settings,
             watch,
+            themes: qingjian_render::ThemeLibrary::load(paths::themes_dir().as_deref()),
             last_flush: std::time::Instant::now(),
             applied_predict: PredictConfig::default(),
             applied_dictionaries: DictionariesConfig::default(),

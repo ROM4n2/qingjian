@@ -30,7 +30,7 @@ pub use frame::{Frame, Preedit, PreeditSegment, PreeditStyle, Row, Tone};
 pub use layout::Layout;
 pub use renderer::{Rendered, RenderedStatus, Renderer, StatusCell};
 pub use shadow::Shadow;
-pub use theme::{FontSpec, Theme, ThemeError};
+pub use theme::{FontSpec, Theme, ThemeError, ThemeLibrary};
 
 /// 让 `tiny_skia::Pixmap` 的使用方不用再单独依赖 tiny-skia。
 pub use tiny_skia::Pixmap;

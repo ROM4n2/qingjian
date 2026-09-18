@@ -14,6 +14,9 @@ pub struct RenderSettings {
 
     /// 主题 id（`[general] theme`，已按旧写法兼容解析）。
     pub theme: String,
+
+    /// 用户主题目录的戳（`ThemeLibrary::stamp`）：主题文件改了它就变，UI 线程据此重读主题。
+    pub themes_stamp: u64,
 }
 
 /// Router 只产出帧，画交给它；Windows 上由 UI 线程实现。

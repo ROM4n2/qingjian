@@ -38,7 +38,9 @@ impl Host {
         self.window.set_appearance(config.general.appearance());
         self.window.set_layout(config.general.layout);
         self.window.set_font(&config.general.font);
-        self.window.set_render_theme(config.general.theme_id());
+        self.themes.refresh();
+        self.window
+            .set_render_theme(self.themes.resolve(config.general.theme_id(), false));
         self.window.set_renderer(config.general.renderer);
         self.apply_learning_language(&config.general);
         if self.input_log_enabled != Some(config.general.input_log) {
@@ -175,6 +177,13 @@ impl Host {
     /// 没有新数据时 flush 是空操作（各表按 dirty 位判断），不会每分钟碰一次磁盘。
     pub fn tick(&mut self) {
         self.reload_config_if_changed();
+        // 用户主题目录里的 theme.json 改了就重读，当前主题当场换上（边改主题边看效果）
+        if self.themes.refresh() {
+            let id = self.settings.config().general.theme_id().to_owned();
+            tracing::info!(id, "主题目录有变化，已重读");
+            self.window
+                .set_render_theme(self.themes.resolve(&id, false));
+        }
         let learned = self.engine.poll_glosses();
         if learned > 0 {
             tracing::info!(learned, "释义兜底写入个人释义表");

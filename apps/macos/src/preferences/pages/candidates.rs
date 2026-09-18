@@ -4,10 +4,10 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSPopUpButton;
 use qingjian_platform::{Appearance, CandidateRenderer, Config, LayoutMode, PreeditMode};
-use qingjian_render::Theme;
+use qingjian_render::ThemeLibrary;
 
 use crate::candidates::available_families;
-use crate::preferences::controls::{note, row_popup, select};
+use crate::preferences::controls::{note, row_popup, select, set_items};
 use crate::preferences::font_picker::FontPicker;
 use crate::preferences::layout::Layout;
 use crate::preferences::setting::Setting;
@@ -47,11 +47,14 @@ impl CandidatesPage {
             Setting::Appearance,
             target,
         );
-        let theme_titles: Vec<String> = Theme::builtins()
-            .iter()
-            .map(|t| t.name().to_owned())
-            .collect();
-        let theme = row_popup(layout, mtm, "主题", &theme_titles, Setting::Theme, target);
+        let theme = row_popup(
+            layout,
+            mtm,
+            "主题",
+            &theme_titles(&themes()),
+            Setting::Theme,
+            target,
+        );
         note(
             layout,
             mtm,
@@ -117,9 +120,13 @@ impl CandidatesPage {
                 .iter()
                 .position(|a| *a == general.appearance()),
         );
+        // 主题目录里可能新放了主题，每次同步都重列
+        let themes = themes();
+        set_items(&self.theme, &theme_titles(&themes));
         select(
             &self.theme,
-            Theme::builtins()
+            themes
+                .themes()
                 .iter()
                 .position(|t| t.id() == general.theme_id()),
         );
@@ -139,4 +146,18 @@ impl CandidatesPage {
             PreeditMode::ALL.iter().position(|p| *p == general.preedit),
         );
     }
+}
+
+/// 主题库：内置主题加用户主题目录里的。
+fn themes() -> ThemeLibrary {
+    ThemeLibrary::load(crate::app::paths::themes_dir().as_deref())
+}
+
+/// 主题下拉的选项：显示名。
+fn theme_titles(themes: &ThemeLibrary) -> Vec<String> {
+    themes
+        .themes()
+        .iter()
+        .map(|theme| theme.name().to_owned())
+        .collect()
 }

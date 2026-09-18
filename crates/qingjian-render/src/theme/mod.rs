@@ -8,6 +8,7 @@ mod error;
 mod extends;
 pub(crate) mod file;
 mod font_spec;
+mod library;
 mod validate;
 
 use std::sync::{Arc, OnceLock};
@@ -16,6 +17,7 @@ use crate::color::Color;
 
 pub use error::ThemeError;
 pub use font_spec::FontSpec;
+pub use library::ThemeLibrary;
 
 use file::{ColorRef, SCHEMA, ThemeFile};
 

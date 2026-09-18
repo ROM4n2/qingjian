@@ -34,6 +34,9 @@ pub struct RouterConfig {
     /// 候选窗口主题 id（`[general] theme`）；只对青简渲染器生效。
     pub theme: String,
 
+    /// 用户主题目录的戳，热加载轮询时更新；不来自配置文件，重读配置时沿用。
+    pub themes_stamp: u64,
+
     /// 拼音显示位置（`[general] preedit`）。
     pub preedit: PreeditMode,
 
@@ -96,6 +99,7 @@ impl RouterConfig {
             renderer: self.renderer,
             font: self.font.clone(),
             theme: self.theme.clone(),
+            themes_stamp: self.themes_stamp,
         }
     }
 }
@@ -111,6 +115,7 @@ impl From<&Config> for RouterConfig {
             renderer: config.general.renderer,
             font: config.general.font.trim().to_owned(),
             theme: config.general.theme_id().to_owned(),
+            themes_stamp: 0,
             preedit: config.general.preedit,
             page_keys: config.general.page_keys(),
             english_candidates: config.general.english_candidates,

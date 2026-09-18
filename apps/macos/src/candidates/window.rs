@@ -124,9 +124,9 @@ impl CandidateWindow {
         self.view.set_renderer(renderer);
     }
 
-    /// 渲染器主题（`[general] theme` 的 id），只对青简渲染器生效。
-    pub fn set_render_theme(&self, id: &str) {
-        self.view.set_theme_id(id);
+    /// 渲染器主题（按 `[general] theme` 从主题库取出的），只对青简渲染器生效。
+    pub fn set_render_theme(&self, theme: qingjian_render::Theme) {
+        self.view.set_render_theme(theme);
     }
 
     /// 候选窗字体（字族名，空为系统字体），只对青简渲染器生效。

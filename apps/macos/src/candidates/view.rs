@@ -46,8 +46,8 @@ pub struct Ivars {
     /// 用户选的字族名（空为系统字体），换了要重建渲染器。
     font: RefCell<String>,
 
-    /// 渲染器用的主题 id（`[general] theme`），重建渲染器时要带上。
-    theme_id: RefCell<String>,
+    /// 渲染器用的主题（浅色那一份），重建渲染器时要带上。
+    render_theme: RefCell<qingjian_render::Theme>,
 }
 
 /// preedit 光标的宽度。
@@ -123,7 +123,7 @@ impl CandidateView {
             theme,
             bitmap: RefCell::new(None),
             font: RefCell::new(String::new()),
-            theme_id: RefCell::new(String::new()),
+            render_theme: RefCell::new(qingjian_render::Theme::light()),
         });
         unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] }
     }
@@ -142,14 +142,11 @@ impl CandidateView {
         }
     }
 
-    /// 渲染器主题（`[general] theme` 的 id），只对青简渲染器生效。
-    pub fn set_theme_id(&self, id: &str) {
-        if *self.ivars().theme_id.borrow() == id {
-            return;
-        }
-        *self.ivars().theme_id.borrow_mut() = id.to_owned();
+    /// 渲染器主题，只对青简渲染器生效。配置或主题文件变了才会调，每次都当场重画。
+    pub fn set_render_theme(&self, theme: qingjian_render::Theme) {
+        *self.ivars().render_theme.borrow_mut() = theme.clone();
         if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
-            bitmap.set_theme(id);
+            bitmap.set_theme(theme);
             self.setNeedsDisplay(true);
         }
     }
@@ -157,7 +154,7 @@ impl CandidateView {
     /// 新建位图渲染器并带上当前主题。
     fn new_bitmap(&self) -> Option<BitmapPainter> {
         let mut bitmap = BitmapPainter::new(&self.ivars().font.borrow())?;
-        bitmap.set_theme(&self.ivars().theme_id.borrow());
+        bitmap.set_theme(self.ivars().render_theme.borrow().clone());
         Some(bitmap)
     }
 

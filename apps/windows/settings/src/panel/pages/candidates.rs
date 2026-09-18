@@ -1,7 +1,7 @@
 //! 「候选窗口」页：外观、主题、排布、渲染引擎、字体、拼音显示位置、悬浮状态条。
 
 use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode, PreeditMode};
-use qingjian_render::Theme;
+use qingjian_render::ThemeLibrary;
 use windows_reactor::*;
 
 use crate::panel::controls::{field, page};
@@ -33,6 +33,8 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         .filter(|family| family.to_lowercase().contains(&query))
         .cloned()
         .collect();
+    // 内置主题加用户主题目录里的，每次画这一页都重列（新放进去的主题回到这页就能看到）
+    let themes = ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
     let rows = [
         field(
             "外观",
@@ -48,9 +50,10 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             "主题",
             "只对青简渲染器生效；每个主题都有浅色与深色两套，按上面的外观切换。",
             ComboBox::new()
-                .items_source(Theme::builtins().iter().map(Theme::name))
+                .items_source(themes.themes().iter().map(|theme| theme.name().to_owned()))
                 .selected_index(
-                    Theme::builtins()
+                    themes
+                        .themes()
                         .iter()
                         .position(|theme| theme.id() == g.theme_id())
                         .unwrap_or(0),

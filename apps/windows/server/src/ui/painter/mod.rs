@@ -7,7 +7,7 @@ use std::rc::Rc;
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 use qingjian_render::{
     FontLibrary, Frame, Layout, Rendered, RenderedStatus, Renderer, Shadow, StatusCell, Theme,
-    UiFont, system_fonts,
+    ThemeLibrary, UiFont, system_fonts,
 };
 
 use crate::dispatch::RenderSettings;
@@ -66,13 +66,11 @@ impl Painter {
                 if painter.as_ref().map(|p| p.font.as_str()) != Some(settings.font.as_str()) {
                     *painter = Self::new(&settings.font);
                 }
-                if let Some(painter) = painter.as_mut()
-                    && painter.theme.id() != settings.theme
-                {
-                    painter.theme = Theme::builtin(&settings.theme, false).unwrap_or_else(|| {
-                        tracing::warn!(id = settings.theme, "没有这个主题，用缺省主题");
-                        Theme::light()
-                    });
+                // 设置变了才会走到这里（含主题文件的戳），每次都从主题目录重读
+                if let Some(painter) = painter.as_mut() {
+                    let themes =
+                        ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
+                    painter.theme = themes.resolve(&settings.theme, false);
                 }
             }
             CandidateRenderer::System => {

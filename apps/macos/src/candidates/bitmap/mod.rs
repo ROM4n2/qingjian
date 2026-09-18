@@ -81,15 +81,9 @@ impl BitmapPainter {
         })
     }
 
-    /// 换主题（`[general] theme` 的 id）；没有这个内置主题就用缺省的。用最近一帧当场重画。
-    pub fn set_theme(&mut self, id: &str) {
-        if self.theme.id() == id {
-            return;
-        }
-        self.theme = Theme::builtin(id, false).unwrap_or_else(|| {
-            tracing::warn!(id, "没有这个主题，用缺省主题");
-            Theme::light()
-        });
+    /// 换主题（浅色那一份），用最近一帧当场重画。
+    pub fn set_theme(&mut self, theme: Theme) {
+        self.theme = theme;
         self.repaint();
     }
 
