@@ -8,6 +8,7 @@ mod draw_box;
 mod draw_effect;
 mod draw_visual;
 mod effect;
+mod extent;
 mod fill;
 mod icon;
 mod node;
@@ -72,17 +73,6 @@ impl Scene {
         if let Some(context) = self.tree.get_node_context_mut(node) {
             context.effects = effects;
         }
-    }
-
-    /// 投影伸出节点盒子的最远距离（像素）；窗口根节点按它在位图四周留边。
-    pub(crate) fn overhang(&self, node: NodeId) -> f32 {
-        self.tree.get_node_context(node).map_or(0.0, |context| {
-            context
-                .effects
-                .iter()
-                .map(Effect::overhang)
-                .fold(0.0, f32::max)
-        })
     }
 
     /// 把表格里的格子放到指定的行、列；`stretch` 时撑满所占的格子（横跨整行的高亮条）。

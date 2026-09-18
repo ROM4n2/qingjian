@@ -16,7 +16,7 @@ use windows::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, IDC_ARROW, LoadCursorW, SW_HIDE, SW_SHOWNA,
     ShowWindow, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_POPUP,
+    WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
@@ -83,10 +83,15 @@ impl CandidateWindow {
         let dpi = unsafe { GetDpiForSystem() }.max(96);
         let dark = resolve_dark(Appearance::default());
         let data = RefCell::new(RenderData::empty(Rc::new(Theme::new(dpi, dark))));
-        // NOACTIVATE：显示时不抢应用焦点。
+        // NOACTIVATE：显示时不抢应用焦点。TRANSPARENT：鼠标整个穿透（与 mac 面板一致）——候选窗不收点击，
+        // 主题装饰伸出窗口本体、盖住应用的那一块也不能挡鼠标。
         let hwnd = unsafe {
             CreateWindowExW(
-                WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
+                WS_EX_LAYERED
+                    | WS_EX_TOOLWINDOW
+                    | WS_EX_TOPMOST
+                    | WS_EX_NOACTIVATE
+                    | WS_EX_TRANSPARENT,
                 CLASS_NAME,
                 w!("青简候选"),
                 WS_POPUP,

@@ -57,17 +57,34 @@ impl Renderer {
         };
         let root = builder.window(frame, layout)?;
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;
-        let margin = scene.overhang(root).ceil();
-        let width = (content_width + margin * 2.0).ceil();
-        let height = (content_height + margin * 2.0).ceil();
+        self.rasterize(
+            &scene,
+            root,
+            (content_width.ceil(), content_height.ceil()),
+            scale,
+        )
+    }
+
+    /// 按场景画出来的范围开位图（投影、伸出窗口的装饰都在里面），根节点的盒子是内容区。
+    fn rasterize(
+        &mut self,
+        scene: &Scene,
+        root: taffy::NodeId,
+        (content_width, content_height): (f32, f32),
+        scale: f32,
+    ) -> Result<Rendered, RenderError> {
+        let extent = scene.extent(root)?;
+        let (x, y) = ((-extent.left).ceil(), (-extent.top).ceil());
+        let width = (extent.right + x).ceil();
+        let height = (extent.bottom + y).ceil();
         let mut canvas = Canvas::new(width as u32, height as u32)?;
-        scene.paint(root, &mut canvas, &mut self.text, margin, margin)?;
+        scene.paint(root, &mut canvas, &mut self.text, x, y)?;
         Ok(Rendered {
             pixmap: canvas.into_pixmap(),
-            content_x: margin as u32,
-            content_y: margin as u32,
-            content_width: content_width.ceil() as u32,
-            content_height: content_height.ceil() as u32,
+            content_x: x as u32,
+            content_y: y as u32,
+            content_width: content_width as u32,
+            content_height: content_height as u32,
             scale,
         })
     }

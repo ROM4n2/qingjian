@@ -26,8 +26,8 @@ wechat-nihao-vertical-light  bitmap 652x720  content 60,60 532x600
 wechat-cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
 wechat-nihao-vertical-dark  bitmap 652x720  content 60,60 532x600
 wechat-cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
-showcase-nihao-vertical-light  bitmap 669x732  content 60,60 549x612
+showcase-nihao-vertical-light  bitmap 677x740  content 60,68 549x612
 showcase-cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
-showcase-nihao-vertical-dark  bitmap 669x732  content 60,60 549x612
+showcase-nihao-vertical-dark  bitmap 677x740  content 60,68 549x612
 showcase-cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
 nihao-vertical-light-1x  bitmap 326x360  content 30,30 266x300

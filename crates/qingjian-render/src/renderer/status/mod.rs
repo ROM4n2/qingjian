@@ -9,8 +9,7 @@ pub use rendered::RenderedStatus;
 
 use taffy::{AlignItems, Dimension, Display, JustifyContent, NodeId, Position, Size, Style};
 
-use super::{Rendered, Renderer};
-use crate::canvas::Canvas;
+use super::Renderer;
 use crate::error::RenderError;
 use crate::scene::{Effect, Icon, Scene, Visual};
 use crate::text::TextStyle;
@@ -106,11 +105,6 @@ impl Renderer {
         scene.set_effects(root, effects);
         scene.layout(root, &mut self.text)?;
 
-        let margin = scene.overhang(root).ceil();
-        let width = (content_width + margin * 2.0).ceil();
-        let height = (content_height + margin * 2.0).ceil();
-        let mut canvas = Canvas::new(width as u32, height as u32)?;
-        scene.paint(root, &mut canvas, &mut self.text, margin, margin)?;
         let edges = widths
             .iter()
             .scan(0.0, |x, width| {
@@ -119,14 +113,7 @@ impl Renderer {
             })
             .collect();
         Ok(RenderedStatus {
-            rendered: Rendered {
-                pixmap: canvas.into_pixmap(),
-                content_x: margin as u32,
-                content_y: margin as u32,
-                content_width: content_width as u32,
-                content_height: content_height as u32,
-                scale,
-            },
+            rendered: self.rasterize(&scene, root, (content_width, content_height), scale)?,
             cell_edges: edges,
         })
     }
