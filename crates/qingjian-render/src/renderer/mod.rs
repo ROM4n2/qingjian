@@ -5,6 +5,7 @@
 
 mod animate;
 mod build;
+mod partial;
 mod rendered;
 mod retained;
 mod status;
@@ -40,8 +41,11 @@ pub struct Renderer {
     /// 上一帧候选窗（过渡配对与动画帧重画用）；窗口隐藏后清掉。
     last: Option<Retained>,
 
-    /// 系统开了「减少动态效果」：不播过渡。
+    /// 系统开了「减少动态效果」：不播过渡，循环动画停在开头。
     reduce_motion: bool,
+
+    /// 循环动画的时钟起点：窗口出现后的第一帧；打字过程中不重置，窗口收起（`forget`）归零。
+    clock: Option<Instant>,
 }
 
 impl Renderer {
@@ -52,6 +56,7 @@ impl Renderer {
             text,
             last: None,
             reduce_motion: false,
+            clock: None,
         }
     }
 
@@ -87,12 +92,37 @@ impl Renderer {
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;
         let keyed = scene.keyed(root)?;
         let transitions = self.transitions(&keyed, layout, scale, now);
-        // 画出范围按起止两头的并算，动画中途位图不变大小
+        let animated = scene.animated(root)?;
+        // 画出范围按起止两头的并算，循环动画按一轮里能到的最远处算：动画中途位图不变大小
         let mut extent = scene.extent(root)?;
         for transition in &transitions {
             let from = transition.from;
             let reach = scene.reach(transition.node).unwrap_or(0.0);
             extent.include((from.x, from.y, from.width, from.height), reach);
+        }
+        for (node, keyframes) in &animated {
+            let parent = scene.parent_origin(*node, root)?;
+            let own = scene.subtree_extent(*node, parent.0, parent.1)?;
+            let (cx, cy) = scene.center(*node, parent.0, parent.1)?;
+            let (dx, dy, grow) = keyframes.reach();
+            // 旋转取外接圆，缩放按最大倍数，都绕节点中心
+            let (half_w, half_h) = ((own.right - own.left) / 2.0, (own.bottom - own.top) / 2.0);
+            let (half_w, half_h) = if keyframes.rotates() {
+                let r = (half_w * half_w + half_h * half_h).sqrt();
+                (r, r)
+            } else {
+                (half_w, half_h)
+            };
+            let (ox, oy) = (
+                (own.left + own.right) / 2.0 - cx,
+                (own.top + own.bottom) / 2.0 - cy,
+            );
+            let reach_x = (ox.abs() + half_w) * grow.max(1.0) + dx;
+            let reach_y = (oy.abs() + half_h) * grow.max(1.0) + dy;
+            extent.include(
+                (cx - reach_x, cy - reach_y, reach_x * 2.0, reach_y * 2.0),
+                0.0,
+            );
         }
         let (x, y) = ((-extent.left).ceil(), (-extent.top).ceil());
         let mut retained = Retained {
@@ -111,7 +141,12 @@ impl Renderer {
                 .map(|keyed| (keyed.key.clone(), keyed.placement))
                 .collect(),
             transitions,
+            animated,
+            partial: None,
         };
+        if self.clock.is_none() {
+            self.clock = Some(now);
+        }
         let rendered = self.paint_retained(&mut retained, now);
         self.last = Some(retained);
         rendered

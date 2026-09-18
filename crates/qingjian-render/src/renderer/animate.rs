@@ -1,10 +1,10 @@
 //! 过渡：新一帧按配对名找上一帧同名节点，位置不同就从旧位置插值过去。壳按 [`Rendered::next_frame`] 定时调 [`Renderer::tick_at`]。
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use super::retained::Retained;
 use super::{Rendered, Renderer};
-use crate::animation::{FRAME_INTERVAL, Placement, Transition};
+use crate::animation::{FRAME_INTERVAL, LOOP_INTERVAL, Placement, Transition};
 use crate::canvas::Canvas;
 use crate::error::RenderError;
 use crate::scene::Keyed;
@@ -15,9 +15,10 @@ impl Renderer {
         self.reduce_motion = reduce;
     }
 
-    /// 忘掉上一帧（窗口隐藏时调）：下次显示不从旧位置过渡。
+    /// 忘掉上一帧（窗口隐藏时调）：下次显示不从旧位置过渡，循环动画从头播。
     pub fn forget(&mut self) {
         self.last = None;
+        self.clock = None;
     }
 
     /// 有过渡在播时，按 `now` 重画一帧（不重建树、不排版）；没有在播的返回 `None`。
@@ -25,11 +26,15 @@ impl Renderer {
         let Some(mut retained) = self.last.take() else {
             return Ok(None);
         };
-        if retained.transitions.is_empty() {
+        if retained.transitions.is_empty() && !self.loops_running(&retained, now) {
             self.last = Some(retained);
             return Ok(None);
         }
-        let rendered = self.paint_retained(&mut retained, now);
+        let rendered = match self.paint_partial(&mut retained, now) {
+            Ok(Some(rendered)) => Ok(rendered),
+            Ok(None) => self.paint_retained(&mut retained, now),
+            Err(error) => Err(error),
+        };
         self.last = Some(retained);
         rendered.map(Some)
     }
@@ -82,6 +87,7 @@ impl Renderer {
         now: Instant,
     ) -> Result<Rendered, RenderError> {
         let (x, y) = retained.origin;
+        retained.partial = None;
         for transition in &retained.transitions {
             let placed = (!transition.finished(now)).then(|| {
                 let at = transition.at(now);
@@ -96,6 +102,18 @@ impl Renderer {
         retained
             .transitions
             .retain(|transition| !transition.finished(now));
+        let elapsed = self
+            .clock
+            .map_or(Duration::ZERO, |clock| now.saturating_duration_since(clock));
+        for (node, keyframes) in &retained.animated {
+            // 减少动态效果：停在开头那一帧
+            let at = if self.reduce_motion {
+                Duration::ZERO
+            } else {
+                elapsed
+            };
+            retained.scene.set_pose(*node, Some(keyframes.pose(at)));
+        }
         let mut canvas = Canvas::new(retained.size.0, retained.size.1)?;
         retained
             .scene
@@ -107,7 +125,27 @@ impl Renderer {
             content_width: retained.content.0 as u32,
             content_height: retained.content.1 as u32,
             scale: retained.scale,
-            next_frame: (!retained.transitions.is_empty()).then_some(FRAME_INTERVAL),
+            next_frame: if !retained.transitions.is_empty() {
+                Some(FRAME_INTERVAL)
+            } else if self.loops_running(retained, now) {
+                Some(LOOP_INTERVAL)
+            } else {
+                None
+            },
         })
+    }
+
+    /// 还有循环动画要接着播（减少动态效果时不播）。
+    pub(super) fn loops_running(&self, retained: &Retained, now: Instant) -> bool {
+        if self.reduce_motion {
+            return false;
+        }
+        let elapsed = self
+            .clock
+            .map_or(Duration::ZERO, |clock| now.saturating_duration_since(clock));
+        retained
+            .animated
+            .iter()
+            .any(|(_, keyframes)| !keyframes.finished(elapsed))
     }
 }

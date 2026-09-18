@@ -32,6 +32,17 @@ impl Scene {
         Ok(extent)
     }
 
+    /// 同 `grow`，给别的模块用。
+    pub(super) fn grow_from(
+        &self,
+        node: NodeId,
+        x: f32,
+        y: f32,
+        extent: &mut Extent,
+    ) -> Result<(), RenderError> {
+        self.grow(node, x, y, extent)
+    }
+
     /// 把 `node`（父节点左上角在 `(x, y)`）及其子树并进 `extent`。
     fn grow(&self, node: NodeId, x: f32, y: f32, extent: &mut Extent) -> Result<(), RenderError> {
         let layout = self.tree.layout(node)?;

@@ -33,10 +33,8 @@ use super::window_class::WindowClass;
 const CLASS_NAME: PCWSTR = w!("QingjianCandidateWindow");
 static CLASS: WindowClass = WindowClass::new();
 
-/// 动画定时器的 id 与间隔（约 60 帧；系统定时器精度约 15.6 ms）。
+/// 动画定时器的 id（间隔按渲染器给的 `next_frame`；系统定时器精度约 15.6 ms）。
 const ANIMATION_TIMER: usize = 1;
-
-const ANIMATION_INTERVAL_MS: u32 = 16;
 
 /// 光标行与候选窗之间的间隙（逻辑像素）。
 const CARET_GAP: i32 = 2;
@@ -158,17 +156,7 @@ impl CandidateWindow {
                     content_y - rendered.content_y as i32,
                 );
                 self.position.set(position);
-                if rendered.next_frame.is_some() {
-                    // SAFETY: 本线程建的窗口；定时器消息由 UI 线程的消息循环截下交给 animation_frame
-                    unsafe {
-                        SetTimer(
-                            Some(self.hwnd),
-                            ANIMATION_TIMER,
-                            ANIMATION_INTERVAL_MS,
-                            None,
-                        )
-                    };
-                }
+                self.schedule(rendered.next_frame);
                 layered::present(self.hwnd, &rendered.pixmap, position)
             }
             None => self.show_gdi(anchor),
@@ -228,8 +216,18 @@ impl CandidateWindow {
             return;
         };
         let _ = layered::present(self.hwnd, &rendered.pixmap, self.position.get());
-        if rendered.next_frame.is_none() {
-            self.stop_animation();
+        self.schedule(rendered.next_frame);
+    }
+
+    /// 按渲染器给的间隔（过渡 16 ms、循环动画 33 ms）起或改定时器；`None` 停。同一个 id 再 SetTimer 就是改间隔。
+    fn schedule(&self, next_frame: Option<std::time::Duration>) {
+        match next_frame {
+            Some(interval) => {
+                let ms = interval.as_millis().clamp(10, 1000) as u32;
+                // SAFETY: 本线程建的窗口；定时器消息由 UI 线程的消息循环截下交给 animation_frame
+                unsafe { SetTimer(Some(self.hwnd), ANIMATION_TIMER, ms, None) };
+            }
+            None => self.stop_animation(),
         }
     }
 

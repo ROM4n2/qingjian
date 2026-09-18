@@ -3,6 +3,7 @@
 //! 节点的位置全由布局给出：流内节点按 flex / grid 排，高亮条、光标这类叠在别的节点上的用绝对定位。
 //! 单位是像素（主题的点数在建树时已乘倍数），布局不取整，保证与直接算坐标的结果一致。
 
+mod animated;
 mod box_paint;
 mod cache_key;
 mod draw_box;
@@ -13,8 +14,10 @@ mod extent;
 mod fill;
 mod icon;
 mod keyed;
+mod layer_place;
 mod node;
 mod paint;
+mod split;
 mod visual;
 
 use std::cell::RefCell;
@@ -34,7 +37,9 @@ pub(crate) use effect::{Effect, EffectKind};
 pub(crate) use fill::Fill;
 pub(crate) use icon::Icon;
 pub(crate) use keyed::Keyed;
+pub(crate) use layer_place::LayerPlace;
 pub(crate) use node::SceneNode;
+pub(crate) use split::SplitMark;
 pub(crate) use visual::Visual;
 
 pub(crate) struct Scene {
@@ -46,6 +51,15 @@ pub(crate) struct Scene {
 
     /// 画好的图片填充框（九宫格窗口背景这类，每像素都要采样）：动画帧里没动就贴回去。
     visual_cache: RefCell<HashMap<CacheKey, CachedVisual>>,
+
+    /// 分段模式：只画画序编号落在这个范围里的节点（见 `split.rs`）；`None` 为正常画。
+    split: RefCell<Option<std::ops::Range<usize>>>,
+
+    /// 分段模式下下一个节点的编号。
+    order: std::cell::Cell<usize>,
+
+    /// 分段模式下跳过的动画节点。
+    marks: RefCell<Vec<SplitMark>>,
 }
 
 /// 缓存的一块画面：左上角在画布里的整数位置与位图。
@@ -65,6 +79,9 @@ impl Scene {
             tree,
             effect_cache: RefCell::new(HashMap::new()),
             visual_cache: RefCell::new(HashMap::new()),
+            split: RefCell::new(None),
+            order: std::cell::Cell::new(0),
+            marks: RefCell::new(Vec::new()),
         }
     }
 
@@ -84,6 +101,8 @@ impl Scene {
                 effects: Vec::new(),
                 transition: None,
                 placed: None,
+                animation: None,
+                pose: None,
             }),
         )?;
         Ok(node)

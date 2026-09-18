@@ -10,6 +10,7 @@ mod row;
 
 use taffy::NodeId;
 
+use crate::animation::Keyframes;
 use crate::error::RenderError;
 use crate::frame::Frame;
 use crate::layout::Layout;
@@ -97,8 +98,12 @@ impl Builder<'_> {
         }
     }
 
-    /// 节点写了 `id` 与 `transition`：登记到刚产出的场景节点上（`out` 的最后一个）。
+    /// 节点写了 `id` 与 `transition`：登记到刚产出的场景节点上（`out` 的最后一个）；写了 `animation` 同样登记。
     fn mark_transition(&mut self, spec: &NodeSpec, out: &[NodeId]) {
+        if let (Some(animation), Some(&node)) = (&spec.animation, out.last()) {
+            self.scene
+                .set_animation(node, Keyframes::from_spec(animation, self.scale));
+        }
         if let (Some(id), Some(transition), Some(&node)) = (&spec.id, &spec.transition, out.last())
         {
             let duration =

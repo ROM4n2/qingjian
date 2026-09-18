@@ -76,6 +76,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
         for (scene, frame, layout) in &samples {
             let started = Instant::now();
+            // 每张样例独立：不和上一张配对播过渡
+            renderer.forget();
             let rendered = renderer.render(frame, *layout, &theme, args.scale)?;
             let elapsed = started.elapsed();
             let path = args.out.join(format!("{scene}-{theme_name}.png"));

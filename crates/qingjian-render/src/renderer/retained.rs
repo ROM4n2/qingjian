@@ -5,9 +5,11 @@ use std::time::Instant;
 
 use taffy::NodeId;
 
-use crate::animation::{Placement, Transition};
+use crate::animation::{Keyframes, Placement, Transition};
 use crate::layout::Layout;
 use crate::scene::Scene;
+
+use super::partial::Partial;
 
 pub(super) struct Retained {
     pub(super) scene: Scene,
@@ -33,6 +35,12 @@ pub(super) struct Retained {
 
     /// 在播的过渡。
     pub(super) transitions: Vec<Transition>,
+
+    /// 带循环动画的节点与关键帧。
+    pub(super) animated: Vec<(NodeId, Keyframes)>,
+
+    /// 循环动画局部重画的缓存；整张重画后作废。
+    pub(super) partial: Option<Partial>,
 }
 
 impl Retained {

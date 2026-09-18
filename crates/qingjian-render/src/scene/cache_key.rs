@@ -25,6 +25,9 @@ pub(super) enum Slot {
 
     /// 节点自己的画面（图片填充的框）。
     Visual,
+
+    /// 带循环动画的节点整棵子树（未变换），每帧按姿态变换后贴上。
+    Layer,
 }
 
 impl CacheKey {
@@ -33,6 +36,16 @@ impl CacheKey {
         slot: Slot,
         rect: (f32, f32, f32, f32),
         canvas: &Canvas,
+    ) -> Self {
+        Self::with_size(node, slot, rect, (canvas.width(), canvas.height()))
+    }
+
+    /// 画布大小直接给（往局部小图上画、但要与整张画布共用缓存时）。
+    pub(super) fn with_size(
+        node: NodeId,
+        slot: Slot,
+        rect: (f32, f32, f32, f32),
+        canvas: (u32, u32),
     ) -> Self {
         Self {
             node,
@@ -43,7 +56,7 @@ impl CacheKey {
                 rect.2.to_bits(),
                 rect.3.to_bits(),
             ],
-            canvas: (canvas.width(), canvas.height()),
+            canvas,
         }
     }
 

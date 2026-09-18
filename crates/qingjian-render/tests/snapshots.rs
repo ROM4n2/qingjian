@@ -12,7 +12,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use qingjian_render::{FontLibrary, Layout, Pixmap, Rendered, Renderer, Theme};
+use qingjian_render::{FontLibrary, Frame, Layout, Pixmap, Rendered, Renderer, Theme};
 
 const UPDATE_ENV: &str = "QINGJIAN_UPDATE_SNAPSHOTS";
 
@@ -94,7 +94,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
     let mut shots = Vec::new();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
         for (scene, frame, layout) in scenes::candidate_scenes() {
-            let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
+            let rendered = still(&mut renderer, &frame, layout, &theme, 2.0);
             shots.push(shot(format!("{scene}-{theme_name}"), rendered, None));
         }
         let status = renderer
@@ -114,7 +114,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
                 ("nihao-vertical", scenes::nihao(), Layout::Vertical),
                 ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
             ] {
-                let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
+                let rendered = still(&mut renderer, &frame, layout, &theme, 2.0);
                 shots.push(shot(format!("{id}-{scene}-{theme_name}"), rendered, None));
             }
         }
@@ -127,9 +127,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             ("nihao-vertical", scenes::nihao(), Layout::Vertical),
             ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
         ] {
-            // 展示主题的高亮条带过渡：每张都从头画，不和上一张配对
-            renderer.forget();
-            let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
+            let rendered = still(&mut renderer, &frame, layout, &theme, 2.0);
             shots.push(shot(
                 format!("showcase-{scene}-{theme_name}"),
                 rendered,
@@ -137,17 +135,34 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             ));
         }
     }
-    shots.push(transition_mid(&mut renderer, &showcase));
-    let rendered = renderer
-        .render(&scenes::nihao(), Layout::Vertical, &Theme::light(), 1.0)
-        .unwrap();
+    shots.push(transition_mid(&mut renderer));
+    shots.push(loop_frame(&mut renderer, &showcase));
+    let rendered = still(
+        &mut renderer,
+        &scenes::nihao(),
+        Layout::Vertical,
+        &Theme::light(),
+        1.0,
+    );
     shots.push(shot("nihao-vertical-light-1x".to_owned(), rendered, None));
     shots
 }
 
-/// 过渡：高亮从第 1 项移到第 4 项，取 60 ms 处的一帧当快照；播完的最后一帧要与直接画第 4 项高亮逐像素一致。
-fn transition_mid(renderer: &mut Renderer, showcase: &Path) -> Shot {
-    let theme = Theme::from_dir(showcase, false).unwrap();
+/// 静止的一帧：先忘掉上一张，主题里的过渡不和上一张样例配对。
+fn still(
+    renderer: &mut Renderer,
+    frame: &Frame,
+    layout: Layout,
+    theme: &Theme,
+    scale: f32,
+) -> Rendered {
+    renderer.forget();
+    renderer.render(frame, layout, theme, scale).unwrap()
+}
+
+/// 过渡（青简绿的高亮条）：高亮从第 1 项移到第 4 项，取 60 ms 处的一帧当快照；播完的最后一帧要与直接画第 4 项高亮逐像素一致。
+fn transition_mid(renderer: &mut Renderer) -> Shot {
+    let theme = Theme::light();
     let from = scenes::nihao();
     let mut to = scenes::nihao();
     to.highlighted = Some(3);
@@ -175,10 +190,52 @@ fn transition_mid(renderer: &mut Renderer, showcase: &Path) -> Shot {
             .unwrap()
             .is_none()
     );
-    renderer.forget();
-    let still = renderer.render(&to, Layout::Vertical, &theme, 2.0).unwrap();
+    let still = still(renderer, &to, Layout::Vertical, &theme, 2.0);
     assert!(end.pixmap == still.pixmap, "过渡的最后一帧与直接画的不一致");
-    shot("showcase-transition-mid".to_owned(), mid, None)
+    shot("transition-mid".to_owned(), mid, None)
+}
+
+/// 循环动画（展示主题的两片花瓣）：取 600 ms 处的一帧当快照；减少动态效果时停在开头、不再要帧。
+fn loop_frame(renderer: &mut Renderer, showcase: &Path) -> Shot {
+    let theme = Theme::from_dir(showcase, false).unwrap();
+    let frame = scenes::nihao();
+    let start = Instant::now();
+    renderer.forget();
+    let first = renderer
+        .render_at(&frame, Layout::Vertical, &theme, 2.0, start)
+        .unwrap();
+    assert!(first.next_frame.is_some(), "有循环动画应当接着要帧");
+    let later = renderer
+        .tick_at(start + Duration::from_millis(600))
+        .unwrap()
+        .expect("循环动画的一帧");
+    assert!(later.next_frame.is_some(), "循环动画一直播");
+    // 循环帧走局部重画（各段图层叠放），与同一时刻整张重画只能差在半透明叠加的取整上（实测最多 3 / 255）
+    let full = renderer
+        .render_at(
+            &frame,
+            Layout::Vertical,
+            &theme,
+            2.0,
+            start + Duration::from_millis(600),
+        )
+        .unwrap();
+    let worst = max_channel_difference(&later.pixmap, &full.pixmap);
+    assert!(worst <= 3, "局部重画与整张重画差太多：{worst}");
+    assert_eq!(
+        (later.pixmap.width(), later.pixmap.height()),
+        (first.pixmap.width(), first.pixmap.height()),
+        "动画中位图不变大小"
+    );
+    renderer.set_reduce_motion(true);
+    renderer.forget();
+    let calm = renderer
+        .render(&frame, Layout::Vertical, &theme, 2.0)
+        .unwrap();
+    renderer.set_reduce_motion(false);
+    assert!(calm.next_frame.is_none(), "减少动态效果时不播循环动画");
+    assert!(calm.pixmap == first.pixmap, "减少动态效果时停在第一帧");
+    shot("showcase-loop".to_owned(), later, None)
 }
 
 fn shot(name: String, rendered: Rendered, cell_edges: Option<&[f32]>) -> Shot {
@@ -237,6 +294,17 @@ fn compare(shot: &Shot, dir: &Path, out: &Path) -> Option<String> {
         let _ = diff.save_png(out.join(format!("{}.diff.png", shot.name)));
     }
     Some(reason)
+}
+
+/// 两张同大位图逐像素各通道差的最大值。
+fn max_channel_difference(a: &Pixmap, b: &Pixmap) -> u8 {
+    assert_eq!((a.width(), a.height()), (b.width(), b.height()));
+    a.data()
+        .iter()
+        .zip(b.data())
+        .map(|(x, y)| x.abs_diff(*y))
+        .max()
+        .unwrap_or(0)
 }
 
 /// 差异图：不同的像素标红，其余画成实际图的淡灰剪影；尺寸不同时不出。

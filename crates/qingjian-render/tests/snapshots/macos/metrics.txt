@@ -30,5 +30,6 @@ showcase-nihao-vertical-light  bitmap 677x740  content 60,68 549x612
 showcase-cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
 showcase-nihao-vertical-dark  bitmap 677x740  content 60,68 549x612
 showcase-cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
-showcase-transition-mid  bitmap 677x740  content 60,68 549x612
+transition-mid  bitmap 652x720  content 60,60 532x600
+showcase-loop  bitmap 677x740  content 60,68 549x612
 nihao-vertical-light-1x  bitmap 326x360  content 30,30 266x300

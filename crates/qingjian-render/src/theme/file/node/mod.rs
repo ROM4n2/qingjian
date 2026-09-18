@@ -1,6 +1,7 @@
 //! 主题里的节点：种类 + 显示条件 + 盒子属性。
 
 mod align;
+mod animation;
 mod border;
 mod box_spec;
 mod caret;
@@ -18,6 +19,7 @@ mod transition;
 use serde::Deserialize;
 
 pub(crate) use align::Align;
+pub(crate) use animation::{AnimationSpec, KeyframeSpec};
 pub(crate) use border::BorderSpec;
 pub(crate) use box_spec::BoxSpec;
 pub(crate) use direction::Direction;
@@ -43,6 +45,9 @@ pub(crate) struct NodeSpec {
 
     /// 写了才过渡，没写的节点即使有 `id` 也直接跳到新位置。
     pub(crate) transition: Option<TransitionSpec>,
+
+    /// 循环动画（关键帧）。
+    pub(crate) animation: Option<AnimationSpec>,
 
     #[serde(flatten)]
     pub(crate) layout: BoxSpec,

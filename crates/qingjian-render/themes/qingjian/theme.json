@@ -58,8 +58,8 @@
     "row": {
       "type": "frame",
       "children": [
-        { "type": "frame", "when": "highlighted", "span": "row",
-          "margin": [0, -4, 0, -4], "fill": "@accent", "radius": 4 },
+        { "type": "frame", "id": "highlight", "transition": { "duration": 100, "easing": "ease-out" },
+          "when": "highlighted", "span": "row", "margin": [0, -4, 0, -4], "fill": "@accent", "radius": 4 },
         { "type": "text", "bind": "index", "font": "index", "margin": [8, 0, 0, 0],
           "color": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" } },
         { "type": "use", "component": "word", "margin": [4, 0, 0, 8] },
@@ -74,8 +74,8 @@
     "item": {
       "type": "frame", "height": 27,
       "children": [
-        { "type": "frame", "when": "highlighted", "position": "absolute", "inset": [0, -5, 0, -5],
-          "fill": "@accent", "radius": 4 },
+        { "type": "frame", "id": "highlight", "transition": { "duration": 100, "easing": "ease-out" },
+          "when": "highlighted", "position": "absolute", "inset": [0, -5, 0, -5], "fill": "@accent", "radius": 4 },
         { "type": "text", "bind": "index", "font": "index", "margin": [8, 3, 0, 0],
           "color": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" } },
         { "type": "use", "component": "word", "margin": [4, 0, 0, 0] }

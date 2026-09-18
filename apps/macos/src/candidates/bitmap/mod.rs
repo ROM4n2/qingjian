@@ -43,8 +43,8 @@ pub struct BitmapPainter {
     /// 主题（浅色那一份，画的时候按外观取深浅）。
     theme: Theme,
 
-    /// 最近一帧还有动画在播，要定时调 [`Self::tick`]。
-    animating: bool,
+    /// 最近一帧还有动画在播：隔多久要调 [`Self::tick`]。
+    next_frame: Option<std::time::Duration>,
 }
 
 impl BitmapPainter {
@@ -82,7 +82,7 @@ impl BitmapPainter {
             scale: 2.0,
             bounds: ViewBounds::filled(NSSize::ZERO),
             theme: Theme::light(),
-            animating: false,
+            next_frame: None,
         })
     }
 
@@ -136,31 +136,31 @@ impl BitmapPainter {
         }
     }
 
-    /// 有动画在播。
-    pub fn animating(&self) -> bool {
-        self.animating
+    /// 有动画在播时隔多久要下一帧。
+    pub fn next_frame(&self) -> Option<std::time::Duration> {
+        self.next_frame
     }
 
-    /// 动画的下一帧：换上新位图（尺寸不变）；返回是否还要接着要。
-    pub fn tick(&mut self) -> bool {
+    /// 动画的下一帧：换上新位图（尺寸不变）；返回隔多久再要，`None` 为播完。
+    pub fn tick(&mut self) -> Option<std::time::Duration> {
         match self.renderer.tick() {
             Ok(Some(rendered)) => {
-                self.animating = rendered.next_frame.is_some();
+                self.next_frame = rendered.next_frame;
                 self.image = to_image(&rendered.pixmap, self.bounds.size);
             }
-            Ok(None) => self.animating = false,
+            Ok(None) => self.next_frame = None,
             Err(error) => {
                 tracing::warn!(%error, "候选窗动画帧渲染失败");
-                self.animating = false;
+                self.next_frame = None;
             }
         }
-        self.animating
+        self.next_frame
     }
 
     /// 窗口收起：停动画、忘掉上一帧，下次显示不从旧位置过渡。
     pub fn forget(&mut self) {
         self.renderer.forget();
-        self.animating = false;
+        self.next_frame = None;
     }
 
     fn repaint(&mut self) {
@@ -179,7 +179,7 @@ impl BitmapPainter {
         };
         let (width, height) = rendered.content_size_points();
         self.bounds = bounds(&rendered);
-        self.animating = rendered.next_frame.is_some();
+        self.next_frame = rendered.next_frame;
         self.image = to_image(&rendered.pixmap, self.bounds.size);
         tracing::debug!(elapsed = ?started.elapsed(), width, height, "候选窗位图已画");
     }

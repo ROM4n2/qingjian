@@ -2,7 +2,7 @@
 
 use super::effect::Effect;
 use super::visual::Visual;
-use crate::animation::{Easing, Placement};
+use crate::animation::{Easing, Keyframes, Placement, Pose};
 
 #[derive(Debug, Clone)]
 pub(crate) struct SceneNode {
@@ -19,4 +19,10 @@ pub(crate) struct SceneNode {
 
     /// 动画中的位置（画布像素）与不透明度，盖过布局算的；不在动画中为 `None`。
     pub(crate) placed: Option<Placement>,
+
+    /// 循环动画的关键帧。
+    pub(crate) animation: Option<Keyframes>,
+
+    /// 这一帧的姿态（循环动画算出来的），整棵子树跟着变换；`None` 为原样。
+    pub(crate) pose: Option<Pose>,
 }

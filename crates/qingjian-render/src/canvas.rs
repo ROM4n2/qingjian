@@ -138,6 +138,41 @@ impl Canvas {
             .draw_pixmap(0, 0, layer.as_ref(), &paint, Transform::identity(), None);
     }
 
+    /// 另一张位图原样盖到 `(x, y)`（替换，不混合）；局部重画的结果写回整帧用。
+    pub(crate) fn replace(&mut self, x: i32, y: i32, other: &Pixmap) {
+        let canvas_width = self.pixmap.width() as i32;
+        let canvas_height = self.pixmap.height() as i32;
+        let width = other.width() as i32;
+        let col_start = (-x).max(0);
+        let col_end = width.min(canvas_width - x);
+        if col_start >= col_end {
+            return;
+        }
+        let source = other.pixels();
+        let pixels = self.pixmap.pixels_mut();
+        for row in 0..other.height() as i32 {
+            let py = y + row;
+            if py < 0 || py >= canvas_height {
+                continue;
+            }
+            let from = row as usize * width as usize;
+            let to = py as usize * canvas_width as usize;
+            pixels[to + (x + col_start) as usize..to + (x + col_end) as usize]
+                .copy_from_slice(&source[from + col_start as usize..from + col_end as usize]);
+        }
+    }
+
+    /// 另一张位图按变换叠上来（双线性采样，整数平移时 tiny-skia 自己退成最近邻）；循环动画的姿态用。
+    pub(crate) fn draw_transformed(&mut self, layer: &Pixmap, transform: Transform, opacity: f32) {
+        let paint = PixmapPaint {
+            opacity,
+            quality: tiny_skia::FilterQuality::Bilinear,
+            ..PixmapPaint::default()
+        };
+        self.pixmap
+            .draw_pixmap(0, 0, layer.as_ref(), &paint, transform, None);
+    }
+
     /// 把另一张位图整张叠上来（左上角对齐到 `(x, y)`）。
     pub(crate) fn blend_pixmap(&mut self, x: i32, y: i32, other: &Pixmap) {
         let width = other.width();
@@ -169,6 +204,9 @@ impl Canvas {
         if col_start >= col_end {
             return;
         }
+        // 覆盖率 → 预乘颜色查表（同 Skia 的 A8 遮罩），每像素只剩一次查表加一次混合
+        let table: Vec<PremultipliedColorU8> =
+            (0..=255u8).map(|c| color.premultiplied(c)).collect();
         let pixels = self.pixmap.pixels_mut();
         for row in 0..height as i32 {
             let py = y + row;
@@ -187,7 +225,7 @@ impl Canvas {
                     continue;
                 }
                 let dst = &mut pixels[base + (x + col) as usize];
-                *dst = source_over(color.premultiplied(coverage), *dst);
+                *dst = source_over(table[coverage as usize], *dst);
             }
         }
     }

@@ -231,28 +231,37 @@ impl CandidateView {
 
     /// 位图渲染器说有动画在播就起定时器。
     fn sync_animation(&self) {
-        let animating = self
+        let next_frame = self
             .ivars()
             .bitmap
             .borrow()
             .as_ref()
-            .is_some_and(BitmapPainter::animating);
-        if animating && let Some(mtm) = MainThreadMarker::new() {
-            self.ivars().animation.borrow_mut().start(mtm, self);
+            .and_then(BitmapPainter::next_frame);
+        if let (Some(interval), Some(mtm)) = (next_frame, MainThreadMarker::new()) {
+            self.ivars()
+                .animation
+                .borrow_mut()
+                .start(mtm, self, interval);
         }
     }
 
     /// 定时器每跳：要动画的下一帧并重画；播完就停。
     pub fn animation_frame(&self) {
-        let more = self
+        let next_frame = self
             .ivars()
             .bitmap
             .borrow_mut()
             .as_mut()
-            .is_some_and(BitmapPainter::tick);
+            .and_then(BitmapPainter::tick);
         self.setNeedsDisplay(true);
-        if !more {
-            self.ivars().animation.borrow_mut().stop();
+        match (next_frame, MainThreadMarker::new()) {
+            // 过渡播完只剩循环动画时，间隔从 16 ms 换成 33 ms
+            (Some(interval), Some(mtm)) => self
+                .ivars()
+                .animation
+                .borrow_mut()
+                .start(mtm, self, interval),
+            _ => self.ivars().animation.borrow_mut().stop(),
         }
     }
 
