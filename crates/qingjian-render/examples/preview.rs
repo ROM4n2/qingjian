@@ -6,10 +6,10 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use qingjian_render::{
-    FontLibrary, Frame, Layout, Preedit, PreeditSegment, PreeditStyle, Renderer, Row, Shadow,
-    StatusCell, Theme, Tone,
-};
+use qingjian_render::{FontLibrary, Renderer, Shadow, Theme};
+
+#[path = "../tests/scenes/mod.rs"]
+mod scenes;
 
 #[derive(Parser)]
 struct Args {
@@ -78,24 +78,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let shadow = (!args.no_shadow).then_some(Shadow::mac_panel());
 
-    let scenes: [(&str, Frame, Layout); 6] = [
-        ("nihao-vertical", nihao(), Layout::Vertical),
-        (
-            "nihao-horizontal",
-            nihao_with_sentence(),
-            Layout::Horizontal,
-        ),
-        ("cloud-vertical", cloud(), Layout::Vertical),
-        ("corrected-vertical", corrected_japanese(), Layout::Vertical),
-        (
-            "corrected-horizontal",
-            corrected_japanese(),
-            Layout::Horizontal,
-        ),
-        ("probe", probe(), Layout::Vertical),
-    ];
+    let samples = scenes::candidate_scenes();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
-        for (scene, frame, layout) in &scenes {
+        for (scene, frame, layout) in &samples {
             let started = Instant::now();
             let rendered = renderer.render(frame, *layout, &theme, args.scale, shadow.as_ref())?;
             let elapsed = started.elapsed();
@@ -114,11 +99,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Windows 的悬浮状态条：三格
-    let cells = [
-        StatusCell::text("中 · 小鹤", true),
-        StatusCell::text("，。", true),
-        StatusCell::Gear,
-    ];
+    let cells = scenes::status_cells();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
         let status = renderer.render_status(&cells, &theme, args.scale, shadow.as_ref())?;
         let path = args.out.join(format!("status-{theme_name}.png"));
@@ -145,154 +126,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
     Ok(())
-}
-
-// 样例帧：与真机上敲同样拼音看到的候选窗对照，所以内容要和引擎当时给的一致（人工从截图抄）。
-
-/// 真机敲「nihao」看到的第一页（2026-09-13 从截图抄），拼音行带光标、译文、生词橙色、页码。
-fn nihao() -> Frame {
-    Frame {
-        preedit: Some(Preedit::plain("ni'hao", 6)),
-        rows: vec![
-            annotated(
-                0,
-                "你好",
-                &[
-                    ("int. ", Tone::Faint),
-                    ("hello", Tone::Gloss),
-                    (" · ", Tone::Faint),
-                    ("int. ", Tone::Faint),
-                    ("hi", Tone::Gloss),
-                ],
-                false,
-            ),
-            annotated(1, "👋", &[("你好", Tone::Gloss)], false),
-            annotated(2, "你好好", &[], false),
-            annotated(
-                3,
-                "你好像",
-                &[("phr. ", Tone::Faint), ("you seem", Tone::Fresh)],
-                false,
-            ),
-            annotated(4, "你好久", &[], false),
-            annotated(5, "你好看", &[], false),
-            annotated(6, "你哈", &[], false),
-            annotated(
-                7,
-                "你换",
-                &[
-                    ("phr. ", Tone::Faint),
-                    ("you change", Tone::Fresh),
-                    (" · ", Tone::Faint),
-                    ("phr. ", Tone::Faint),
-                    ("you swap", Tone::Fresh),
-                ],
-                false,
-            ),
-            annotated(
-                8,
-                "你会",
-                &[("phr. ", Tone::Faint), ("you will", Tone::Fresh)],
-                false,
-            ),
-        ],
-        highlighted: Some(0),
-        footer: Some("1/6".to_owned()),
-        sentence: None,
-        status: None,
-    }
-}
-
-/// 横排真机截图那一次云端整句到了：拼音行右侧带云朵的整句补全。
-fn nihao_with_sentence() -> Frame {
-    let mut frame = nihao();
-    frame.sentence = Some("你好，很高兴认识你！".to_owned());
-    frame
-}
-
-/// 带云联想的一页：整句补全与云端词各带云朵。
-fn cloud() -> Frame {
-    let mut frame = nihao();
-    frame.rows.truncate(3);
-    frame
-        .rows
-        .push(annotated(3, "你好吗", &[("hello?", Tone::Gloss)], true));
-    frame.sentence = Some("你好，世界".to_owned());
-    frame.footer = Some("1/3".to_owned());
-    frame
-}
-
-/// 纠错后的拼音行（删除线 + 淡色剩余）加日文译词（汉字注假名）。
-fn corrected_japanese() -> Frame {
-    Frame {
-        preedit: Some(Preedit {
-            segments: vec![
-                PreeditSegment {
-                    text: "kai".to_owned(),
-                    style: PreeditStyle::Typed,
-                },
-                PreeditSegment {
-                    text: "fs".to_owned(),
-                    style: PreeditStyle::Struck,
-                },
-                PreeditSegment {
-                    text: "'fa".to_owned(),
-                    style: PreeditStyle::Rest,
-                },
-            ],
-            cursor: 5,
-        }),
-        rows: vec![
-            annotated(
-                0,
-                "开发",
-                &[
-                    ("v. ", Tone::Faint),
-                    ("開発", Tone::Gloss),
-                    ("(かいはつ)", Tone::Faint),
-                    ("する", Tone::Gloss),
-                ],
-                false,
-            ),
-            annotated(
-                1,
-                "开",
-                &[
-                    ("v. ", Tone::Faint),
-                    ("開", Tone::Fresh),
-                    ("(ひら)", Tone::Faint),
-                    ("く", Tone::Fresh),
-                ],
-                false,
-            ),
-        ],
-        highlighted: Some(1),
-        footer: None,
-        sentence: None,
-        status: Some("已删除「开放」".to_owned()),
-    }
-}
-
-/// 四条验收用的一行：汉字（zh 字形）、英文、彩色 emoji、日文假名与汉字。
-fn probe() -> Frame {
-    Frame {
-        preedit: None,
-        rows: vec![Row::plain(0, "青简 hello 🙂 日本語 骨直曜")],
-        highlighted: None,
-        footer: None,
-        sentence: None,
-        status: None,
-    }
-}
-
-fn annotated(index: usize, text: &str, annotation: &[(&str, Tone)], cloud: bool) -> Row {
-    Row {
-        index: (index + 1).to_string(),
-        text: text.to_owned(),
-        annotation: annotation
-            .iter()
-            .map(|(s, tone)| ((*s).to_owned(), *tone))
-            .collect(),
-        cloud,
-    }
 }

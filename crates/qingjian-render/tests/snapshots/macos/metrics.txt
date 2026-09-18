@@ -1,0 +1,21 @@
+nihao-vertical-light  bitmap 652x720  content 60,60 532x600
+nihao-horizontal-light  bitmap 1195x290  content 60,60 1075x170
+cloud-vertical-light  bitmap 520x450  content 60,60 400x330
+cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
+corrected-vertical-light  bitmap 520x306  content 60,60 400x186
+corrected-horizontal-light  bitmap 437x290  content 60,60 317x170
+probe-light  bitmap 569x206  content 60,60 449x86
+preedit-only-light  bitmap 520x198  content 60,60 400x78
+short-vertical-light  bitmap 520x360  content 60,60 400x240
+status-light  bitmap 432x174  content 60,60 312x54  edges [153.625, 249.625, 312.0]
+nihao-vertical-dark  bitmap 652x720  content 60,60 532x600
+nihao-horizontal-dark  bitmap 1195x290  content 60,60 1075x170
+cloud-vertical-dark  bitmap 520x450  content 60,60 400x330
+cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
+corrected-vertical-dark  bitmap 520x306  content 60,60 400x186
+corrected-horizontal-dark  bitmap 437x290  content 60,60 317x170
+probe-dark  bitmap 569x206  content 60,60 449x86
+preedit-only-dark  bitmap 520x198  content 60,60 400x78
+short-vertical-dark  bitmap 520x360  content 60,60 400x240
+status-dark  bitmap 432x174  content 60,60 312x54  edges [153.625, 249.625, 312.0]
+nihao-vertical-light-1x  bitmap 266x300  content 0,0 266x300
