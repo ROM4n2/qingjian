@@ -23,6 +23,7 @@ impl Builder<'_> {
                 text,
                 font,
                 color,
+                stroke,
             } => {
                 let content = match (bind, text) {
                     (Some(bind), _) => ctx.text(bind),
@@ -34,7 +35,9 @@ impl Builder<'_> {
                 };
                 let visual = Visual::Text {
                     text: content.to_owned(),
-                    style: self.text_style(font, self.color(color, ctx)),
+                    style: self
+                        .text_style(font, self.color(color, ctx))
+                        .stroked(self.stroke(stroke.as_ref(), ctx)),
                 };
                 self.scene.node(style, visual, &[])?
             }
@@ -66,10 +69,12 @@ impl Builder<'_> {
                 gloss,
                 fresh,
                 faint,
+                stroke,
             } => {
                 let Some(segments) = ctx.annotation(bind) else {
                     return Ok(None);
                 };
+                let stroke = self.stroke(stroke.as_ref(), ctx);
                 let mut children = Vec::with_capacity(segments.len());
                 for (segment, tone) in segments {
                     let color = match tone {
@@ -79,7 +84,9 @@ impl Builder<'_> {
                     };
                     let visual = Visual::Text {
                         text: segment.clone(),
-                        style: self.text_style(font, self.color(color, ctx)),
+                        style: self
+                            .text_style(font, self.color(color, ctx))
+                            .stroked(stroke),
                     };
                     children.push(self.scene.node(Style::default(), visual, &[])?);
                 }
@@ -111,17 +118,24 @@ impl Builder<'_> {
             rest,
             struck,
             caret,
+            stroke,
         } = &spec.kind
         else {
             return self.scene.node(style, Visual::Group, &[]);
         };
-        let typed_style = self.text_style(font, self.color(typed, ctx));
+        let stroke = self.stroke(stroke.as_ref(), ctx);
+        let typed_style = self
+            .text_style(font, self.color(typed, ctx))
+            .stroked(stroke);
         let mut children = Vec::with_capacity(preedit.segments.len() + 2);
         for segment in &preedit.segments {
             let text_style = match segment.style {
                 PreeditStyle::Typed => typed_style,
-                PreeditStyle::Rest => self.text_style(font, self.color(rest, ctx)),
-                PreeditStyle::Struck => self.text_style(font, self.color(struck, ctx)).struck(),
+                PreeditStyle::Rest => self.text_style(font, self.color(rest, ctx)).stroked(stroke),
+                PreeditStyle::Struck => self
+                    .text_style(font, self.color(struck, ctx))
+                    .stroked(stroke)
+                    .struck(),
             };
             let visual = Visual::Text {
                 text: segment.text.clone(),

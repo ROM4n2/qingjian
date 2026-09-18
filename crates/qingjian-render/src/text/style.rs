@@ -1,4 +1,4 @@
-//! 一段文字怎么画：字号、行高（像素）、字重、颜色、删除线。
+//! 一段文字怎么画：字号、行高（像素）、字重、颜色、描边、删除线。
 
 use crate::color::Color;
 use crate::theme::{FontSpec, FontWeight};
@@ -18,6 +18,9 @@ pub(crate) struct TextStyle {
 
     pub color: Color,
 
+    /// 描边：向外的宽度（像素）与颜色；描边垫在字形底下，不占排版宽度。
+    pub stroke: Option<(f32, Color)>,
+
     /// 画删除线（纠错改掉的拼音）。
     pub strike: bool,
 
@@ -34,9 +37,15 @@ impl TextStyle {
             line_height: font.line_height,
             weight: font.weight,
             color,
+            stroke: None,
             strike: false,
             gamma,
         }
+    }
+
+    pub(crate) fn stroked(mut self, stroke: Option<(f32, Color)>) -> Self {
+        self.stroke = stroke.filter(|(width, _)| *width > 0.0);
+        self
     }
 
     pub(crate) fn struck(mut self) -> Self {

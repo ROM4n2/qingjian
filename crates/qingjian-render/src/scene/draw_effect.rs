@@ -1,20 +1,22 @@
-//! 画投影与内阴影：把节点自己的画面画进一张离屏图取 alpha 当形状，偏移、模糊、染色后合成。
-//! 离屏图只取形状加模糊铺开的那一块，不是整张画布。
+//! 画投影与内阴影：把节点的形状画进一张离屏图取 alpha，偏移、模糊、染色后合成。
+//! 离屏图只取形状加模糊铺开的那一块，不是整张画布。形状怎么画由调用方给（节点自己的画面，或容器的子节点）。
 
-use super::draw_visual::draw_visual;
-use super::{BoxPaint, Effect, EffectKind, Visual};
+use super::{Effect, EffectKind};
 use crate::canvas::Canvas;
+use crate::error::RenderError;
 use crate::shadow;
-use crate::text::TextPainter;
+
+/// 在离屏图上画形状：盒子在 `rect`（离屏图坐标），按 `spread` 外扩（负数内缩）。
+pub(super) type DrawShape<'a> =
+    dyn FnMut(&mut Canvas, (f32, f32, f32, f32), f32) -> Result<(), RenderError> + 'a;
 
 /// 画一个效果；`rect` 是节点盒子（像素，画布坐标）。
 pub(super) fn draw_effect(
     canvas: &mut Canvas,
-    text: &mut TextPainter,
-    visual: &Visual,
     rect: (f32, f32, f32, f32),
     effect: &Effect,
-) {
+    shape: &mut DrawShape,
+) -> Result<(), RenderError> {
     let (x, y, width, height) = rect;
     let pad = shadow::reach(effect.blur) + effect.spread.abs();
     let (sx, sy) = match effect.kind {
@@ -27,30 +29,21 @@ pub(super) fn draw_effect(
     let right = ((sx + width + pad).ceil() as i32).min(canvas.width() as i32);
     let bottom = ((sy + height + pad).ceil() as i32).min(canvas.height() as i32);
     if right <= left || bottom <= top {
-        return;
+        return Ok(());
     }
     let (w, h) = ((right - left) as u32, (bottom - top) as u32);
     let (ox, oy) = (left as f32, top as f32);
+    let shifted = (x + effect.x - ox, y + effect.y - oy, width, height);
     let mask = match effect.kind {
         EffectKind::DropShadow => {
-            let spread = effect.spread;
-            let shape = (x + effect.x - ox, y + effect.y - oy, width, height);
-            let Some(mut mask) = shape_alpha(text, visual, shape, spread, (w, h)) else {
-                return;
-            };
+            let mut mask = alpha(shape, shifted, effect.spread, (w, h))?;
             shadow::blur(&mut mask, w as usize, h as usize, effect.blur);
             mask
         }
         EffectKind::InnerShadow => {
-            let shape = (x - ox, y - oy, width, height);
-            let Some(inside) = shape_alpha(text, visual, shape, 0.0, (w, h)) else {
-                return;
-            };
+            let inside = alpha(shape, (x - ox, y - oy, width, height), 0.0, (w, h))?;
             // 形状外（按偏移挪过、按扩展缩过）为实，模糊后只留形状里的部分
-            let hole = (x + effect.x - ox, y + effect.y - oy, width, height);
-            let Some(mut mask) = shape_alpha(text, visual, hole, -effect.spread, (w, h)) else {
-                return;
-            };
+            let mut mask = alpha(shape, shifted, -effect.spread, (w, h))?;
             for value in &mut mask {
                 *value = 255 - *value;
             }
@@ -62,44 +55,22 @@ pub(super) fn draw_effect(
         }
     };
     canvas.blend_mask(left, top, w, h, &mask, effect.color);
+    Ok(())
 }
 
-/// 节点画面的 alpha；盒子按 `spread` 外扩（负数内缩）。
-fn shape_alpha(
-    text: &mut TextPainter,
-    visual: &Visual,
+/// 形状画进一张 `size` 大的离屏图，取 alpha。
+fn alpha(
+    shape: &mut DrawShape,
     rect: (f32, f32, f32, f32),
     spread: f32,
     size: (u32, u32),
-) -> Option<Vec<u8>> {
-    let mut layer = Canvas::new(size.0, size.1).ok()?;
-    match visual {
-        Visual::Box(paint) if spread != 0.0 => {
-            let (x, y, width, height) = rect;
-            let grown = (
-                x - spread,
-                y - spread,
-                (width + spread * 2.0).max(0.0),
-                (height + spread * 2.0).max(0.0),
-            );
-            let paint = BoxPaint {
-                radius: if paint.radius > 0.0 {
-                    (paint.radius + spread).max(0.0)
-                } else {
-                    0.0
-                },
-                ..paint.clone()
-            };
-            draw_visual(&mut layer, text, &Visual::Box(paint), grown);
-        }
-        _ => draw_visual(&mut layer, text, visual, rect),
-    }
-    Some(
-        layer
-            .into_pixmap()
-            .pixels()
-            .iter()
-            .map(|pixel| pixel.alpha())
-            .collect(),
-    )
+) -> Result<Vec<u8>, RenderError> {
+    let mut layer = Canvas::new(size.0, size.1)?;
+    shape(&mut layer, rect, spread)?;
+    Ok(layer
+        .into_pixmap()
+        .pixels()
+        .iter()
+        .map(|pixel| pixel.alpha())
+        .collect())
 }

@@ -1,7 +1,7 @@
-//! 画一个节点自己的画面（不含子节点）。
+//! 画一个节点自己的画面（不含子节点）；阴影取形状时盒子可以外扩 / 内缩。
 
 use super::draw_box::draw_box;
-use super::{Icon, Visual};
+use super::{BoxPaint, Icon, Visual};
 use crate::canvas::Canvas;
 use crate::cloud::draw_cloud;
 use crate::gear::draw_gear;
@@ -32,4 +32,33 @@ pub(super) fn draw_visual(
         }
         Visual::Group => {}
     }
+}
+
+/// 阴影用的形状：盒子按 `spread` 外扩（负数内缩），圆角随之变；别的画面不管 `spread`。
+pub(super) fn draw_shape(
+    canvas: &mut Canvas,
+    text: &mut TextPainter,
+    visual: &Visual,
+    rect: (f32, f32, f32, f32),
+    spread: f32,
+) {
+    let Visual::Box(paint) = visual else {
+        return draw_visual(canvas, text, visual, rect);
+    };
+    let (x, y, width, height) = rect;
+    let grown = (
+        x - spread,
+        y - spread,
+        (width + spread * 2.0).max(0.0),
+        (height + spread * 2.0).max(0.0),
+    );
+    let paint = BoxPaint {
+        radius: if paint.radius > 0.0 {
+            (paint.radius + spread).max(0.0)
+        } else {
+            0.0
+        },
+        ..paint.clone()
+    };
+    draw_box(canvas, grown, &paint);
 }

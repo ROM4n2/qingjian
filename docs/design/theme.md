@@ -149,10 +149,10 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
 | 节点 `type` | 属性 |
 |---|---|
 | `frame` | `direction`（row / column）、`fill`、`border`、`radius`、`children`；带 `table: { row_height }` 时排成表格 |
-| `text` | `bind` 或 `text`、`font`、`color` |
+| `text` | `bind` 或 `text`、`font`、`color`、`stroke` |
 | `icon` | `icon`（cloud / gear）、`size`、`color`；盒子缺省与图标同大，图标垂直居中 |
-| `preedit` | `font`、`typed` / `rest` / `struck` 三种拼音颜色、`caret: { width, color }` |
-| `annotation` | `bind`、`font`、`gloss` / `fresh` / `faint` 三种深浅 |
+| `preedit` | `font`、`typed` / `rest` / `struck` 三种拼音颜色、`caret: { width, color }`、`stroke` |
+| `annotation` | `bind`、`font`、`gloss` / `fresh` / `faint` 三种深浅、`stroke` |
 | `use` | `component`：引用组件，这里写的盒子属性盖过组件根节点的 |
 | `repeat` | `bind`（`candidates`）、`component`：每项候选实例化一份 |
 
@@ -164,9 +164,12 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
   `{ "image": "images/x.png", "slice": [上, 右, 下, 左], "scale": 2 }`（路径相对 theme.json，slice 为图片像素的九宫格切边、不写就拉伸，scale 为一个点对几个图片像素）。
   `border: { width, color }` 画在内侧。图片随主题目录加载（`Theme::from_dir`），只认 PNG、边长 ≤ 4096、路径不能出主题目录。
 - **效果**（第 2 阶段第 2 步）：`effects: [{ "type": "drop-shadow" | "inner-shadow", "x", "y", "blur", "spread", "color" }]`，按写的顺序画；
-  形状取节点自己画出来的 alpha（圆角框、九宫格图片的透明边、文字），不含子节点；`spread` 只对框生效。投影垫在节点底下、半透明填充会透出来，
+  形状取节点自己画出来的 alpha（圆角框、九宫格图片的透明边、文字），不含子节点，自己不画东西的容器（没填充的框、译文、拼音行）取子节点；`spread` 只对框生效。投影垫在节点底下、半透明填充会透出来，
   内阴影压在填充上、子节点下。窗口阴影就是根节点的投影：渲染器按根节点投影伸出的距离在位图四周留边，壳按内容区对齐光标，
   mac 面板关掉系统阴影（系统绘制退路仍用系统阴影），两端同一份像素。状态条的阴影写在 `status.effects`。
+- **文字描边**（第 2 阶段第 4 步）：`text` / `annotation` / `preedit` 上写 `stroke: { width, color }`（颜色可写条件）；
+  cosmic-text 取字形轮廓（`SwashCache::get_outline_commands`）拼成一条路径，圆角接头按两倍宽描一次、字形压在上面，露出的是向外的宽度，不占排版宽度；
+  位图 emoji 没有轮廓不描。文字阴影、发光就是文字节点上的 `effects`（形状含描边）。
 - **字重与行内字体**：样式里 `weight` 写 100–900 或 `thin` / `extralight` / `light` / `regular` / `medium` / `semibold` / `bold` / `extrabold` / `black`；
   节点的 `font` 也可以写 `{ "base": "index", "size": 12, "weight": "semibold" }` 在某个样式上改几项，只改字号时行高等比缩放。
   mac 的 SF 是可变字体、苹方是多字重集合；Windows 另加载 Segoe UI 与雅黑 / 正黑的粗细体文件，缺的字重挑最近的一档。
@@ -182,7 +185,7 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
   高亮候选换一套颜色（系统蓝、微信绿的白字）靠它；青简绿里 `hl_*` 变量与普通颜色同值。
 - **容错**：加载时检查颜色变量、文字样式、组件引用，找不到的记警告；渲染时颜色退回透明、样式退回 16/19、组件不画。
 
-还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、图层模糊、伸出窗口的装饰、文字描边、动画、主题包与字体随包。
+还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、图层模糊、渐变字、伸出窗口的装饰、动画、主题包与字体随包。
 
 ## 渲染器要变成什么样
 

@@ -98,6 +98,23 @@ impl Canvas {
         );
     }
 
+    /// 描字形轮廓：圆角接头与端点，描边不出尖角。
+    pub(crate) fn stroke_outline(&mut self, path: &Path, width: f32, color: Color) {
+        let stroke = Stroke {
+            width,
+            line_join: tiny_skia::LineJoin::Round,
+            line_cap: tiny_skia::LineCap::Round,
+            ..Stroke::default()
+        };
+        self.pixmap.stroke_path(
+            path,
+            &paint(color, BlendMode::SourceOver),
+            &stroke,
+            Transform::identity(),
+            None,
+        );
+    }
+
     /// 与画布同大的遮罩，`path` 里面为不透明。
     pub(crate) fn mask(&self, path: &Path) -> Option<Mask> {
         let mut mask = Mask::new(self.width(), self.height())?;

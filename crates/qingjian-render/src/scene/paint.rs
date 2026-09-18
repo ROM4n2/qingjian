@@ -1,11 +1,11 @@
-//! 按树序画：先画节点自己（投影垫底、内阴影压在填充上），再画子节点；坐标是父节点位置加布局给的相对位置。
+//! 按树序画：先画节点自己（投影垫底、内阴影压在填充上；自己不画的容器取子节点当阴影形状），再画子节点；坐标是父节点位置加布局给的相对位置。
 //! 不透明度小于 1 的节点连同子树先画到离屏图层，再按不透明度合成。
 
 use taffy::NodeId;
 
 use super::draw_effect::draw_effect;
-use super::draw_visual::draw_visual;
-use super::{EffectKind, Scene, SceneNode};
+use super::draw_visual::{draw_shape, draw_visual};
+use super::{EffectKind, Scene, SceneNode, Visual};
 use crate::canvas::Canvas;
 use crate::error::RenderError;
 use crate::text::TextPainter;
@@ -51,12 +51,25 @@ impl Scene {
             visual, effects, ..
         }) = self.tree.get_node_context(root)
         {
+            let children = self.tree.children(root)?;
             for kind in [EffectKind::DropShadow, EffectKind::InnerShadow] {
                 if kind == EffectKind::InnerShadow {
                     draw_visual(canvas, text, visual, rect);
                 }
                 for effect in effects.iter().filter(|effect| effect.kind == kind) {
-                    draw_effect(canvas, text, visual, rect, effect);
+                    // 自己不画东西的容器（译文、拼音行）拿子节点当形状
+                    let mut shape = |layer: &mut Canvas, (x, y, width, height), spread| {
+                        match visual {
+                            Visual::Group => {
+                                for &child in &children {
+                                    self.paint(child, layer, text, x, y)?;
+                                }
+                            }
+                            _ => draw_shape(layer, text, visual, (x, y, width, height), spread),
+                        }
+                        Ok(())
+                    };
+                    draw_effect(canvas, rect, effect, &mut shape)?;
                 }
             }
         }

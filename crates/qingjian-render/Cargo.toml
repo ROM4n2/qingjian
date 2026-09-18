@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 tiny-skia.workspace = true
 cosmic-text.workspace = true
+zeno.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 taffy.workspace = true

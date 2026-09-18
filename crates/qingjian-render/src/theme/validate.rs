@@ -1,6 +1,6 @@
 //! 加载时检查一遍引用（颜色变量、文字样式、组件），有问题记警告；渲染时引用不到的退回缺省值，不让整个主题失败。
 
-use super::file::node::{FillSpec, NodeKind, NodeSpec};
+use super::file::node::{BorderSpec, FillSpec, NodeKind, NodeSpec};
 use super::file::{ColorRef, ColorSpec, FontRef, ThemeFile};
 
 /// 列出主题里引用不到的名字。
@@ -54,9 +54,15 @@ impl Checker<'_> {
                     self.node(child, &format!("{path}.children[{i}]"));
                 }
             }
-            NodeKind::Text { font, color, .. } => {
+            NodeKind::Text {
+                font,
+                color,
+                stroke,
+                ..
+            } => {
                 self.font(font, path);
                 self.spec(color, path);
+                self.stroke(stroke.as_ref(), path);
             }
             NodeKind::Icon { color, .. } => self.spec(color, path),
             NodeKind::Preedit {
@@ -65,8 +71,10 @@ impl Checker<'_> {
                 rest,
                 struck,
                 caret,
+                stroke,
             } => {
                 self.font(font, path);
+                self.stroke(stroke.as_ref(), path);
                 for color in [typed, rest, struck, &caret.color] {
                     self.spec(color, path);
                 }
@@ -76,9 +84,11 @@ impl Checker<'_> {
                 gloss,
                 fresh,
                 faint,
+                stroke,
                 ..
             } => {
                 self.font(font, path);
+                self.stroke(stroke.as_ref(), path);
                 for color in [gloss, fresh, faint] {
                     self.spec(color, path);
                 }
@@ -89,6 +99,12 @@ impl Checker<'_> {
                         .push(format!("{path}: 组件 {component:?} 不存在"));
                 }
             }
+        }
+    }
+
+    fn stroke(&mut self, stroke: Option<&BorderSpec>, path: &str) {
+        if let Some(stroke) = stroke {
+            self.spec(&stroke.color, path);
         }
     }
 

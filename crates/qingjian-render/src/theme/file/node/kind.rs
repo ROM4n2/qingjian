@@ -42,6 +42,9 @@ pub(crate) enum NodeKind {
         font: FontRef,
 
         color: ColorSpec,
+
+        /// 描边。
+        stroke: Option<BorderSpec>,
     },
 
     /// 矢量图标，在盒子里垂直居中。
@@ -67,6 +70,9 @@ pub(crate) enum NodeKind {
         struck: ColorSpec,
 
         caret: CaretSpec,
+
+        /// 拼音的描边。
+        stroke: Option<BorderSpec>,
     },
 
     /// 一串译文片段，按深浅着色。
@@ -83,6 +89,9 @@ pub(crate) enum NodeKind {
 
         /// 词性与分隔符。
         faint: ColorSpec,
+
+        /// 描边。
+        stroke: Option<BorderSpec>,
     },
 
     /// 引用一个组件；这里写的盒子属性盖过组件根节点的。

@@ -16,7 +16,7 @@ use crate::layout::Layout;
 use crate::scene::{Effect, Scene, Visual};
 use crate::text::{TextPainter, TextStyle};
 use crate::theme::Theme;
-use crate::theme::file::node::{BoxSpec, EffectSpec, NodeKind, NodeSpec};
+use crate::theme::file::node::{BorderSpec, BoxSpec, EffectSpec, NodeKind, NodeSpec};
 use crate::theme::file::{ColorSpec, FontRef};
 
 use context::Context;
@@ -130,6 +130,15 @@ impl Builder<'_> {
     }
 
     /// 命名文字样式按倍数换成像素、配上颜色与当前外观的 gamma。
+    /// 文字的描边：宽度换成像素、颜色按当前数据与外观取值。
+    fn stroke(
+        &self,
+        stroke: Option<&BorderSpec>,
+        ctx: Context,
+    ) -> Option<(f32, crate::color::Color)> {
+        stroke.map(|stroke| (stroke.width * self.scale, self.color(&stroke.color, ctx)))
+    }
+
     fn text_style(&self, font: &FontRef, color: crate::color::Color) -> TextStyle {
         let spec = self.theme.font_ref(font);
         TextStyle::new(

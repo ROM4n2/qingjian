@@ -17,6 +17,7 @@ mod table;
 use serde::Deserialize;
 
 pub(crate) use align::Align;
+pub(crate) use border::BorderSpec;
 pub(crate) use box_spec::BoxSpec;
 pub(crate) use direction::Direction;
 pub(crate) use edges::Edges;

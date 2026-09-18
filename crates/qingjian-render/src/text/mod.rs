@@ -80,6 +80,9 @@ impl TextPainter {
         y: f32,
     ) -> f32 {
         self.shape(text, style);
+        if let Some((stroke_width, stroke_color)) = style.stroke {
+            self.draw_stroke(canvas, style, x, y, stroke_width, stroke_color);
+        }
         let mut width = 0.0_f32;
         let mut strike: Option<(f32, f32)> = None;
         for run in self.buffer.layout_runs() {
@@ -121,6 +124,61 @@ impl TextPainter {
             canvas.fill_rect(x, line_y, line_w, thickness, style.color);
         }
         width
+    }
+
+    /// 描边：整段文字的字形轮廓拼成一条路径，按两倍宽描一次（字形随后压在上面，露出来的就是向外的宽度）。
+    /// 一条路径描一次，半透明的描边在字形相交处不会叠深。没有轮廓的字形（位图 emoji）不描。
+    fn draw_stroke(
+        &mut self,
+        canvas: &mut Canvas,
+        style: &TextStyle,
+        x: f32,
+        y: f32,
+        width: f32,
+        color: crate::color::Color,
+    ) {
+        let mut path = tiny_skia::PathBuilder::new();
+        for run in self.buffer.layout_runs() {
+            let baseline = y + run.line_y.round();
+            let mut tracked = 0.0_f32;
+            for glyph in run.glyphs {
+                let physical = glyph.physical((x + tracked, y), 1.0);
+                let origin_x = x + tracked + glyph.x + glyph.font_size * glyph.x_offset;
+                let origin_y = baseline + glyph.y - glyph.font_size * glyph.y_offset;
+                tracked += tracking_px(&self.font_system, &mut self.tracking, glyph.font_id, style);
+                let Some(commands) = self
+                    .cache
+                    .get_outline_commands(&mut self.font_system, physical.cache_key)
+                else {
+                    continue;
+                };
+                for command in commands {
+                    let at = |p: zeno::Point| (origin_x + p.x, origin_y - p.y);
+                    match *command {
+                        zeno::Command::MoveTo(p) => {
+                            let (px, py) = at(p);
+                            path.move_to(px, py);
+                        }
+                        zeno::Command::LineTo(p) => {
+                            let (px, py) = at(p);
+                            path.line_to(px, py);
+                        }
+                        zeno::Command::QuadTo(c, p) => {
+                            let ((cx, cy), (px, py)) = (at(c), at(p));
+                            path.quad_to(cx, cy, px, py);
+                        }
+                        zeno::Command::CurveTo(c1, c2, p) => {
+                            let ((ax, ay), (bx, by), (px, py)) = (at(c1), at(c2), at(p));
+                            path.cubic_to(ax, ay, bx, by, px, py);
+                        }
+                        zeno::Command::Close => path.close(),
+                    }
+                }
+            }
+        }
+        if let Some(path) = path.finish() {
+            canvas.stroke_outline(&path, width * 2.0, color);
+        }
     }
 
     /// 每个字形用的字族名（相邻相同的合并），拿来核对中日字形与 emoji 回退到了哪家字体。
