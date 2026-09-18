@@ -1,6 +1,6 @@
 //! 「候选窗口」页：外观、排布、渲染引擎、字体、拼音显示位置、悬浮状态条。
 
-use qingjian_platform::{CandidateRenderer, LayoutMode, PreeditMode, ThemeMode};
+use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode, PreeditMode};
 use windows_reactor::*;
 
 use crate::panel::controls::{field, page};
@@ -37,10 +37,10 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
             "外观",
             "",
             mode_combo(
-                &ThemeMode::ALL,
-                g.theme,
-                ThemeMode::label,
-                context.callback(Message::Theme),
+                &Appearance::ALL,
+                g.appearance(),
+                Appearance::label,
+                context.callback(Message::Appearance),
             ),
         ),
         field(

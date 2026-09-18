@@ -3,7 +3,7 @@
 use std::rc::Rc;
 
 use qingjian_platform::protocol::{Frame, PreeditKind};
-use qingjian_platform::{LayoutMode, ThemeMode};
+use qingjian_platform::{Appearance, LayoutMode};
 use qingjian_render::{Preedit, PreeditSegment, PreeditStyle, Row};
 
 use super::row;
@@ -38,8 +38,8 @@ pub(crate) struct RenderData {
     /// 候选排布。
     pub(super) layout: LayoutMode,
 
-    /// 外观模式；`System` 由窗口按系统主题解析。
-    pub(super) theme_mode: ThemeMode,
+    /// 外观；`System` 由窗口按系统深浅色解析。
+    pub(super) appearance: Appearance,
 }
 
 impl RenderData {
@@ -54,13 +54,13 @@ impl RenderData {
             sentence: None,
             notice: None,
             layout: LayoutMode::default(),
-            theme_mode: ThemeMode::default(),
+            appearance: Appearance::default(),
         }
     }
 
     pub(super) fn set(&mut self, frame: &Frame) {
         self.layout = frame.layout;
-        self.theme_mode = frame.theme;
+        self.appearance = frame.appearance;
         self.preedit = window_preedit(frame);
         self.cursor = frame.cursor;
         self.rows = frame

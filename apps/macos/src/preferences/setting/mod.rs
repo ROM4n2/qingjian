@@ -29,8 +29,8 @@ pub enum Setting {
     /// `[general] page_keys`，弹出菜单。
     PageKeys,
 
-    /// `[general] theme`，弹出菜单。
-    Theme,
+    /// `[general] appearance`，弹出菜单。
+    Appearance,
 
     /// `[general] renderer`，弹出菜单：青简渲染器 / 系统绘制。
     Renderer,
@@ -186,7 +186,7 @@ impl Setting {
             Self::LearningLanguage => 1,
             Self::PageSize => 2,
             Self::PageKeys => 3,
-            Self::Theme => 4,
+            Self::Appearance => 4,
             Self::ExpressionKey => 5,
             Self::QuestionKey => 6,
             Self::QuestionMark => 41,
@@ -244,7 +244,7 @@ impl Setting {
             1 => Self::LearningLanguage,
             2 => Self::PageSize,
             3 => Self::PageKeys,
-            4 => Self::Theme,
+            4 => Self::Appearance,
             43 => Self::Renderer,
             44 => Self::Font,
             5 => Self::ExpressionKey,
@@ -317,7 +317,7 @@ mod tests {
             Setting::LearningLanguage,
             Setting::PageSize,
             Setting::PageKeys,
-            Setting::Theme,
+            Setting::Appearance,
             Setting::Renderer,
             Setting::Font,
             Setting::ExpressionKey,

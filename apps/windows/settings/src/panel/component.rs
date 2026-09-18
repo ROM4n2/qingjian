@@ -1,8 +1,8 @@
 //! 根组件的 Reactor 生命周期：建状态、按消息落盘、画左侧导航 + 当前页。
 
 use qingjian_platform::{
-    CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode, LogLevel,
-    PreeditMode, ShiftLetter, ThemeMode,
+    Appearance, CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode,
+    LogLevel, PreeditMode, ShiftLetter,
 };
 use windows_reactor::*;
 
@@ -73,8 +73,8 @@ impl Component for Settings {
             Message::EnglishMode(on) => self.save("general", "english_mode", on),
 
             // 候选窗口页
-            Message::Theme(Some(i)) if i < ThemeMode::ALL.len() => {
-                self.save("general", "theme", ThemeMode::ALL[i].key());
+            Message::Appearance(Some(i)) if i < Appearance::ALL.len() => {
+                self.save("general", "appearance", Appearance::ALL[i].key());
             }
             Message::Layout(Some(i)) if i < LayoutMode::ALL.len() => {
                 self.save("general", "layout", LayoutMode::ALL[i].key());

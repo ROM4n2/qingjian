@@ -8,7 +8,7 @@ use objc2_app_kit::{
     NSWindowLevel, NSWindowStyleMask,
 };
 use objc2_foundation::{NSPoint, NSRect, NSSize};
-use qingjian_platform::{CandidateRenderer, LayoutMode, ThemeMode};
+use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode};
 
 use super::frame::Frame;
 use super::theme::Theme;
@@ -100,13 +100,13 @@ impl CandidateWindow {
     }
 
     /// 外观：跟随系统时不指定，否则强制浅色 / 深色。
-    pub fn set_theme(&mut self, mode: ThemeMode) {
+    pub fn set_appearance(&mut self, mode: Appearance) {
         // SAFETY: 只读 AppKit 导出的常量名
         let name = unsafe {
             match mode {
-                ThemeMode::System => None,
-                ThemeMode::Light => Some(NSAppearanceNameAqua),
-                ThemeMode::Dark => Some(NSAppearanceNameDarkAqua),
+                Appearance::System => None,
+                Appearance::Light => Some(NSAppearanceNameAqua),
+                Appearance::Dark => Some(NSAppearanceNameDarkAqua),
             }
         };
         let appearance = name.and_then(NSAppearance::appearanceNamed);

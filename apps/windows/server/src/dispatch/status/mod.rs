@@ -100,7 +100,7 @@ impl Router {
                     scheme: Some(scheme_label(self.config.scheme, self.config.wubi))
                         .filter(|label| !label.is_empty()),
                     full_width: self.full_width_for(english),
-                    theme: self.config.theme,
+                    appearance: self.config.appearance,
                     anchor: self.config.status_pos,
                 });
             }

@@ -35,7 +35,7 @@ impl Host {
         self.preedit_mode = config.general.preedit;
         self.english_candidates = config.general.english_candidates;
         self.apps = config.apps.clone();
-        self.window.set_theme(config.general.theme);
+        self.window.set_appearance(config.general.appearance());
         self.window.set_layout(config.general.layout);
         self.window.set_font(&config.general.font);
         self.window.set_renderer(config.general.renderer);

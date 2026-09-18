@@ -3,7 +3,7 @@
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSPopUpButton;
-use qingjian_platform::{CandidateRenderer, Config, LayoutMode, PreeditMode, ThemeMode};
+use qingjian_platform::{Appearance, CandidateRenderer, Config, LayoutMode, PreeditMode};
 
 use crate::candidates::available_families;
 use crate::preferences::controls::{note, row_popup, select};
@@ -14,7 +14,7 @@ use crate::preferences::target::PreferencesTarget;
 
 pub struct CandidatesPage {
     /// 外观：跟随系统 / 浅色 / 深色。
-    theme: Retained<NSPopUpButton>,
+    appearance: Retained<NSPopUpButton>,
 
     /// 竖排 / 横排。
     layout_mode: Retained<NSPopUpButton>,
@@ -31,11 +31,18 @@ pub struct CandidatesPage {
 
 impl CandidatesPage {
     pub fn build(layout: &mut Layout, mtm: MainThreadMarker, target: &PreferencesTarget) -> Self {
-        let theme_titles: Vec<String> = ThemeMode::ALL
+        let appearance_titles: Vec<String> = Appearance::ALL
             .iter()
-            .map(|t| t.label().to_owned())
+            .map(|a| a.label().to_owned())
             .collect();
-        let theme = row_popup(layout, mtm, "外观", &theme_titles, Setting::Theme, target);
+        let appearance = row_popup(
+            layout,
+            mtm,
+            "外观",
+            &appearance_titles,
+            Setting::Appearance,
+            target,
+        );
         let layout_titles: Vec<String> = LayoutMode::ALL
             .iter()
             .map(|l| l.label().to_owned())
@@ -79,7 +86,7 @@ impl CandidatesPage {
             "「只在候选窗口」时正在敲的拼音不显示在应用里，终端或行内拼音显示不正常的应用可以选它。",
         );
         Self {
-            theme,
+            appearance,
             layout_mode,
             renderer,
             font,
@@ -90,8 +97,10 @@ impl CandidatesPage {
     pub fn sync(&self, config: &Config) {
         let general = &config.general;
         select(
-            &self.theme,
-            ThemeMode::ALL.iter().position(|t| *t == general.theme),
+            &self.appearance,
+            Appearance::ALL
+                .iter()
+                .position(|a| *a == general.appearance()),
         );
         select(
             &self.layout_mode,

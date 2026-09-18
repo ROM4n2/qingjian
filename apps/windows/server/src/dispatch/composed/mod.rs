@@ -160,7 +160,7 @@ impl Router {
                 page: 0,
                 page_count: 1,
                 layout: self.config.layout,
-                theme: self.config.theme,
+                appearance: self.config.appearance,
                 sentence: None,
                 notice: self.notice.clone(),
             },
@@ -188,7 +188,7 @@ impl Router {
                     page,
                     page_count: layout.pages().max(1),
                     layout: self.config.layout,
-                    theme: self.config.theme,
+                    appearance: self.config.appearance,
                     sentence: self.sentence.clone(),
                     notice: self.notice.clone(),
                 }

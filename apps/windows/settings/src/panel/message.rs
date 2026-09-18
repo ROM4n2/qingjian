@@ -26,7 +26,7 @@ pub(crate) enum Message {
     EnglishMode(bool),
 
     // 候选窗口页
-    Theme(Option<usize>),
+    Appearance(Option<usize>),
     Layout(Option<usize>),
     Preedit(Option<usize>),
     Renderer(Option<usize>),

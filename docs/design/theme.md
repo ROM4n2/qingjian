@@ -259,9 +259,14 @@ theme.json + Frame 数据
 | 4 | Figma 插件导出 | 设计师从 Figma 出一个主题，装上即用 |
 | 5 | 网页编辑器（WASM） | 不装 Figma 也能做主题 |
 
+## 配置键（2026-09-18 定）
+
+`[general] appearance` 是外观（system / light / dark），`[general] theme` 是主题 id（缺省 `qingjian`）。2026-09-18 之前外观写在 `theme` 里：
+没写 `appearance` 且 `theme` 是这三个词之一时按外观读、主题用内置的，所以这三个词不能当主题 id。读取一律走 `GeneralConfig::appearance()` / `theme_id()`。
+Server ↔ DLL 帧协议里的字段在 Rust 里改名为 `appearance`，线上仍叫 `theme`，旧 DLL 照常能解析，协议版本不变。
+
 ## 待定
 
-- **配置键**：`[general] theme` 现在是外观模式（system / light / dark）。主题名要新开一个键，还是让 `theme` 改存主题名、外观挪到 `appearance`（需要迁移旧配置）？
 - **透明区点击穿透**：Windows 分层窗口的全透明像素天然穿透；macOS 的 NSPanel 要实测。
 - **毛玻璃**：各平台的背景效果能否与自绘位图叠加，要实测。
 - **Linux**：原生 Wayland 下候选窗由 Fcitx5 / IBus 画，主题要生效得自己画面板，单独调研；在那之前只承诺 mac + Windows。

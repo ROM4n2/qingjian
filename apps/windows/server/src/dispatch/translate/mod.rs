@@ -108,7 +108,7 @@ impl Router {
             page: 0,
             page_count: 1,
             layout: self.config.layout,
-            theme: self.config.theme,
+            appearance: self.config.appearance,
             sentence: None,
             notice: None,
         }

@@ -1,7 +1,7 @@
 use qingjian_platform::protocol::KeyModifiers;
 use qingjian_platform::{
-    AppsConfig, CandidateRenderer, Config, KeyCombo, LayoutMode, PreeditMode, Scheme, SwitchKey,
-    ThemeMode,
+    Appearance, AppsConfig, CandidateRenderer, Config, KeyCombo, LayoutMode, PreeditMode, Scheme,
+    SwitchKey,
 };
 
 use super::RenderSettings;
@@ -22,8 +22,8 @@ pub struct RouterConfig {
     /// 候选排布（`[general] layout`）。
     pub layout: LayoutMode,
 
-    /// 候选窗口外观（`[general] theme`）。
-    pub theme: ThemeMode,
+    /// 候选窗口外观（`[general] appearance`，兼容旧写法见 [`qingjian_platform::GeneralConfig::appearance`]）。
+    pub appearance: Appearance,
 
     /// 候选窗口 / 状态条由青简渲染器还是 GDI 画（`[general] renderer`）。
     pub renderer: CandidateRenderer,
@@ -103,7 +103,7 @@ impl From<&Config> for RouterConfig {
             cloud_slots: config.predict.slots,
             shift_letter_compose: config.general.shift_letter.compose(),
             layout: config.general.layout,
-            theme: config.general.theme,
+            appearance: config.general.appearance(),
             renderer: config.general.renderer,
             font: config.general.font.trim().to_owned(),
             preedit: config.general.preedit,

@@ -26,7 +26,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
-use qingjian_platform::ThemeMode;
+use qingjian_platform::Appearance;
 use qingjian_render::StatusCell;
 
 use self::cell::CellSpec;
@@ -93,7 +93,7 @@ impl StatusBar {
             ..Default::default()
         })?;
         let dpi = unsafe { GetDpiForSystem() }.max(96);
-        let dark = resolve_dark(ThemeMode::default());
+        let dark = resolve_dark(Appearance::default());
         // NOACTIVATE：显示时不抢应用焦点。
         let hwnd = unsafe {
             CreateWindowExW(
@@ -148,7 +148,7 @@ impl StatusBar {
             .data
             .borrow()
             .as_ref()
-            .map(|view| view.theme)
+            .map(|view| view.appearance)
             .unwrap_or_default();
         let dark = resolve_dark(mode);
         if dpi != self.dpi.get() || dark != self.dark.get() {

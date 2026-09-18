@@ -183,9 +183,10 @@ impl Host {
                     self.settings.set_value("general", "page_keys", *pair);
                 }
             }
-            (Setting::Theme, SettingValue::Index(index)) => {
-                if let Some(theme) = ThemeMode::ALL.get(index) {
-                    self.settings.set_value("general", "theme", theme.key());
+            (Setting::Appearance, SettingValue::Index(index)) => {
+                if let Some(appearance) = Appearance::ALL.get(index) {
+                    self.settings
+                        .set_value("general", "appearance", appearance.key());
                 }
             }
             (Setting::Renderer, SettingValue::Index(index)) => {

@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use qingjian_core::CandidateList;
 
-use crate::{LayoutMode, PreeditMode, ThemeMode};
+use crate::{Appearance, LayoutMode, PreeditMode};
 
 /// Server 告诉 DLL「现在屏幕上该是什么样」：组句的拼音行、候选页、高亮与页码。
 /// 空 [`Frame`]（`preedit` 与 `candidates` 都空）表示没有在组句，DLL 收起候选窗口。
@@ -40,8 +40,10 @@ pub struct Frame {
     /// 候选排布（竖排 / 横排）。DLL 是纯渲染端，布局由 Server 按 `[general] layout` 配置随帧下发。
     pub layout: LayoutMode,
 
-    /// 候选窗口外观（跟随系统 / 浅色 / 深色）。`System` 由 DLL 侧按当前系统主题解析。
-    pub theme: ThemeMode,
+    /// 候选窗口外观（跟随系统 / 浅色 / 深色）。`System` 由绘制端按当前系统深浅色解析。
+    /// 线上字段名仍是 `theme`（2026-09-18 之前的名字），没重启的应用里的旧 DLL 要求有这个字段，改名会让它解不出帧。
+    #[serde(rename = "theme")]
+    pub appearance: Appearance,
 
     /// 整句补全（云联想给的整段拼音的整句结果）：画在 preedit 行右侧，按 Tab 上屏。无则 `None`。
     pub sentence: Option<String>,

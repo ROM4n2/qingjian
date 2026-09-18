@@ -1,3 +1,4 @@
+mod appearance;
 mod apps;
 mod candidate_renderer;
 mod dictionaries;
@@ -13,7 +14,6 @@ mod shift_letter;
 mod shortcut;
 mod status_bar;
 mod switch_key;
-mod theme_mode;
 
 use std::path::Path;
 
@@ -24,6 +24,7 @@ use toml_edit::DocumentMut;
 
 use crate::error::ConfigError;
 
+pub use appearance::Appearance;
 pub use apps::{
     AppsConfig, DEFAULT_ENGLISH_CANDIDATES_OFF, DEFAULT_ENGLISH_CANDIDATES_OFF_LINUX,
     DEFAULT_ENGLISH_CANDIDATES_OFF_MACOS, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS,
@@ -31,7 +32,8 @@ pub use apps::{
 pub use candidate_renderer::CandidateRenderer;
 pub use dictionaries::{DEFAULT_DOMAINS, DictionariesConfig};
 pub use general::{
-    DEFAULT_PAGE_KEYS, GeneralConfig, LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS,
+    DEFAULT_PAGE_KEYS, DEFAULT_THEME, GeneralConfig, LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE,
+    PAGE_KEY_OPTIONS,
 };
 pub use key_combo::KeyCombo;
 pub use layout_mode::LayoutMode;
@@ -44,7 +46,6 @@ pub use shift_letter::ShiftLetter;
 pub use shortcut::ShortcutConfig;
 pub use status_bar::StatusBarConfig;
 pub use switch_key::SwitchKey;
-pub use theme_mode::ThemeMode;
 
 /// 用户配置文件（TOML）。所有平台同一份格式，缺省值全部在各分节的 `Default` 里。
 ///
@@ -194,7 +195,9 @@ page_size = 9
 # 翻页键对：前一个上一页、后一个下一页。可选 "[]" 或 ",."；选 ",." 的话组句中敲逗号句号是翻页而不是上屏加标点
 page_keys = "[]"
 # 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色
-theme = "system"
+appearance = "system"
+# 候选窗口主题（主题 id）；目前只有内置的 qingjian
+theme = "qingjian"
 # 候选窗口排布：vertical 竖排 / horizontal 横排（横排只给高亮候选显示译文）
 layout = "vertical"
 # 候选窗口由谁绘制：qingjian 青简渲染器（各平台一致，主题走它）/ system 系统原生绘制（渲染器有问题时的退路）
@@ -444,6 +447,9 @@ impl Config {
             document[section] = toml_edit::table();
         }
         document[section][key] = toml_edit::value(value);
+        if section == "general" && key == "appearance" {
+            migrate_legacy_theme(&mut document);
+        }
         // 写临时文件再改名：输入法进程随时可能被杀，不能留半个配置文件
         write_file(path, &document.to_string())
     }
@@ -488,6 +494,37 @@ impl Config {
         }
         write_file(path, TEMPLATE)?;
         Ok(true)
+    }
+}
+
+/// 模板里 `appearance` 那一行上方的注释，旧配置迁移时照抄（有测试保证与 [`TEMPLATE`] 一致）。
+const APPEARANCE_COMMENT: &str = "# 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色\n";
+
+/// 模板里 `theme` 那一行上方的注释，同上。
+const THEME_COMMENT: &str = "# 候选窗口主题（主题 id）；目前只有内置的 qingjian\n";
+
+/// 写 `appearance` 时顺手迁移旧写法：2026-09-18 之前外观写在 `theme` 里，还是外观词就改成内置主题 id，
+/// 两行注释换成模板里的，免得手改配置的人看到「外观」注释下面是 `theme`。只迁一次，之后 `theme` 不再是外观词。
+fn migrate_legacy_theme(document: &mut DocumentMut) {
+    let Some(general) = document
+        .get_mut("general")
+        .and_then(toml_edit::Item::as_table_mut)
+    else {
+        return;
+    };
+    let legacy = general
+        .get("theme")
+        .and_then(toml_edit::Item::as_str)
+        .is_some_and(|value| Appearance::from_key(value.trim()).is_some());
+    if !legacy {
+        return;
+    }
+    general["theme"] = toml_edit::value(DEFAULT_THEME);
+    if let Some(mut key) = general.key_mut("theme") {
+        key.leaf_decor_mut().set_prefix(THEME_COMMENT);
+    }
+    if let Some(mut key) = general.key_mut("appearance") {
+        key.leaf_decor_mut().set_prefix(APPEARANCE_COMMENT);
     }
 }
 
@@ -540,7 +577,9 @@ mod tests {
         .unwrap();
         assert_eq!(config.general.page_size(), 5);
         assert_eq!(config.general.page_keys(), ('[', ']'));
-        assert_eq!(config.general.theme, ThemeMode::Dark);
+        // 旧写法：外观写在 theme 里
+        assert_eq!(config.general.appearance(), Appearance::Dark);
+        assert_eq!(config.general.theme_id(), DEFAULT_THEME);
         assert_eq!(config.general.layout, LayoutMode::Horizontal);
         assert_eq!(config.general.preedit, PreeditMode::Window);
         assert_eq!(config.general.learning_language, "en");
@@ -560,15 +599,64 @@ mod tests {
     }
 
     #[test]
+    fn appearance_reads_legacy_theme_key() {
+        let parse = |text: &str| toml::from_str::<Config>(text).unwrap().general;
+        // 旧写法：外观写在 theme 里
+        let legacy = parse("[general]\ntheme = \"light\"\n");
+        assert_eq!(legacy.appearance(), Appearance::Light);
+        assert_eq!(legacy.theme_id(), DEFAULT_THEME);
+        // 新旧都在（设置页写了 appearance，旧的 theme 还留着）：appearance 为准
+        let both = parse("[general]\ntheme = \"dark\"\nappearance = \"system\"\n");
+        assert_eq!(both.appearance(), Appearance::System);
+        assert_eq!(both.theme_id(), DEFAULT_THEME);
+        // 新写法
+        let new = parse("[general]\nappearance = \"dark\"\ntheme = \"sakura\"\n");
+        assert_eq!(new.appearance(), Appearance::Dark);
+        assert_eq!(new.theme_id(), "sakura");
+        // 都没写
+        let empty = parse("[general]\n");
+        assert_eq!(empty.appearance(), Appearance::System);
+        assert_eq!(empty.theme_id(), DEFAULT_THEME);
+    }
+
+    #[test]
+    fn writing_appearance_migrates_legacy_theme_line() {
+        assert!(TEMPLATE.contains(&format!("{APPEARANCE_COMMENT}appearance = ")));
+        assert!(TEMPLATE.contains(&format!("{THEME_COMMENT}theme = ")));
+        let path = std::env::temp_dir().join("qingjian-config-migrate-theme-test.toml");
+        std::fs::write(
+            &path,
+            "[general]\n# 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色\ntheme = \"dark\"\nlayout = \"vertical\"\n",
+        )
+        .unwrap();
+        Config::set_value(&path, "general", "appearance", "light").unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains(&format!("{THEME_COMMENT}theme = \"qingjian\"\nlayout")));
+        assert!(text.contains(&format!("{APPEARANCE_COMMENT}appearance = \"light\"")));
+        assert_eq!(text.matches("候选窗口外观").count(), 1);
+        let general = Config::load(&path).unwrap().general;
+        assert_eq!(general.appearance(), Appearance::Light);
+        assert_eq!(general.theme_id(), DEFAULT_THEME);
+        // 已迁移过（或新写法）的不再动
+        Config::set_value(&path, "general", "appearance", "dark").unwrap();
+        let again = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(
+            again,
+            text.replace("appearance = \"light\"", "appearance = \"dark\"")
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn set_value_writes_strings_and_integers() {
         let path = std::env::temp_dir().join("qingjian-config-set-value-test.toml");
         let _ = std::fs::remove_file(&path);
         Config::set_value(&path, "general", "page_size", 5i64).unwrap();
-        Config::set_value(&path, "general", "theme", "dark").unwrap();
+        Config::set_value(&path, "general", "appearance", "dark").unwrap();
         Config::set_value(&path, "shortcut", "question", "i").unwrap();
         let config = Config::load(&path).unwrap();
         assert_eq!(config.general.page_size, 5);
-        assert_eq!(config.general.theme, ThemeMode::Dark);
+        assert_eq!(config.general.appearance(), Appearance::Dark);
         assert_eq!(config.shortcut.mode.question, 'i');
         let _ = std::fs::remove_file(&path);
     }

@@ -20,7 +20,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
-use qingjian_platform::ThemeMode;
+use qingjian_platform::Appearance;
 use qingjian_platform::protocol::Frame;
 
 pub(crate) use self::render_data::RenderData;
@@ -37,11 +37,11 @@ static CLASS: WindowClass = WindowClass::new();
 const CARET_GAP: i32 = 2;
 
 /// 按外观模式解析深浅；`System` 读系统主题。
-pub(super) fn resolve_dark(mode: ThemeMode) -> bool {
+pub(super) fn resolve_dark(mode: Appearance) -> bool {
     match mode {
-        ThemeMode::Light => false,
-        ThemeMode::Dark => true,
-        ThemeMode::System => system_prefers_dark(),
+        Appearance::Light => false,
+        Appearance::Dark => true,
+        Appearance::System => system_prefers_dark(),
     }
 }
 
@@ -81,7 +81,7 @@ impl CandidateWindow {
             ..Default::default()
         })?;
         let dpi = unsafe { GetDpiForSystem() }.max(96);
-        let dark = resolve_dark(ThemeMode::default());
+        let dark = resolve_dark(Appearance::default());
         let data = RefCell::new(RenderData::empty(Rc::new(Theme::new(dpi, dark))));
         // NOACTIVATE：显示时不抢应用焦点。
         let hwnd = unsafe {
@@ -190,7 +190,7 @@ impl CandidateWindow {
             0 => self.dpi.get(),
             dpi => dpi,
         };
-        let dark = resolve_dark(self.data.borrow().theme_mode);
+        let dark = resolve_dark(self.data.borrow().appearance);
         if dpi != self.dpi.get() || dark != self.dark.get() {
             self.data.borrow_mut().theme = Rc::new(Theme::new(dpi, dark));
             self.dpi.set(dpi);
