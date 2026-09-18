@@ -131,6 +131,35 @@ sakura.qjtheme            分发形态：同样结构的 zip
 - **变量带深浅两值**：深浅色不再是两份主题，而是每个颜色变量有 `light` / `dark` 两个值，跟随系统切换。
 - **`hug` / `fill` / 定值**：尺寸写法照搬 Figma（按内容撑开 / 撑满父框 / 固定）。
 
+## 已实现的格式（schema 1，2026-09-18）
+
+上面的草图是目标；下面是渲染器现在认得的写法，内置主题 `crates/qingjian-render/themes/qingjian/theme.json` 全部用它写成，与原先写死的排版逐像素一致（快照测试）。
+
+顶层：`schema`、`meta`（id / name / author / license）、`variables`（颜色，`"#…"` 或 `{ "light", "dark" }`）、
+`text`（`gamma` 可分深浅；`styles` 是命名的字号行高，节点用 `"font": "名字"` 引用）、`components`、`windows`（`vertical` / `horizontal` 两个根节点）、`status`（状态条）。
+
+| 节点 `type` | 属性 |
+|---|---|
+| `frame` | `direction`（row / column）、`fill`、`radius`、`children`；带 `table: { row_height }` 时排成表格 |
+| `text` | `bind` 或 `text`、`font`、`color` |
+| `icon` | `icon`（cloud / gear）、`size`、`color`；盒子缺省与图标同大，图标垂直居中 |
+| `preedit` | `font`、`typed` / `rest` / `struck` 三种拼音颜色、`caret: { width, color }` |
+| `annotation` | `bind`、`font`、`gloss` / `fresh` / `faint` 三种深浅 |
+| `use` | `component`：引用组件，这里写的盒子属性盖过组件根节点的 |
+| `repeat` | `bind`（`candidates`）、`component`：每项候选实例化一份 |
+
+所有节点都可写：`when`（显示条件）、`margin` / `padding`（一个数或 `[上, 右, 下, 左]`，外边距可写 `"auto"`）、`gap`、`width` / `height` / `min_width`、
+`position: "absolute"` + `inset`、`align_self`（start / end / center / stretch）、`span: "row"`（表格里横跨整行）。长度单位是点。
+
+- **表格**：`repeat` 出来的每份组件是一行，组件根节点的子节点依次是各列，每列取各行最宽，行高固定；末尾自动补一列吃掉剩余宽度，
+  `span: "row"` 的格子（高亮条）因此能横跨整个表格。列间距用各格的外边距写。竖排三列对齐就靠它。
+- **条件**：`when` 是数据字段名，`!` 取反，`a|b` 任一成立。候选项里：`highlighted`、`cloud`、`annotation`、`first`、`last`；
+  整帧：`preedit`、`trailing`、`trailing.cloud`、`page`、`candidates`、`annotations`（任一候选有译文）、`highlighted`、`highlighted.annotation`。
+- **绑定**：文字 `index`、`text`（候选项）、`page`、`trailing.text`；译文 `annotation`（候选项）、`highlighted.annotation`；列表 `candidates`。
+- **容错**：加载时检查颜色变量、文字样式、组件引用，找不到的记警告；渲染时颜色退回透明、样式退回 16/19、组件不画。
+
+还没做：变体覆盖（现在用 `when` 分支代替）、渐变 / 图片填充、描边、效果、动画、主题包与字体随包、用户主题目录。
+
 ## 渲染器要变成什么样
 
 现在的渲染器是「代码里写死的排版 + 一个 Theme 结构」。主题要做到上面那样，渲染器要换成**场景图 + 布局 + 合成**三段：
@@ -224,7 +253,7 @@ theme.json + Frame 数据
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| 1 | 场景图 + Taffy 布局 + 现有能力（纯色、圆角、阴影、文字）；内置主题改写成 JSON | 与现渲染器逐像素一致，首帧耗时不劣化 |
+| 1 | 场景图 + Taffy 布局 + 现有能力（纯色、圆角、阴影、文字）；内置主题改写成 JSON（2026-09-18 完成） | 与现渲染器逐像素一致，首帧耗时不劣化 |
 | 2 | 图片 / 九宫格、渐变、描边、效果、混合模式、绝对层与约束、窗口伸出 | 做出一个二次元静态主题，mac / Windows 并排一致 |
 | 3 | 动画：过渡 + APNG + 关键帧；壳侧时钟驱动 | 高亮滑动流畅，空闲时 CPU 为 0，首帧延迟不变 |
 | 4 | Figma 插件导出 | 设计师从 Figma 出一个主题，装上即用 |

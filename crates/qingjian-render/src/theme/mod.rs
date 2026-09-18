@@ -1,71 +1,151 @@
-//! 主题：字体、颜色、间距。所有可视参数都在这里，单位是点；将来从 TOML 读。
+//! 主题：一份 `theme.json`（图层树 + 组件 + 颜色变量 + 文字样式）加当前外观（浅色 / 深色）。格式见 `docs/design/theme.md`。
 //!
-//! 视觉层级（产品决定）：候选词最深，译文稍浅，词性最浅，序号弱化。数值对齐 macOS 壳的 AppKit 实现。
+//! 内置主题「青简」随 crate 编进来（`themes/qingjian/theme.json`），只解析一次；用户主题用 [`Theme::from_json`]。
+//! 渲染时引用不到的颜色、样式退回缺省值，加载时 [`validate`] 先把这类问题记成警告。
 
+mod error;
+pub(crate) mod file;
 mod font_spec;
-mod palette;
+mod validate;
 
+use std::sync::{Arc, OnceLock};
+
+use crate::color::Color;
+
+pub use error::ThemeError;
 pub use font_spec::FontSpec;
-pub use palette::Palette;
 
-#[derive(Debug, Clone, PartialEq)]
+use file::{ColorRef, SCHEMA, ThemeFile};
+
+/// 内置主题的源文件。
+const BUILTIN: &str = include_str!("../../themes/qingjian/theme.json");
+
+/// 引用不到的文字样式退回这个（点）。
+const FALLBACK_FONT: FontSpec = FontSpec::new(16.0, 19.0);
+
+#[derive(Debug, Clone)]
 pub struct Theme {
-    /// 候选词字体。
-    pub text_font: FontSpec,
+    /// 解析后的主题文件，同一主题的浅色 / 深色共用。
+    file: Arc<ThemeFile>,
 
-    /// 译文与词性字体。
-    pub annotation_font: FontSpec,
-
-    /// 序号字体。
-    pub index_font: FontSpec,
-
-    /// 配色。
-    pub colors: Palette,
-
-    /// 窗口内边距。
-    pub padding: f32,
-
-    /// 行内上下留白。
-    pub row_padding: f32,
-
-    /// 序号与候选词、候选词与译文之间的间距。
-    pub column_gap: f32,
-
-    /// 窗口与高亮条的圆角。
-    pub corner_radius: f32,
-
-    /// 最多显示几行。
-    pub max_rows: usize,
-
-    /// 文字抗锯齿覆盖率的 gamma：小于 1 笔画显粗。CoreText 对文字有一层类似的加深，深色背景上尤其明显，
-    /// 线性混合出来的字会偏细；这个值按真机截图并排调。
-    pub text_gamma: f32,
+    /// 用深色那一套值。
+    dark: bool,
 }
 
 impl Theme {
-    /// 浅色，对齐 macOS 系统外观。
+    /// 内置主题，浅色。
     pub fn light() -> Self {
-        Self::with_palette(Palette::light(), 0.85)
+        Self::builtin(false)
     }
 
-    /// 深色，对齐 macOS 系统外观。
+    /// 内置主题，深色。
     pub fn dark() -> Self {
-        Self::with_palette(Palette::dark(), 0.75)
+        Self::builtin(true)
     }
 
-    fn with_palette(colors: Palette, text_gamma: f32) -> Self {
-        Self {
-            // 行高取 AppKit 系统字体在这几个字号下 NSAttributedString.size() 的高度
-            text_font: FontSpec::new(16.0, 19.0),
-            annotation_font: FontSpec::new(12.0, 15.0),
-            index_font: FontSpec::new(11.0, 14.0),
-            colors,
-            padding: 8.0,
-            row_padding: 4.0,
-            column_gap: 8.0,
-            corner_radius: 8.0,
-            max_rows: 9,
-            text_gamma,
+    /// 从 `theme.json` 的内容读主题。引用不到的名字只记警告。
+    pub fn from_json(json: &str, dark: bool) -> Result<Self, ThemeError> {
+        let file: ThemeFile = serde_json::from_str(json)?;
+        if file.schema > SCHEMA {
+            tracing::warn!(
+                id = file.meta.id,
+                schema = file.schema,
+                supported = SCHEMA,
+                "主题格式比当前版本新，只按认得的部分画"
+            );
         }
+        for problem in validate::problems(&file) {
+            tracing::warn!(id = file.meta.id, "主题引用有误：{problem}");
+        }
+        Ok(Self {
+            file: Arc::new(file),
+            dark,
+        })
+    }
+
+    /// 同一主题换外观。
+    pub fn with_dark(&self, dark: bool) -> Self {
+        Self {
+            file: Arc::clone(&self.file),
+            dark,
+        }
+    }
+
+    /// 主题 id。
+    pub fn id(&self) -> &str {
+        &self.file.meta.id
+    }
+
+    /// 显示名。
+    pub fn name(&self) -> &str {
+        &self.file.meta.name
+    }
+
+    pub fn author(&self) -> &str {
+        &self.file.meta.author
+    }
+
+    /// SPDX 许可证标识。
+    pub fn license(&self) -> &str {
+        &self.file.meta.license
+    }
+
+    fn builtin(dark: bool) -> Self {
+        static FILE: OnceLock<Theme> = OnceLock::new();
+        FILE.get_or_init(|| {
+            Self::from_json(BUILTIN, false).expect("内置主题 themes/qingjian/theme.json 解析失败")
+        })
+        .with_dark(dark)
+    }
+
+    pub(crate) fn file(&self) -> &ThemeFile {
+        &self.file
+    }
+
+    /// 颜色引用按当前外观取值；变量不存在时透明。
+    pub(crate) fn color(&self, color: &ColorRef) -> Color {
+        match color {
+            ColorRef::Literal(color) => *color,
+            ColorRef::Variable(name) => self
+                .file
+                .variables
+                .get(name)
+                .map_or(Color::rgba(0, 0, 0, 0), |value| value.get(self.dark).0),
+        }
+    }
+
+    /// 命名文字样式（点）。
+    pub(crate) fn font(&self, name: &str) -> FontSpec {
+        self.file
+            .text
+            .styles
+            .get(name)
+            .copied()
+            .unwrap_or(FALLBACK_FONT)
+    }
+
+    /// 当前外观下的文字覆盖率 gamma。
+    pub(crate) fn text_gamma(&self) -> f32 {
+        self.file.text.gamma.get(self.dark)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builtin_theme_parses_without_problems() {
+        let theme = Theme::light();
+        assert_eq!(theme.id(), "qingjian");
+        assert!(validate::problems(theme.file()).is_empty());
+        assert_eq!(
+            theme.color(&ColorRef::Variable("accent".to_owned())),
+            Color::rgba(176, 206, 125, 127)
+        );
+        assert_eq!(
+            Theme::dark().color(&ColorRef::Variable("accent".to_owned())),
+            Color::rgb(36, 76, 36)
+        );
     }
 }

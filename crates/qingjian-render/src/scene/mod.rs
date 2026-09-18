@@ -10,7 +10,7 @@ mod visual;
 use std::collections::HashMap;
 
 use taffy::prelude::TaffyMaxContent;
-use taffy::{AvailableSpace, NodeId, Size, Style, TaffyTree};
+use taffy::{AlignItems, AvailableSpace, GridPlacement, Line, NodeId, Size, Style, TaffyTree};
 
 use crate::error::RenderError;
 use crate::text::{TextPainter, TextSize};
@@ -40,6 +40,25 @@ impl Scene {
         let node = self.tree.new_with_children(style, children)?;
         self.tree.set_node_context(node, Some(visual))?;
         Ok(node)
+    }
+
+    /// 把表格里的格子放到指定的行、列；`stretch` 时撑满所占的格子（横跨整行的高亮条）。
+    pub(crate) fn place(
+        &mut self,
+        node: NodeId,
+        row: Line<GridPlacement>,
+        column: Line<GridPlacement>,
+        stretch: bool,
+    ) -> Result<(), RenderError> {
+        let mut style = self.tree.style(node)?.clone();
+        style.grid_row = row;
+        style.grid_column = column;
+        if stretch {
+            style.justify_self = Some(AlignItems::STRETCH);
+            style.align_self = Some(AlignItems::STRETCH);
+        }
+        self.tree.set_style(node, style)?;
+        Ok(())
     }
 
     /// 以 `root` 为根按内容撑开算布局，返回根节点的宽高。
