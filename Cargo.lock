@@ -2691,6 +2691,7 @@ version = "0.1.1"
 dependencies = [
  "clap",
  "cosmic-text",
+ "taffy",
  "thiserror 2.0.20",
  "tiny-skia",
  "tracing",
@@ -3469,6 +3470,18 @@ dependencies = [
  "libc",
  "thiserror 1.0.69",
  "walkdir",
+]
+
+[[package]]
+name = "taffy"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "639627c87f43b9181c811f40a6296409e093a17bc761214cba3c15df74f86b99"
+dependencies = [
+ "arrayvec",
+ "serde",
+ "slotmap",
+ "smallvec",
 ]
 
 [[package]]

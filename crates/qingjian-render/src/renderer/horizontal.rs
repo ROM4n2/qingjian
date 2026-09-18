@@ -1,139 +1,84 @@
-//! 横排：候选排成一行，高亮那个下面单独一行译文，页码在行尾。
+//! 横排：候选排成一行（高亮条向两侧多出一点），页码靠行尾，高亮那个的译文在下面单独一行。
 
-use super::item::Item;
-use super::{HIGHLIGHT_INSET, INDEX_GAP, Metrics, Renderer};
-use crate::canvas::Canvas;
-use crate::frame::{Frame, Row};
+use taffy::{AlignSelf, Dimension, LengthPercentageAuto, NodeId, Size, Style};
+
+use super::metrics::Metrics;
+use super::{HIGHLIGHT_INSET, INDEX_GAP, Renderer, nodes, styles};
+use crate::error::RenderError;
+use crate::frame::Frame;
+use crate::scene::{Scene, Visual};
 
 impl Renderer {
-    pub(super) fn horizontal_size(&mut self, frame: &Frame, m: &Metrics) -> (f32, f32) {
-        if frame.rows.is_empty() {
-            return (0.0, 0.0);
-        }
-        let (items, row_height) = self.items(&frame.rows, m);
-        let mut width: f32 = items
-            .iter()
-            .map(|item| item.index_width + m.px(INDEX_GAP) + item.text_width)
-            .sum::<f32>()
-            + m.column_gap() * items.len().saturating_sub(1) as f32
-            + m.px(HIGHLIGHT_INSET) * 2.0;
-        if let Some(footer) = frame.footer.as_deref() {
-            width += m.column_gap() + self.measure(footer, &m.index_style()).width;
-        }
-        let mut height = row_height;
-        if let Some((annotation_width, annotation_height)) =
-            self.highlighted_annotation_size(frame, m)
-        {
-            width = width.max(annotation_width);
-            height += annotation_height;
-        }
-        (width, height)
-    }
-
-    /// 横排时高亮候选的译文行尺寸；高亮候选没有译文时为 `None`。
-    fn highlighted_annotation_size(&mut self, frame: &Frame, m: &Metrics) -> Option<(f32, f32)> {
-        let row = frame.rows.get(frame.highlighted?)?;
-        if row.annotation.is_empty() {
-            return None;
-        }
-        let style = m.annotation_style(m.theme.colors.gloss);
-        let width: f32 = row
-            .annotation
-            .iter()
-            .map(|(s, _)| self.measure(s, &style).width)
-            .sum();
-        Some((width, style.line_height + m.row_padding()))
-    }
-
-    /// 横排各项的尺寸与统一行高。
-    fn items(&mut self, rows: &[Row], m: &Metrics) -> (Vec<Item>, f32) {
-        let mut row_height: f32 = 0.0;
-        let text_style = m.text_style();
-        let index_style = m.index_style();
-        let items = rows
-            .iter()
-            .map(|row| {
-                let index = self.measure(&row.index, &index_style);
-                let mut text = self.measure(&row.text, &text_style);
-                if row.cloud {
-                    text.width += m.cloud_width();
-                }
-                row_height = row_height.max(text.height + m.row_padding() * 2.0);
-                Item {
-                    index_width: index.width,
-                    text_width: text.width,
-                }
-            })
-            .collect();
-        (items, row_height)
-    }
-
-    pub(super) fn draw_horizontal(
+    pub(super) fn horizontal_body(
         &mut self,
-        canvas: &mut Canvas,
+        scene: &mut Scene,
         frame: &Frame,
         m: &Metrics,
-        left: f32,
-        y: f32,
-        content_width: f32,
-    ) {
+    ) -> Result<Vec<NodeId>, RenderError> {
         if frame.rows.is_empty() {
-            return;
+            return Ok(Vec::new());
         }
-        // 量尺寸时已整形过一遍，这里再整形一遍；等渲染器定型再把结果从 render 传下来。
-        let (items, row_height) = self.items(&frame.rows, m);
-        let top = y + m.row_padding();
-        let text_height = m.px(m.theme.text_font.line_height);
+        let row_padding = m.row_padding();
+        let small = row_padding + m.small_offset();
         let inset = m.px(HIGHLIGHT_INSET);
-        let mut x = left + m.padding() + inset;
-        for (i, (row, item)) in frame.rows.iter().zip(&items).enumerate() {
-            let item_width = item.index_width + m.px(INDEX_GAP) + item.text_width;
+        let last = frame.rows.len() - 1;
+        let mut items = Vec::with_capacity(frame.rows.len() + 1);
+        for (i, row) in frame.rows.iter().enumerate() {
+            let mut children = Vec::with_capacity(3);
             if Some(i) == frame.highlighted {
-                self.fill_highlight(
-                    canvas,
-                    m,
-                    x - inset,
-                    y,
-                    item_width + inset * 2.0,
-                    row_height,
-                );
+                // 高亮条比这一项左右各宽出 inset，压进项间距里
+                let style = styles::absolute(Some(-inset), Some(-inset), Some(0.0), Some(0.0));
+                children.push(scene.node(
+                    style,
+                    Visual::Fill {
+                        color: m.theme.colors.highlight,
+                        radius: m.corner_radius() / 2.0,
+                    },
+                    &[],
+                )?);
             }
-            self.draw_text(
-                canvas,
+            children.push(nodes::text(
+                scene,
                 &row.index,
-                &m.index_style(),
-                x,
-                top + m.small_offset(text_height),
-            );
-            self.draw_word(
-                canvas,
-                m,
-                row,
-                x + item.index_width + m.px(INDEX_GAP),
-                top,
-                text_height,
-            );
-            x += item_width + m.column_gap();
+                m.index_style(),
+                styles::margin(small, m.px(INDEX_GAP), 0.0, 0.0),
+            )?);
+            children.push(nodes::word(scene, m, row, styles::margin_top(row_padding))?);
+            let mut style = styles::row();
+            style.size.height = Dimension::length(m.row_height());
+            // 最后一项右侧留出高亮条多出的那块
+            if i == last {
+                style.margin = styles::margin(0.0, inset, 0.0, 0.0);
+            }
+            items.push(scene.node(style, Visual::Group, &children)?);
         }
         if let Some(footer) = frame.footer.as_deref() {
-            let style = m.index_style();
-            let size = self.measure(footer, &style);
-            self.draw_text(
-                canvas,
-                footer,
-                &style,
-                left + content_width - m.padding() - size.width,
-                top + m.small_offset(text_height),
-            );
+            let mut margin = styles::margin_top(small);
+            margin.left = LengthPercentageAuto::auto();
+            items.push(nodes::text(scene, footer, m.index_style(), margin)?);
         }
-        // 高亮候选的译文
-        if let Some(row) = frame.highlighted.and_then(|i| frame.rows.get(i)) {
-            let mut x = left + m.padding() + inset;
-            let annotation_top = y + row_height + m.row_padding() / 2.0;
-            for (segment, tone) in &row.annotation {
-                let style = m.annotation_style(m.tone_color(*tone));
-                x += self.draw_text(canvas, segment, &style, x, annotation_top);
-            }
+        let style = Style {
+            padding: styles::padding(0.0, 0.0, 0.0, inset),
+            gap: Size {
+                width: taffy::LengthPercentage::length(m.column_gap()),
+                height: taffy::LengthPercentage::length(0.0),
+            },
+            align_self: Some(AlignSelf::STRETCH),
+            ..styles::row()
+        };
+        let mut body = vec![scene.node(style, Visual::Group, &items)?];
+
+        // 高亮候选的译文：从候选行第一项的位置开始；量宽时不算 inset（左加右减）
+        if let Some(row) = frame.highlighted.and_then(|i| frame.rows.get(i))
+            && !row.annotation.is_empty()
+        {
+            let style = Style {
+                margin: styles::margin(row_padding / 2.0, -inset, 0.0, inset),
+                padding: styles::padding(0.0, 0.0, row_padding / 2.0, 0.0),
+                ..styles::row()
+            };
+            body.push(nodes::annotation(scene, m, &row.annotation, style)?);
         }
+        Ok(body)
     }
 }

@@ -7,10 +7,13 @@ mod rendered;
 pub use cell::StatusCell;
 pub use rendered::RenderedStatus;
 
-use super::{Metrics, Rendered, Renderer};
+use taffy::{AlignItems, Dimension, Display, JustifyContent, NodeId, Style};
+
+use super::metrics::Metrics;
+use super::{Rendered, Renderer, styles};
 use crate::canvas::Canvas;
 use crate::error::RenderError;
-use crate::gear::draw_gear;
+use crate::scene::{Icon, Scene, Visual};
 use crate::shadow::Shadow;
 use crate::theme::Theme;
 
@@ -31,7 +34,6 @@ impl Renderer {
     ) -> Result<RenderedStatus, RenderError> {
         let metrics = Metrics { theme, scale };
         let padding = metrics.padding();
-        let line_height = metrics.px(theme.text_font.line_height);
         let mut widths: Vec<f32> = cells
             .iter()
             .map(|cell| self.status_cell_width(cell, &metrics) + padding * 2.0)
@@ -42,44 +44,48 @@ impl Renderer {
         if let Some(last) = widths.last_mut() {
             *last += content_width - total;
         }
-        let content_height = (line_height + padding).ceil();
+        let content_height = (metrics.text_line_height() + padding).ceil();
+
+        let mut scene = Scene::new();
+        let mut children = Vec::with_capacity(cells.len());
+        for (i, (cell, width)) in cells.iter().zip(&widths).enumerate() {
+            children.push(self.status_cell(
+                &mut scene,
+                cell,
+                &metrics,
+                i > 0,
+                *width,
+                content_height,
+            )?);
+        }
+        let root = scene.node(
+            styles::row(),
+            Visual::Fill {
+                color: theme.colors.background,
+                radius: metrics.corner_radius(),
+            },
+            &children,
+        )?;
+        scene.layout(root, &mut self.text)?;
+
         let margin = shadow.map_or(0.0, |s| metrics.px(s.margin()));
         let width = (content_width + margin * 2.0).ceil();
         let height = (content_height + margin * 2.0).ceil();
         let mut canvas = Canvas::new(width as u32, height as u32)?;
-        let radius = metrics.corner_radius();
         if let Some(shadow) = shadow
             && let Some(content) =
                 tiny_skia::Rect::from_xywh(margin, margin, content_width, content_height)
         {
-            shadow.paint(&mut canvas, content, radius, scale);
+            shadow.paint(&mut canvas, content, metrics.corner_radius(), scale);
         }
-        canvas.fill_round_rect(
-            margin,
-            margin,
-            content_width,
-            content_height,
-            radius,
-            theme.colors.background,
-        );
-        let inset = padding / 2.0;
-        let mut x = margin;
-        let mut edges = Vec::with_capacity(cells.len());
-        for (i, (cell, width)) in cells.iter().zip(&widths).enumerate() {
-            if i > 0 {
-                canvas.fill_rect(
-                    x,
-                    margin + inset,
-                    metrics.px(SEPARATOR_WIDTH),
-                    content_height - inset * 2.0,
-                    theme.colors.pos,
-                );
-            }
-            let slot = (x, margin, *width, content_height);
-            self.draw_status_cell(&mut canvas, cell, &metrics, slot);
-            x += width;
-            edges.push(x - margin);
-        }
+        scene.paint(root, &mut canvas, &mut self.text, margin, margin)?;
+        let edges = widths
+            .iter()
+            .scan(0.0, |x, width| {
+                *x += width;
+                Some(*x)
+            })
+            .collect();
         Ok(RenderedStatus {
             rendered: Rendered {
                 pixmap: canvas.into_pixmap(),
@@ -96,44 +102,65 @@ impl Renderer {
     /// 一格内容的宽度（像素，不含内边距）。
     fn status_cell_width(&mut self, cell: &StatusCell, m: &Metrics) -> f32 {
         match cell {
-            StatusCell::Text { text, .. } => self.measure(text, &m.text_style()).width,
+            StatusCell::Text { text, .. } => self.text.measure(text, &m.text_style()).width,
             StatusCell::Gear => m.px(GEAR_SIZE),
         }
     }
 
-    /// 在 `slot = (x, y, 宽, 高)` 的格子里居中画一格。
-    fn draw_status_cell(
+    /// 一格：内容在格里居中；不是第一格时左边画一条上下各缩进半个内边距的细线。
+    fn status_cell(
         &mut self,
-        canvas: &mut Canvas,
+        scene: &mut Scene,
         cell: &StatusCell,
         m: &Metrics,
-        slot: (f32, f32, f32, f32),
-    ) {
-        let (x, y, width, height) = slot;
-        match cell {
+        separator: bool,
+        width: f32,
+        height: f32,
+    ) -> Result<NodeId, RenderError> {
+        let mut children = Vec::with_capacity(2);
+        if separator {
+            let inset = m.padding() / 2.0;
+            let mut style = styles::absolute(Some(0.0), None, Some(inset), Some(inset));
+            style.size.width = Dimension::length(m.px(SEPARATOR_WIDTH));
+            children.push(scene.node(
+                style,
+                Visual::Fill {
+                    color: m.theme.colors.pos,
+                    radius: 0.0,
+                },
+                &[],
+            )?);
+        }
+        let content = match cell {
             StatusCell::Text { text, emphasized } => {
                 let color = if *emphasized {
                     m.theme.colors.cloud
                 } else {
                     m.theme.colors.gloss
                 };
-                let style = m.style(m.theme.text_font, color);
-                let size = self.measure(text, &style);
-                let left = x + (width - size.width) / 2.0;
-                let top = y + (height - size.height) / 2.0;
-                self.draw_text(canvas, text, &style, left, top);
+                Visual::Text {
+                    text: text.clone(),
+                    style: m.style(m.theme.text_font, color),
+                }
             }
-            StatusCell::Gear => {
-                let size = m.px(GEAR_SIZE);
-                draw_gear(
-                    canvas,
-                    x + (width - size) / 2.0,
-                    y + (height - size) / 2.0,
-                    size,
-                    m.theme.colors.gloss,
-                );
-            }
-        }
+            StatusCell::Gear => Visual::Icon {
+                icon: Icon::Gear,
+                size: m.px(GEAR_SIZE),
+                color: m.theme.colors.gloss,
+            },
+        };
+        let content_style = match cell {
+            StatusCell::Text { .. } => Style::default(),
+            StatusCell::Gear => styles::fixed(m.px(GEAR_SIZE), m.px(GEAR_SIZE)),
+        };
+        children.push(scene.node(content_style, content, &[])?);
+        let style = Style {
+            display: Display::Flex,
+            justify_content: Some(JustifyContent::CENTER),
+            align_items: Some(AlignItems::CENTER),
+            ..styles::fixed(width, height)
+        };
+        scene.node(style, Visual::Group, &children)
     }
 }
 
