@@ -7,7 +7,7 @@ use super::caret::CaretSpec;
 use super::direction::Direction;
 use super::table::TableSpec;
 use crate::scene::Icon;
-use crate::theme::file::ColorRef;
+use crate::theme::file::ColorSpec;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -17,7 +17,7 @@ pub(crate) enum NodeKind {
         #[serde(default)]
         direction: Direction,
 
-        fill: Option<ColorRef>,
+        fill: Option<ColorSpec>,
 
         #[serde(default)]
         radius: f32,
@@ -37,7 +37,7 @@ pub(crate) enum NodeKind {
         /// `text.styles` 里的样式名。
         font: String,
 
-        color: ColorRef,
+        color: ColorSpec,
     },
 
     /// 矢量图标，在盒子里垂直居中。
@@ -46,7 +46,7 @@ pub(crate) enum NodeKind {
 
         size: f32,
 
-        color: ColorRef,
+        color: ColorSpec,
     },
 
     /// 拼音行：各段按状态着色，光标画在光标位置。
@@ -54,13 +54,13 @@ pub(crate) enum NodeKind {
         font: String,
 
         /// 已敲的拼音。
-        typed: ColorRef,
+        typed: ColorSpec,
 
         /// 光标后未确认的拼音。
-        rest: ColorRef,
+        rest: ColorSpec,
 
         /// 纠错改掉的字母，带删除线。
-        struck: ColorRef,
+        struck: ColorSpec,
 
         caret: CaretSpec,
     },
@@ -72,13 +72,13 @@ pub(crate) enum NodeKind {
         font: String,
 
         /// 译文。
-        gloss: ColorRef,
+        gloss: ColorSpec,
 
         /// 生词的译文。
-        fresh: ColorRef,
+        fresh: ColorSpec,
 
         /// 词性与分隔符。
-        faint: ColorRef,
+        faint: ColorSpec,
     },
 
     /// 引用一个组件；这里写的盒子属性盖过组件根节点的。

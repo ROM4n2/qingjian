@@ -1,6 +1,7 @@
-//! 「候选窗口」页：外观、排布、渲染引擎、字体、拼音显示位置、悬浮状态条。
+//! 「候选窗口」页：外观、主题、排布、渲染引擎、字体、拼音显示位置、悬浮状态条。
 
 use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode, PreeditMode};
+use qingjian_render::Theme;
 use windows_reactor::*;
 
 use crate::panel::controls::{field, page};
@@ -42,6 +43,19 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 Appearance::label,
                 context.callback(Message::Appearance),
             ),
+        ),
+        field(
+            "主题",
+            "只对青简渲染器生效；每个主题都有浅色与深色两套，按上面的外观切换。",
+            ComboBox::new()
+                .items_source(Theme::builtins().iter().map(Theme::name))
+                .selected_index(
+                    Theme::builtins()
+                        .iter()
+                        .position(|theme| theme.id() == g.theme_id())
+                        .unwrap_or(0),
+                )
+                .on_selection_changed(context.callback(Message::Theme)),
         ),
         field(
             "排布",

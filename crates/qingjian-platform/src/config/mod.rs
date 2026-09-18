@@ -196,7 +196,7 @@ page_size = 9
 page_keys = "[]"
 # 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色
 appearance = "system"
-# 候选窗口主题（主题 id）；目前只有内置的 qingjian
+# 候选窗口主题（主题 id）：qingjian 青简绿 / system-blue 系统蓝 / wechat 微信绿。只对青简渲染器生效
 theme = "qingjian"
 # 候选窗口排布：vertical 竖排 / horizontal 横排（横排只给高亮候选显示译文）
 layout = "vertical"
@@ -446,9 +446,13 @@ impl Config {
         if !document.get(section).is_some_and(|item| item.is_table()) {
             document[section] = toml_edit::table();
         }
+        // 旧写法（外观写在 theme 里）要在改键之前认出来：写的正是 theme 时，新值会把它盖掉
+        let legacy = (section == "general" && matches!(key, "appearance" | "theme"))
+            .then(|| legacy_appearance(&document))
+            .flatten();
         document[section][key] = toml_edit::value(value);
-        if section == "general" && key == "appearance" {
-            migrate_legacy_theme(&mut document);
+        if let Some(old) = legacy {
+            migrate_legacy_theme(&mut document, old);
         }
         // 写临时文件再改名：输入法进程随时可能被杀，不能留半个配置文件
         write_file(path, &document.to_string())
@@ -501,25 +505,34 @@ impl Config {
 const APPEARANCE_COMMENT: &str = "# 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色\n";
 
 /// 模板里 `theme` 那一行上方的注释，同上。
-const THEME_COMMENT: &str = "# 候选窗口主题（主题 id）；目前只有内置的 qingjian\n";
+const THEME_COMMENT: &str = "# 候选窗口主题（主题 id）：qingjian 青简绿 / system-blue 系统蓝 / wechat 微信绿。只对青简渲染器生效\n";
 
-/// 写 `appearance` 时顺手迁移旧写法：2026-09-18 之前外观写在 `theme` 里，还是外观词就改成内置主题 id，
-/// 两行注释换成模板里的，免得手改配置的人看到「外观」注释下面是 `theme`。只迁一次，之后 `theme` 不再是外观词。
-fn migrate_legacy_theme(document: &mut DocumentMut) {
+/// 旧写法里 `theme` 写的外观；新写法（或没写）为 `None`。
+fn legacy_appearance(document: &DocumentMut) -> Option<Appearance> {
+    let value = document.get("general")?.get("theme")?.as_str()?;
+    Appearance::from_key(value.trim())
+}
+
+/// 写 `appearance` 或 `theme` 时顺手迁移旧写法（2026-09-18 之前外观写在 `theme` 里，旧值是 `old`）：
+/// 外观补写到 `appearance`（写的是 `theme` 时它还没有，不补就丢了），`theme` 还是外观词就换成内置主题，
+/// 两行注释换成模板里的，免得手改配置的人看到「外观」注释下面是 `theme`。迁过之后 `theme` 不再是外观词，不会再迁。
+fn migrate_legacy_theme(document: &mut DocumentMut, old: Appearance) {
     let Some(general) = document
         .get_mut("general")
         .and_then(toml_edit::Item::as_table_mut)
     else {
         return;
     };
-    let legacy = general
+    if !general.contains_key("appearance") {
+        general["appearance"] = toml_edit::value(old.key());
+    }
+    let still_legacy = general
         .get("theme")
         .and_then(toml_edit::Item::as_str)
         .is_some_and(|value| Appearance::from_key(value.trim()).is_some());
-    if !legacy {
-        return;
+    if still_legacy {
+        general["theme"] = toml_edit::value(DEFAULT_THEME);
     }
-    general["theme"] = toml_edit::value(DEFAULT_THEME);
     if let Some(mut key) = general.key_mut("theme") {
         key.leaf_decor_mut().set_prefix(THEME_COMMENT);
     }

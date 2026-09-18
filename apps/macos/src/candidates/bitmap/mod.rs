@@ -38,6 +38,9 @@ pub struct BitmapPainter {
 
     /// 最近一帧的尺寸（点）。
     size: NSSize,
+
+    /// 主题（浅色那一份，画的时候按外观取深浅）。
+    theme: Theme,
 }
 
 impl BitmapPainter {
@@ -74,7 +77,20 @@ impl BitmapPainter {
             dark: false,
             scale: 2.0,
             size: NSSize::ZERO,
+            theme: Theme::light(),
         })
+    }
+
+    /// 换主题（`[general] theme` 的 id）；没有这个内置主题就用缺省的。用最近一帧当场重画。
+    pub fn set_theme(&mut self, id: &str) {
+        if self.theme.id() == id {
+            return;
+        }
+        self.theme = Theme::builtin(id, false).unwrap_or_else(|| {
+            tracing::warn!(id, "没有这个主题，用缺省主题");
+            Theme::light()
+        });
+        self.repaint();
     }
 
     /// 记下新一帧并画好，返回窗口该有的尺寸（点）。
@@ -121,11 +137,7 @@ impl BitmapPainter {
     }
 
     fn repaint(&mut self) {
-        let theme = if self.dark {
-            Theme::dark()
-        } else {
-            Theme::light()
-        };
+        let theme = self.theme.with_dark(self.dark);
         let started = std::time::Instant::now();
         let rendered =
             match self

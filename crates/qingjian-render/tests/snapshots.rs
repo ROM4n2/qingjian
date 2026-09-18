@@ -88,7 +88,7 @@ fn renderer_matches_snapshots() {
     );
 }
 
-/// 全部样例：候选窗浅 / 深色 × 各帧（2 倍、带阴影），1 倍屏不带阴影一张，状态条浅 / 深色。
+/// 全部样例：候选窗浅 / 深色 × 各帧（2 倍、带阴影），其余内置主题各几张，1 倍屏不带阴影一张，状态条浅 / 深色。
 fn render_all(mut renderer: Renderer) -> Vec<Shot> {
     let shadow = Shadow::mac_panel();
     let mut shots = Vec::new();
@@ -107,6 +107,21 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             status.rendered,
             Some(&status.cell_edges),
         ));
+    }
+    // 其余内置主题：竖排与横排云端各一张，看高亮换色
+    for id in ["system-blue", "wechat"] {
+        for (theme_name, dark) in [("light", false), ("dark", true)] {
+            let theme = Theme::builtin(id, dark).unwrap();
+            for (scene, frame, layout) in [
+                ("nihao-vertical", scenes::nihao(), Layout::Vertical),
+                ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
+            ] {
+                let rendered = renderer
+                    .render(&frame, layout, &theme, 2.0, Some(&shadow))
+                    .unwrap();
+                shots.push(shot(format!("{id}-{scene}-{theme_name}"), rendered, None));
+            }
+        }
     }
     let rendered = renderer
         .render(

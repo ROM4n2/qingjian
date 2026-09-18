@@ -32,6 +32,9 @@ pub enum Setting {
     /// `[general] appearance`，弹出菜单。
     Appearance,
 
+    /// `[general] theme`，弹出菜单，选项是内置主题。
+    Theme,
+
     /// `[general] renderer`，弹出菜单：青简渲染器 / 系统绘制。
     Renderer,
 
@@ -200,6 +203,7 @@ impl Setting {
             Self::EnglishCandidates => 14,
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
+            Self::Theme => 51,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
@@ -260,6 +264,7 @@ impl Setting {
             14 => Self::EnglishCandidates,
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
+            51 => Self::Theme,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
@@ -318,6 +323,7 @@ mod tests {
             Setting::PageSize,
             Setting::PageKeys,
             Setting::Appearance,
+            Setting::Theme,
             Setting::Renderer,
             Setting::Font,
             Setting::ExpressionKey,

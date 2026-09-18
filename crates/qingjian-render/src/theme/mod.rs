@@ -1,9 +1,11 @@
 //! 主题：一份 `theme.json`（图层树 + 组件 + 颜色变量 + 文字样式）加当前外观（浅色 / 深色）。格式见 `docs/design/theme.md`。
 //!
-//! 内置主题「青简」随 crate 编进来（`themes/qingjian/theme.json`），只解析一次；用户主题用 [`Theme::from_json`]。
+//! 内置主题随 crate 编进来（`themes/<id>/theme.json`），第一次用到时解析一次；用户主题用 [`Theme::from_json`]。
+//! 主题可以 `"extends": "<内置主题 id>"`，只写要改的部分（见 `extends.rs`）。
 //! 渲染时引用不到的颜色、样式退回缺省值，加载时 [`validate`] 先把这类问题记成警告。
 
 mod error;
+mod extends;
 pub(crate) mod file;
 mod font_spec;
 mod validate;
@@ -17,8 +19,15 @@ pub use font_spec::FontSpec;
 
 use file::{ColorRef, SCHEMA, ThemeFile};
 
-/// 内置主题的源文件。
-const BUILTIN: &str = include_str!("../../themes/qingjian/theme.json");
+/// 内置主题：id 与源文件，按设置界面列出的顺序；第一个是缺省主题。
+const BUILTINS: [(&str, &str); 3] = [
+    ("qingjian", include_str!("../../themes/qingjian/theme.json")),
+    (
+        "system-blue",
+        include_str!("../../themes/system-blue/theme.json"),
+    ),
+    ("wechat", include_str!("../../themes/wechat/theme.json")),
+];
 
 /// 引用不到的文字样式退回这个（点）。
 const FALLBACK_FONT: FontSpec = FontSpec::new(16.0, 19.0);
@@ -33,19 +42,33 @@ pub struct Theme {
 }
 
 impl Theme {
-    /// 内置主题，浅色。
+    /// 缺省内置主题，浅色。
     pub fn light() -> Self {
-        Self::builtin(false)
+        Self::default_builtin().clone()
     }
 
-    /// 内置主题，深色。
+    /// 缺省内置主题，深色。
     pub fn dark() -> Self {
-        Self::builtin(true)
+        Self::default_builtin().with_dark(true)
     }
 
-    /// 从 `theme.json` 的内容读主题。引用不到的名字只记警告。
+    /// 按 id 找内置主题；没有这个 id 时为 `None`。
+    pub fn builtin(id: &str, dark: bool) -> Option<Self> {
+        builtins()
+            .iter()
+            .find(|theme| theme.id() == id)
+            .map(|theme| theme.with_dark(dark))
+    }
+
+    /// 全部内置主题（浅色），按设置界面列出的顺序。
+    pub fn builtins() -> &'static [Theme] {
+        builtins()
+    }
+
+    /// 从 `theme.json` 的内容读主题。可以 `extends` 内置主题；引用不到的名字只记警告。
     pub fn from_json(json: &str, dark: bool) -> Result<Self, ThemeError> {
-        let file: ThemeFile = serde_json::from_str(json)?;
+        let value = extends::resolve(json, &builtin_source)?;
+        let file: ThemeFile = serde_json::from_value(value)?;
         if file.schema > SCHEMA {
             tracing::warn!(
                 id = file.meta.id,
@@ -90,12 +113,8 @@ impl Theme {
         &self.file.meta.license
     }
 
-    fn builtin(dark: bool) -> Self {
-        static FILE: OnceLock<Theme> = OnceLock::new();
-        FILE.get_or_init(|| {
-            Self::from_json(BUILTIN, false).expect("内置主题 themes/qingjian/theme.json 解析失败")
-        })
-        .with_dark(dark)
+    fn default_builtin() -> &'static Theme {
+        &builtins()[0]
     }
 
     pub(crate) fn file(&self) -> &ThemeFile {
@@ -130,15 +149,49 @@ impl Theme {
     }
 }
 
+/// 解析好的内置主题，第一次用到时解析。内置主题是随包的，解析失败是 bug。
+fn builtins() -> &'static [Theme] {
+    static THEMES: OnceLock<Vec<Theme>> = OnceLock::new();
+    THEMES.get_or_init(|| {
+        BUILTINS
+            .iter()
+            .map(|(id, source)| {
+                let theme = Theme::from_json(source, false)
+                    .unwrap_or_else(|error| panic!("内置主题 {id} 解析失败：{error}"));
+                debug_assert_eq!(theme.id(), *id, "内置主题 id 与目录名不一致");
+                theme
+            })
+            .collect()
+    })
+}
+
+/// `extends` 按 id 找内置主题的源文件。
+fn builtin_source(id: &str) -> Option<&'static str> {
+    BUILTINS
+        .iter()
+        .find(|(builtin, _)| *builtin == id)
+        .map(|(_, source)| *source)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn builtin_theme_parses_without_problems() {
+    fn builtin_themes_parse_without_problems() {
+        for theme in Theme::builtins() {
+            assert!(
+                validate::problems(theme.file()).is_empty(),
+                "{}: {:?}",
+                theme.id(),
+                validate::problems(theme.file())
+            );
+        }
+        assert_eq!(Theme::builtins().len(), BUILTINS.len());
         let theme = Theme::light();
         assert_eq!(theme.id(), "qingjian");
-        assert!(validate::problems(theme.file()).is_empty());
+        assert!(Theme::builtin("wechat", true).is_some());
+        assert!(Theme::builtin("nope", false).is_none());
         assert_eq!(
             theme.color(&ColorRef::Variable("accent".to_owned())),
             Color::rgba(176, 206, 125, 127)

@@ -135,7 +135,10 @@ sakura.qjtheme            分发形态：同样结构的 zip
 
 上面的草图是目标；下面是渲染器现在认得的写法，内置主题 `crates/qingjian-render/themes/qingjian/theme.json` 全部用它写成，与原先写死的排版逐像素一致（快照测试）。
 
-顶层：`schema`、`meta`（id / name / author / license）、`variables`（颜色，`"#…"` 或 `{ "light", "dark" }`）、
+内置主题三个：`qingjian` 青简绿（缺省）、`system-blue` 系统蓝、`wechat` 微信绿，后两个 `extends` 青简绿、只改颜色变量。
+设置界面（mac 偏好设置、Windows 设置程序「候选窗口」页）按显示名列出，写回 `[general] theme` 的 id。
+
+顶层：`extends`（可选，以某个内置主题为底：对象逐键合并、数组与标量整个替换）、`schema`、`meta`（id / name / author / license）、`variables`（颜色，`"#…"` 或 `{ "light", "dark" }`）、
 `text`（`gamma` 可分深浅；`styles` 是命名的字号行高，节点用 `"font": "名字"` 引用）、`components`、`windows`（`vertical` / `horizontal` 两个根节点）、`status`（状态条）。
 
 | 节点 `type` | 属性 |
@@ -156,9 +159,11 @@ sakura.qjtheme            分发形态：同样结构的 zip
 - **条件**：`when` 是数据字段名，`!` 取反，`a|b` 任一成立。候选项里：`highlighted`、`cloud`、`annotation`、`first`、`last`；
   整帧：`preedit`、`trailing`、`trailing.cloud`、`page`、`candidates`、`annotations`（任一候选有译文）、`highlighted`、`highlighted.annotation`。
 - **绑定**：文字 `index`、`text`（候选项）、`page`、`trailing.text`；译文 `annotation`（候选项）、`highlighted.annotation`；列表 `candidates`。
+- **条件颜色**：节点上的颜色可以写 `{ "if": "highlighted", "then": "@hl_text", "else": "@text" }`，条件写法同 `when`。
+  高亮候选换一套颜色（系统蓝、微信绿的白字）靠它；青简绿里 `hl_*` 变量与普通颜色同值。
 - **容错**：加载时检查颜色变量、文字样式、组件引用，找不到的记警告；渲染时颜色退回透明、样式退回 16/19、组件不画。
 
-还没做：变体覆盖（现在用 `when` 分支代替）、渐变 / 图片填充、描边、效果、动画、主题包与字体随包、用户主题目录。
+还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、渐变 / 图片填充、描边、效果、动画、主题包与字体随包、用户主题目录。
 
 ## 渲染器要变成什么样
 

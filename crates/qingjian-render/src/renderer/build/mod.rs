@@ -16,6 +16,7 @@ use crate::layout::Layout;
 use crate::scene::{Scene, Visual};
 use crate::text::{TextPainter, TextStyle};
 use crate::theme::Theme;
+use crate::theme::file::ColorSpec;
 use crate::theme::file::node::{BoxSpec, NodeKind, NodeSpec};
 
 use context::Context;
@@ -97,6 +98,25 @@ impl Builder<'_> {
                 Ok(())
             }
         }
+    }
+
+    /// 节点颜色：条件写法按当前数据取分支，再按外观取值。
+    fn color(&self, spec: &ColorSpec, ctx: Context) -> crate::color::Color {
+        let color = match spec {
+            ColorSpec::Fixed(color) => color,
+            ColorSpec::Switch {
+                condition,
+                then,
+                otherwise,
+            } => {
+                if ctx.holds(condition) {
+                    then
+                } else {
+                    otherwise
+                }
+            }
+        };
+        self.theme.color(color)
     }
 
     /// 命名文字样式按倍数换成像素、配上颜色与当前外观的 gamma。

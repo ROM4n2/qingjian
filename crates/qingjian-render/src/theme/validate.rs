@@ -1,7 +1,7 @@
 //! 加载时检查一遍引用（颜色变量、文字样式、组件），有问题记警告；渲染时引用不到的退回缺省值，不让整个主题失败。
 
 use super::file::node::{NodeKind, NodeSpec};
-use super::file::{ColorRef, ThemeFile};
+use super::file::{ColorRef, ColorSpec, ThemeFile};
 
 /// 列出主题里引用不到的名字。
 pub(super) fn problems(file: &ThemeFile) -> Vec<String> {
@@ -40,7 +40,7 @@ impl Checker<'_> {
         match &node.kind {
             NodeKind::Frame { fill, children, .. } => {
                 if let Some(fill) = fill {
-                    self.color(fill, path);
+                    self.spec(fill, path);
                 }
                 for (i, child) in children.iter().enumerate() {
                     self.node(child, &format!("{path}.children[{i}]"));
@@ -48,9 +48,9 @@ impl Checker<'_> {
             }
             NodeKind::Text { font, color, .. } => {
                 self.font(font, path);
-                self.color(color, path);
+                self.spec(color, path);
             }
-            NodeKind::Icon { color, .. } => self.color(color, path),
+            NodeKind::Icon { color, .. } => self.spec(color, path),
             NodeKind::Preedit {
                 font,
                 typed,
@@ -60,7 +60,7 @@ impl Checker<'_> {
             } => {
                 self.font(font, path);
                 for color in [typed, rest, struck, &caret.color] {
-                    self.color(color, path);
+                    self.spec(color, path);
                 }
             }
             NodeKind::Annotation {
@@ -72,7 +72,7 @@ impl Checker<'_> {
             } => {
                 self.font(font, path);
                 for color in [gloss, fresh, faint] {
-                    self.color(color, path);
+                    self.spec(color, path);
                 }
             }
             NodeKind::Use { component } | NodeKind::Repeat { component, .. } => {
@@ -81,6 +81,12 @@ impl Checker<'_> {
                         .push(format!("{path}: 组件 {component:?} 不存在"));
                 }
             }
+        }
+    }
+
+    fn spec(&mut self, spec: &ColorSpec, path: &str) {
+        for color in spec.refs() {
+            self.color(color, path);
         }
     }
 

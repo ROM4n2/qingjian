@@ -38,6 +38,7 @@ impl Host {
         self.window.set_appearance(config.general.appearance());
         self.window.set_layout(config.general.layout);
         self.window.set_font(&config.general.font);
+        self.window.set_render_theme(config.general.theme_id());
         self.window.set_renderer(config.general.renderer);
         self.apply_learning_language(&config.general);
         if self.input_log_enabled != Some(config.general.input_log) {

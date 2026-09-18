@@ -18,4 +18,12 @@ probe-dark  bitmap 569x206  content 60,60 449x86
 preedit-only-dark  bitmap 520x198  content 60,60 400x78
 short-vertical-dark  bitmap 520x360  content 60,60 400x240
 status-dark  bitmap 432x174  content 60,60 312x54  edges [153.625, 249.625, 312.0]
+system-blue-nihao-vertical-light  bitmap 652x720  content 60,60 532x600
+system-blue-cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
+system-blue-nihao-vertical-dark  bitmap 652x720  content 60,60 532x600
+system-blue-cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
+wechat-nihao-vertical-light  bitmap 652x720  content 60,60 532x600
+wechat-cloud-horizontal-light  bitmap 666x290  content 60,60 546x170
+wechat-nihao-vertical-dark  bitmap 652x720  content 60,60 532x600
+wechat-cloud-horizontal-dark  bitmap 666x290  content 60,60 546x170
 nihao-vertical-light-1x  bitmap 266x300  content 0,0 266x300

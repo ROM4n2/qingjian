@@ -104,6 +104,26 @@ fn writing_appearance_migrates_legacy_theme_line() {
 }
 
 #[test]
+fn writing_theme_first_keeps_legacy_appearance() {
+    let path = std::env::temp_dir().join("qingjian-config-migrate-theme-first-test.toml");
+    std::fs::write(
+        &path,
+        "[general]\n# 候选窗口外观：system 跟随系统 / light 浅色 / dark 深色\ntheme = \"dark\"\n",
+    )
+    .unwrap();
+    // 没切过外观、直接选了主题：旧的深色不能丢，注释也要换掉
+    Config::set_value(&path, "general", "theme", "wechat").unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    assert!(text.contains(&format!("{THEME_COMMENT}theme = \"wechat\"")));
+    assert!(text.contains(&format!("{APPEARANCE_COMMENT}appearance = \"dark\"")));
+    assert_eq!(text.matches("候选窗口外观").count(), 1);
+    let general = Config::load(&path).unwrap().general;
+    assert_eq!(general.appearance(), Appearance::Dark);
+    assert_eq!(general.theme_id(), "wechat");
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
 fn set_value_writes_strings_and_integers() {
     let path = std::env::temp_dir().join("qingjian-config-set-value-test.toml");
     let _ = std::fs::remove_file(&path);

@@ -16,7 +16,6 @@ impl Builder<'_> {
         layout: &BoxSpec,
         ctx: Context,
     ) -> Result<Option<NodeId>, RenderError> {
-        let theme = self.theme;
         let style = layout_style::from_box(layout, self.scale);
         let node = match &spec.kind {
             NodeKind::Text {
@@ -35,7 +34,7 @@ impl Builder<'_> {
                 };
                 let visual = Visual::Text {
                     text: content.to_owned(),
-                    style: self.text_style(font, theme.color(color)),
+                    style: self.text_style(font, self.color(color, ctx)),
                 };
                 self.scene.node(style, visual, &[])?
             }
@@ -51,7 +50,7 @@ impl Builder<'_> {
                 let visual = Visual::Icon {
                     icon: *icon,
                     size,
-                    color: theme.color(color),
+                    color: self.color(color, ctx),
                 };
                 self.scene.node(style, visual, &[])?
             }
@@ -59,7 +58,7 @@ impl Builder<'_> {
                 let Some(preedit) = &ctx.frame.preedit else {
                     return Ok(None);
                 };
-                self.preedit(spec, preedit, style)?
+                self.preedit(spec, preedit, style, ctx)?
             }
             NodeKind::Annotation {
                 bind,
@@ -80,7 +79,7 @@ impl Builder<'_> {
                     };
                     let visual = Visual::Text {
                         text: segment.clone(),
-                        style: self.text_style(font, theme.color(color)),
+                        style: self.text_style(font, self.color(color, ctx)),
                     };
                     children.push(self.scene.node(Style::default(), visual, &[])?);
                 }
@@ -103,6 +102,7 @@ impl Builder<'_> {
         spec: &NodeSpec,
         preedit: &Preedit,
         style: Style,
+        ctx: Context,
     ) -> Result<NodeId, RenderError> {
         let NodeKind::Preedit {
             font,
@@ -114,14 +114,13 @@ impl Builder<'_> {
         else {
             return self.scene.node(style, Visual::Group, &[]);
         };
-        let theme = self.theme;
-        let typed_style = self.text_style(font, theme.color(typed));
+        let typed_style = self.text_style(font, self.color(typed, ctx));
         let mut children = Vec::with_capacity(preedit.segments.len() + 2);
         for segment in &preedit.segments {
             let text_style = match segment.style {
                 PreeditStyle::Typed => typed_style,
-                PreeditStyle::Rest => self.text_style(font, theme.color(rest)),
-                PreeditStyle::Struck => self.text_style(font, theme.color(struck)).struck(),
+                PreeditStyle::Rest => self.text_style(font, self.color(rest, ctx)),
+                PreeditStyle::Struck => self.text_style(font, self.color(struck, ctx)).struck(),
             };
             let visual = Visual::Text {
                 text: segment.text.clone(),
@@ -157,7 +156,7 @@ impl Builder<'_> {
             ..Style::default()
         };
         let visual = Visual::Fill {
-            color: theme.color(&caret.color),
+            color: self.color(&caret.color, ctx),
             radius: 0.0,
         };
         children.push(self.scene.node(caret_style, visual, &[])?);

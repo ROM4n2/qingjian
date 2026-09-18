@@ -4,6 +4,7 @@ use objc2::MainThreadMarker;
 use objc2::rc::Retained;
 use objc2_app_kit::NSPopUpButton;
 use qingjian_platform::{Appearance, CandidateRenderer, Config, LayoutMode, PreeditMode};
+use qingjian_render::Theme;
 
 use crate::candidates::available_families;
 use crate::preferences::controls::{note, row_popup, select};
@@ -15,6 +16,9 @@ use crate::preferences::target::PreferencesTarget;
 pub struct CandidatesPage {
     /// 外观：跟随系统 / 浅色 / 深色。
     appearance: Retained<NSPopUpButton>,
+
+    /// 主题：内置主题按显示名列出。
+    theme: Retained<NSPopUpButton>,
 
     /// 竖排 / 横排。
     layout_mode: Retained<NSPopUpButton>,
@@ -42,6 +46,16 @@ impl CandidatesPage {
             &appearance_titles,
             Setting::Appearance,
             target,
+        );
+        let theme_titles: Vec<String> = Theme::builtins()
+            .iter()
+            .map(|t| t.name().to_owned())
+            .collect();
+        let theme = row_popup(layout, mtm, "主题", &theme_titles, Setting::Theme, target);
+        note(
+            layout,
+            mtm,
+            "主题只对青简渲染器生效；每个主题都有浅色与深色两套，按上面的外观切换。",
         );
         let layout_titles: Vec<String> = LayoutMode::ALL
             .iter()
@@ -87,6 +101,7 @@ impl CandidatesPage {
         );
         Self {
             appearance,
+            theme,
             layout_mode,
             renderer,
             font,
@@ -101,6 +116,12 @@ impl CandidatesPage {
             Appearance::ALL
                 .iter()
                 .position(|a| *a == general.appearance()),
+        );
+        select(
+            &self.theme,
+            Theme::builtins()
+                .iter()
+                .position(|t| t.id() == general.theme_id()),
         );
         select(
             &self.layout_mode,

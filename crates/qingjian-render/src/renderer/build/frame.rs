@@ -35,7 +35,7 @@ impl Builder<'_> {
         };
         let visual = match fill {
             Some(fill) => Visual::Fill {
-                color: self.theme.color(fill),
+                color: self.color(fill, ctx),
                 radius: radius * self.scale,
             },
             None => Visual::Group,

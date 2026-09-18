@@ -2,6 +2,7 @@
 
 mod adaptive;
 mod color_ref;
+mod color_spec;
 mod color_value;
 mod meta;
 pub(crate) mod node;
@@ -15,6 +16,7 @@ use serde::Deserialize;
 
 pub(crate) use adaptive::Adaptive;
 pub(crate) use color_ref::ColorRef;
+pub(crate) use color_spec::ColorSpec;
 pub(crate) use color_value::ColorValue;
 pub(crate) use meta::Meta;
 pub(crate) use status::StatusSpec;

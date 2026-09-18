@@ -11,6 +11,9 @@ pub struct RenderSettings {
 
     /// 字族名（`[general] font`），空为系统字体。
     pub font: String,
+
+    /// 主题 id（`[general] theme`，已按旧写法兼容解析）。
+    pub theme: String,
 }
 
 /// Router 只产出帧，画交给它；Windows 上由 UI 线程实现。

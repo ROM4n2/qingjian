@@ -45,6 +45,9 @@ pub struct Ivars {
 
     /// 用户选的字族名（空为系统字体），换了要重建渲染器。
     font: RefCell<String>,
+
+    /// 渲染器用的主题 id（`[general] theme`），重建渲染器时要带上。
+    theme_id: RefCell<String>,
 }
 
 /// preedit 光标的宽度。
@@ -120,6 +123,7 @@ impl CandidateView {
             theme,
             bitmap: RefCell::new(None),
             font: RefCell::new(String::new()),
+            theme_id: RefCell::new(String::new()),
         });
         unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] }
     }
@@ -132,10 +136,29 @@ impl CandidateView {
         *self.ivars().font.borrow_mut() = font.to_owned();
         let mut bitmap = self.ivars().bitmap.borrow_mut();
         if bitmap.is_some() {
-            *bitmap = BitmapPainter::new(font);
+            *bitmap = self.new_bitmap();
             drop(bitmap);
             self.setNeedsDisplay(true);
         }
+    }
+
+    /// 渲染器主题（`[general] theme` 的 id），只对青简渲染器生效。
+    pub fn set_theme_id(&self, id: &str) {
+        if *self.ivars().theme_id.borrow() == id {
+            return;
+        }
+        *self.ivars().theme_id.borrow_mut() = id.to_owned();
+        if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
+            bitmap.set_theme(id);
+            self.setNeedsDisplay(true);
+        }
+    }
+
+    /// 新建位图渲染器并带上当前主题。
+    fn new_bitmap(&self) -> Option<BitmapPainter> {
+        let mut bitmap = BitmapPainter::new(&self.ivars().font.borrow())?;
+        bitmap.set_theme(&self.ivars().theme_id.borrow());
+        Some(bitmap)
     }
 
     /// 青简渲染器 / 系统绘制。渲染器字体库加载失败就留在系统绘制。
@@ -143,7 +166,7 @@ impl CandidateView {
         let mut bitmap = self.ivars().bitmap.borrow_mut();
         match renderer {
             CandidateRenderer::Qingjian if bitmap.is_none() => {
-                *bitmap = BitmapPainter::new(&self.ivars().font.borrow());
+                *bitmap = self.new_bitmap();
             }
             CandidateRenderer::System if bitmap.is_some() => {
                 tracing::info!("候选窗切回 AppKit 绘制");

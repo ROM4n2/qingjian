@@ -4,6 +4,7 @@ use qingjian_platform::{
     Appearance, CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode,
     LogLevel, PreeditMode, ShiftLetter,
 };
+use qingjian_render::Theme;
 use windows_reactor::*;
 
 use super::cloud_status::CloudStatus;
@@ -75,6 +76,9 @@ impl Component for Settings {
             // 候选窗口页
             Message::Appearance(Some(i)) if i < Appearance::ALL.len() => {
                 self.save("general", "appearance", Appearance::ALL[i].key());
+            }
+            Message::Theme(Some(i)) if i < Theme::builtins().len() => {
+                self.save("general", "theme", Theme::builtins()[i].id());
             }
             Message::Layout(Some(i)) if i < LayoutMode::ALL.len() => {
                 self.save("general", "layout", LayoutMode::ALL[i].key());

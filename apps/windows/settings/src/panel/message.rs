@@ -27,6 +27,7 @@ pub(crate) enum Message {
 
     // 候选窗口页
     Appearance(Option<usize>),
+    Theme(Option<usize>),
     Layout(Option<usize>),
     Preedit(Option<usize>),
     Renderer(Option<usize>),

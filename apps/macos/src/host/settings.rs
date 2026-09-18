@@ -4,6 +4,7 @@ use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
 use qingjian_platform::ShiftLetter;
+use qingjian_render::Theme;
 
 impl Host {
     /// 写短语前读取文件；外部规则有变化时同步列表并请用户重新确认。
@@ -187,6 +188,11 @@ impl Host {
                 if let Some(appearance) = Appearance::ALL.get(index) {
                     self.settings
                         .set_value("general", "appearance", appearance.key());
+                }
+            }
+            (Setting::Theme, SettingValue::Index(index)) => {
+                if let Some(theme) = Theme::builtins().get(index) {
+                    self.settings.set_value("general", "theme", theme.id());
                 }
             }
             (Setting::Renderer, SettingValue::Index(index)) => {

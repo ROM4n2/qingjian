@@ -21,6 +21,9 @@ pub(super) struct Painter {
 
     /// 建它时用的字族名（空为系统字体），设置没变就不重建。
     font: String,
+
+    /// 主题（浅色那一份，画的时候按外观取深浅）。
+    theme: Theme,
 }
 
 impl Painter {
@@ -51,6 +54,7 @@ impl Painter {
         Some(Self {
             renderer: Renderer::new(library),
             font: font.to_owned(),
+            theme: Theme::light(),
         })
     }
 
@@ -61,6 +65,14 @@ impl Painter {
             CandidateRenderer::Qingjian => {
                 if painter.as_ref().map(|p| p.font.as_str()) != Some(settings.font.as_str()) {
                     *painter = Self::new(&settings.font);
+                }
+                if let Some(painter) = painter.as_mut()
+                    && painter.theme.id() != settings.theme
+                {
+                    painter.theme = Theme::builtin(&settings.theme, false).unwrap_or_else(|| {
+                        tracing::warn!(id = settings.theme, "没有这个主题，用缺省主题");
+                        Theme::light()
+                    });
                 }
             }
             CandidateRenderer::System => {
@@ -87,7 +99,13 @@ impl Painter {
         let started = std::time::Instant::now();
         let rendered = self
             .renderer
-            .render(frame, layout, &theme(dark), scale(dpi), Some(&SHADOW))
+            .render(
+                frame,
+                layout,
+                &self.theme.with_dark(dark),
+                scale(dpi),
+                Some(&SHADOW),
+            )
             .inspect_err(|error| tracing::warn!(%error, "候选窗渲染失败"))
             .ok()?;
         tracing::debug!(
@@ -107,7 +125,12 @@ impl Painter {
         dpi: u32,
     ) -> Option<RenderedStatus> {
         self.renderer
-            .render_status(cells, &theme(dark), scale(dpi), Some(&SHADOW))
+            .render_status(
+                cells,
+                &self.theme.with_dark(dark),
+                scale(dpi),
+                Some(&SHADOW),
+            )
             .inspect_err(|error| tracing::warn!(%error, "状态条渲染失败"))
             .ok()
     }
@@ -115,10 +138,6 @@ impl Painter {
 
 /// 两个窗口都用渲染器画阴影（分层窗口没有系统阴影），参数与 macOS 面板一致。
 const SHADOW: Shadow = Shadow::mac_panel();
-
-fn theme(dark: bool) -> Theme {
-    if dark { Theme::dark() } else { Theme::light() }
-}
 
 /// 点 → 像素的倍数。
 fn scale(dpi: u32) -> f32 {
