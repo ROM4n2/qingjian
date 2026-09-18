@@ -1,14 +1,13 @@
-//! 按树序画：先画节点自己，再画子节点；坐标是父节点位置加布局给的相对位置。
+//! 按树序画：先画节点自己（投影垫底、内阴影压在填充上），再画子节点；坐标是父节点位置加布局给的相对位置。
 //! 不透明度小于 1 的节点连同子树先画到离屏图层，再按不透明度合成。
 
 use taffy::NodeId;
 
-use super::draw_box::draw_box;
-use super::{Icon, Scene, SceneNode, Visual};
+use super::draw_effect::draw_effect;
+use super::draw_visual::draw_visual;
+use super::{EffectKind, Scene, SceneNode};
 use crate::canvas::Canvas;
-use crate::cloud::draw_cloud;
 use crate::error::RenderError;
-use crate::gear::draw_gear;
 use crate::text::TextPainter;
 
 impl Scene {
@@ -47,37 +46,19 @@ impl Scene {
     ) -> Result<(), RenderError> {
         let layout = self.tree.layout(root)?;
         let (x, y) = (x + layout.location.x, y + layout.location.y);
-        let (width, height) = (layout.size.width, layout.size.height);
-        match self.tree.get_node_context(root) {
-            Some(SceneNode {
-                visual: Visual::Box(paint),
-                ..
-            }) => draw_box(canvas, (x, y, width, height), paint),
-            Some(SceneNode {
-                visual:
-                    Visual::Text {
-                        text: content,
-                        style,
-                    },
-                ..
-            }) => {
-                text.draw(canvas, content, style, x, y);
-            }
-            Some(SceneNode {
-                visual: Visual::Icon { icon, size, color },
-                ..
-            }) => {
-                let top = y + (height - size) / 2.0;
-                match icon {
-                    Icon::Cloud => draw_cloud(canvas, x, top, *size, *color),
-                    Icon::Gear => draw_gear(canvas, x, top, *size, *color),
+        let rect = (x, y, layout.size.width, layout.size.height);
+        if let Some(SceneNode {
+            visual, effects, ..
+        }) = self.tree.get_node_context(root)
+        {
+            for kind in [EffectKind::DropShadow, EffectKind::InnerShadow] {
+                if kind == EffectKind::InnerShadow {
+                    draw_visual(canvas, text, visual, rect);
+                }
+                for effect in effects.iter().filter(|effect| effect.kind == kind) {
+                    draw_effect(canvas, text, visual, rect, effect);
                 }
             }
-            Some(SceneNode {
-                visual: Visual::Group,
-                ..
-            })
-            | None => {}
         }
         for child in self.tree.children(root)? {
             self.paint(child, canvas, text, x, y)?;

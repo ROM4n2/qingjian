@@ -9,7 +9,7 @@ use super::direction::Direction;
 use super::fill::FillSpec;
 use super::table::TableSpec;
 use crate::scene::Icon;
-use crate::theme::file::ColorSpec;
+use crate::theme::file::{ColorSpec, FontRef};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
@@ -38,8 +38,8 @@ pub(crate) enum NodeKind {
 
         text: Option<String>,
 
-        /// `text.styles` 里的样式名。
-        font: String,
+        /// `text.styles` 里的样式名，或在样式上改字号 / 字重。
+        font: FontRef,
 
         color: ColorSpec,
     },
@@ -55,7 +55,7 @@ pub(crate) enum NodeKind {
 
     /// 拼音行：各段按状态着色，光标画在光标位置。
     Preedit {
-        font: String,
+        font: FontRef,
 
         /// 已敲的拼音。
         typed: ColorSpec,
@@ -73,7 +73,7 @@ pub(crate) enum NodeKind {
     Annotation {
         bind: String,
 
-        font: String,
+        font: FontRef,
 
         /// 译文。
         gloss: ColorSpec,

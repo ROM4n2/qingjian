@@ -5,6 +5,9 @@
 
 mod box_paint;
 mod draw_box;
+mod draw_effect;
+mod draw_visual;
+mod effect;
 mod fill;
 mod icon;
 mod node;
@@ -20,6 +23,7 @@ use crate::error::RenderError;
 use crate::text::{TextPainter, TextSize};
 
 pub(crate) use box_paint::BoxPaint;
+pub(crate) use effect::{Effect, EffectKind};
 pub(crate) use fill::Fill;
 pub(crate) use icon::Icon;
 pub(crate) use node::SceneNode;
@@ -50,6 +54,7 @@ impl Scene {
             Some(SceneNode {
                 visual,
                 opacity: 1.0,
+                effects: Vec::new(),
             }),
         )?;
         Ok(node)
@@ -60,6 +65,24 @@ impl Scene {
         if let Some(context) = self.tree.get_node_context_mut(node) {
             context.opacity = opacity.clamp(0.0, 1.0);
         }
+    }
+
+    /// 节点的投影、内阴影。
+    pub(crate) fn set_effects(&mut self, node: NodeId, effects: Vec<Effect>) {
+        if let Some(context) = self.tree.get_node_context_mut(node) {
+            context.effects = effects;
+        }
+    }
+
+    /// 投影伸出节点盒子的最远距离（像素）；窗口根节点按它在位图四周留边。
+    pub(crate) fn overhang(&self, node: NodeId) -> f32 {
+        self.tree.get_node_context(node).map_or(0.0, |context| {
+            context
+                .effects
+                .iter()
+                .map(Effect::overhang)
+                .fold(0.0, f32::max)
+        })
     }
 
     /// 把表格里的格子放到指定的行、列；`stretch` 时撑满所占的格子（横跨整行的高亮条）。

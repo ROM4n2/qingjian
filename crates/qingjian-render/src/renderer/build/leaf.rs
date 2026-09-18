@@ -93,7 +93,7 @@ impl Builder<'_> {
                 return Ok(None);
             }
         };
-        self.apply_opacity(node, layout);
+        self.apply_layer(node, layout, ctx);
         Ok(Some(node))
     }
 

@@ -9,6 +9,7 @@ mod error;
 mod extends;
 pub(crate) mod file;
 mod font_spec;
+mod font_weight;
 mod library;
 mod validate;
 
@@ -21,10 +22,11 @@ use crate::color::Color;
 
 pub use error::ThemeError;
 pub use font_spec::FontSpec;
+pub use font_weight::FontWeight;
 pub use library::ThemeLibrary;
 
 use assets::Assets;
-use file::{ColorRef, LockedAppearance, SCHEMA, ThemeFile};
+use file::{ColorRef, FontRef, LockedAppearance, SCHEMA, ThemeFile};
 
 /// 内置主题：id 与源文件，按设置界面列出的顺序；第一个是缺省主题。
 const BUILTINS: [(&str, &str); 3] = [
@@ -175,6 +177,11 @@ impl Theme {
             .get(name)
             .copied()
             .unwrap_or(FALLBACK_FONT)
+    }
+
+    /// 节点里的 `font`：样式名，或在样式上改字号 / 字重。
+    pub(crate) fn font_ref(&self, font: &FontRef) -> FontSpec {
+        font.apply(font.base().map_or(FALLBACK_FONT, |name| self.font(name)))
     }
 
     /// 当前外观下的文字覆盖率 gamma。

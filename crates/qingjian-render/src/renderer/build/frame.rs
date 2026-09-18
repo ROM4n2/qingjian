@@ -75,7 +75,7 @@ impl Builder<'_> {
                     .node(layout_style::flex(base, *direction), visual, &nodes)?
             }
         };
-        self.apply_opacity(node, layout);
+        self.apply_layer(node, layout, ctx);
         out.push(node);
         Ok(())
     }

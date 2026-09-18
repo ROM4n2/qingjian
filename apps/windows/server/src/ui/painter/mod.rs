@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 use qingjian_render::{
-    FontLibrary, Frame, Layout, Rendered, RenderedStatus, Renderer, Shadow, StatusCell, Theme,
+    FontLibrary, Frame, Layout, Rendered, RenderedStatus, Renderer, StatusCell, Theme,
     ThemeLibrary, UiFont, system_fonts,
 };
 
@@ -97,13 +97,7 @@ impl Painter {
         let started = std::time::Instant::now();
         let rendered = self
             .renderer
-            .render(
-                frame,
-                layout,
-                &self.theme.with_dark(dark),
-                scale(dpi),
-                Some(&SHADOW),
-            )
+            .render(frame, layout, &self.theme.with_dark(dark), scale(dpi))
             .inspect_err(|error| tracing::warn!(%error, "候选窗渲染失败"))
             .ok()?;
         tracing::debug!(
@@ -123,19 +117,11 @@ impl Painter {
         dpi: u32,
     ) -> Option<RenderedStatus> {
         self.renderer
-            .render_status(
-                cells,
-                &self.theme.with_dark(dark),
-                scale(dpi),
-                Some(&SHADOW),
-            )
+            .render_status(cells, &self.theme.with_dark(dark), scale(dpi))
             .inspect_err(|error| tracing::warn!(%error, "状态条渲染失败"))
             .ok()
     }
 }
-
-/// 两个窗口都用渲染器画阴影（分层窗口没有系统阴影），参数与 macOS 面板一致。
-const SHADOW: Shadow = Shadow::mac_panel();
 
 /// 点 → 像素的倍数。
 fn scale(dpi: u32) -> f32 {

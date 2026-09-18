@@ -1,7 +1,7 @@
 //! 加载时检查一遍引用（颜色变量、文字样式、组件），有问题记警告；渲染时引用不到的退回缺省值，不让整个主题失败。
 
 use super::file::node::{FillSpec, NodeKind, NodeSpec};
-use super::file::{ColorRef, ColorSpec, ThemeFile};
+use super::file::{ColorRef, ColorSpec, FontRef, ThemeFile};
 
 /// 列出主题里引用不到的名字。
 pub(super) fn problems(file: &ThemeFile) -> Vec<String> {
@@ -106,8 +106,10 @@ impl Checker<'_> {
         }
     }
 
-    fn font(&mut self, font: &str, path: &str) {
-        if !self.file.text.styles.contains_key(font) {
+    fn font(&mut self, font: &FontRef, path: &str) {
+        if let Some(font) = font.base()
+            && !self.file.text.styles.contains_key(font)
+        {
             self.found.push(format!("{path}: 文字样式 {font:?} 不存在"));
         }
     }

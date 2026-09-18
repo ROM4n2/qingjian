@@ -16,15 +16,17 @@
   "components": {
     "top_line": {
       "fill": { "radial": [0.1, 0.5], "stops": ["#ffd6e6", "#ffd6e600"] },
-      "radius": 6
+      "radius": 6,
+      "effects": [{ "type": "inner-shadow", "y": 1, "blur": 3, "color": "#c2386b40" }]
     },
     "row": {
       "type": "frame",
       "children": [
         { "type": "frame", "when": "highlighted", "span": "row", "margin": [0, -4, 0, -4], "radius": 6,
           "fill": { "linear": 90, "stops": ["#e85a8c", ["#ff9ec0", 0.7], "#ffc2d6"] },
-          "border": { "width": 1, "color": "#c2386b" } },
-        { "type": "text", "bind": "index", "font": "index", "margin": [8, 0, 0, 0],
+          "border": { "width": 1, "color": "#c2386b" },
+          "effects": [{ "type": "drop-shadow", "y": 2, "blur": 6, "color": "#e85a8c66" }] },
+        { "type": "text", "bind": "index", "font": { "base": "index", "weight": "semibold" }, "margin": [8, 0, 0, 0],
           "color": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" } },
         { "type": "use", "component": "word", "margin": [4, 0, 0, 8] },
         { "type": "annotation", "bind": "annotation", "when": "annotations", "font": "annotation",

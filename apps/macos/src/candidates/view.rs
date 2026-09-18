@@ -19,6 +19,7 @@ use objc2_foundation::{
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 
 use super::bitmap::BitmapPainter;
+use super::bounds::ViewBounds;
 use super::cloud_icon::CloudIcon;
 use super::frame::Frame;
 use super::preedit::Preedit;
@@ -201,8 +202,8 @@ impl CandidateView {
         self.ivars().layout.set(layout);
     }
 
-    /// 更新内容并返回需要的窗口尺寸。
-    pub fn set_frame(&self, frame: &Frame) -> NSSize {
+    /// 更新内容并返回视图该有的尺寸与内容区。
+    pub fn set_frame(&self, frame: &Frame) -> ViewBounds {
         *self.ivars().frame.borrow_mut() = frame.clone();
         self.setNeedsDisplay(true);
         if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
@@ -213,7 +214,12 @@ impl CandidateView {
                 self.backing_scale(),
             );
         }
-        self.preferred_size()
+        ViewBounds::filled(self.preferred_size())
+    }
+
+    /// 在用青简渲染器（阴影画在位图里）；否则是 AppKit 逐项绘制，要系统阴影。
+    pub fn uses_bitmap(&self) -> bool {
+        self.ivars().bitmap.borrow().is_some()
     }
 
     fn preferred_size(&self) -> NSSize {

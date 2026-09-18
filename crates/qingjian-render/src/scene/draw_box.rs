@@ -149,21 +149,22 @@ fn nine_slice(
     let (image_width, image_height) = (pixmap.width() as f32, pixmap.height() as f32);
     let [top, right, bottom, left] = slice;
     let per = pixels_per_px.max(f32::EPSILON);
-    // 源（图片像素）与目标（画布像素）的四条分割线；目标四角按倍数，放不下时压缩到盒子里
+    // 源（图片像素）与目标（画布像素）的四条分割线；目标四角按倍数，放不下时压缩到盒子里。
+    // 内部两条目标分割线取整像素：相邻两块各自抗锯齿会在接缝留一道 alpha 不满的缝，底下有投影就透出来
     let source_x = [0.0, left, image_width - right, image_width];
     let source_y = [0.0, top, image_height - bottom, image_height];
     let shrink_x = ((left + right) / per / width).max(1.0);
     let shrink_y = ((top + bottom) / per / height).max(1.0);
     let target_x = [
         x,
-        x + left / per / shrink_x,
-        x + width - right / per / shrink_x,
+        (x + left / per / shrink_x).round(),
+        (x + width - right / per / shrink_x).round(),
         x + width,
     ];
     let target_y = [
         y,
-        y + top / per / shrink_y,
-        y + height - bottom / per / shrink_y,
+        (y + top / per / shrink_y).round(),
+        (y + height - bottom / per / shrink_y).round(),
         y + height,
     ];
     for row in 0..3 {

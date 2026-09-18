@@ -11,7 +11,7 @@ mod scenes;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use qingjian_render::{FontLibrary, Layout, Pixmap, Rendered, Renderer, Shadow, Theme};
+use qingjian_render::{FontLibrary, Layout, Pixmap, Rendered, Renderer, Theme};
 
 const UPDATE_ENV: &str = "QINGJIAN_UPDATE_SNAPSHOTS";
 
@@ -88,19 +88,16 @@ fn renderer_matches_snapshots() {
     );
 }
 
-/// 全部样例：候选窗浅 / 深色 × 各帧（2 倍、带阴影），其余内置主题各几张，1 倍屏不带阴影一张，状态条浅 / 深色。
+/// 全部样例：候选窗浅 / 深色 × 各帧（2 倍），其余内置主题各几张，1 倍屏一张，状态条浅 / 深色。
 fn render_all(mut renderer: Renderer) -> Vec<Shot> {
-    let shadow = Shadow::mac_panel();
     let mut shots = Vec::new();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
         for (scene, frame, layout) in scenes::candidate_scenes() {
-            let rendered = renderer
-                .render(&frame, layout, &theme, 2.0, Some(&shadow))
-                .unwrap();
+            let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
             shots.push(shot(format!("{scene}-{theme_name}"), rendered, None));
         }
         let status = renderer
-            .render_status(&scenes::status_cells(), &theme, 2.0, Some(&shadow))
+            .render_status(&scenes::status_cells(), &theme, 2.0)
             .unwrap();
         shots.push(shot(
             format!("status-{theme_name}"),
@@ -116,9 +113,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
                 ("nihao-vertical", scenes::nihao(), Layout::Vertical),
                 ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
             ] {
-                let rendered = renderer
-                    .render(&frame, layout, &theme, 2.0, Some(&shadow))
-                    .unwrap();
+                let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
                 shots.push(shot(format!("{id}-{scene}-{theme_name}"), rendered, None));
             }
         }
@@ -131,9 +126,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             ("nihao-vertical", scenes::nihao(), Layout::Vertical),
             ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
         ] {
-            let rendered = renderer
-                .render(&frame, layout, &theme, 2.0, Some(&shadow))
-                .unwrap();
+            let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
             shots.push(shot(
                 format!("showcase-{scene}-{theme_name}"),
                 rendered,
@@ -142,13 +135,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
         }
     }
     let rendered = renderer
-        .render(
-            &scenes::nihao(),
-            Layout::Vertical,
-            &Theme::light(),
-            1.0,
-            None,
-        )
+        .render(&scenes::nihao(), Layout::Vertical, &Theme::light(), 1.0)
         .unwrap();
     shots.push(shot("nihao-vertical-light-1x".to_owned(), rendered, None));
     shots

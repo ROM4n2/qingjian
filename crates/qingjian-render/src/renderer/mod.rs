@@ -14,7 +14,6 @@ use crate::fonts::FontLibrary;
 use crate::frame::Frame;
 use crate::layout::Layout;
 use crate::scene::Scene;
-use crate::shadow::Shadow;
 use crate::text::{TextPainter, TextStyle};
 use crate::theme::{FontSpec, Theme};
 
@@ -41,14 +40,13 @@ impl Renderer {
         Self { text }
     }
 
-    /// 画一帧。`scale` 是点 → 像素的倍数（Retina 为 2）；带 `shadow` 时位图四周留出阴影的边。
+    /// 画一帧。`scale` 是点 → 像素的倍数（Retina 为 2）；窗口根节点有投影时位图四周留出投影的边。
     pub fn render(
         &mut self,
         frame: &Frame,
         layout: Layout,
         theme: &Theme,
         scale: f32,
-        shadow: Option<&Shadow>,
     ) -> Result<Rendered, RenderError> {
         let mut scene = Scene::new();
         let mut builder = Builder {
@@ -57,18 +55,12 @@ impl Renderer {
             scale,
             text: &mut self.text,
         };
-        let (root, radius) = builder.window(frame, layout)?;
+        let root = builder.window(frame, layout)?;
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;
-        let margin = shadow.map_or(0.0, |s| s.margin() * scale);
+        let margin = scene.overhang(root).ceil();
         let width = (content_width + margin * 2.0).ceil();
         let height = (content_height + margin * 2.0).ceil();
         let mut canvas = Canvas::new(width as u32, height as u32)?;
-        if let Some(shadow) = shadow
-            && let Some(content) =
-                tiny_skia::Rect::from_xywh(margin, margin, content_width, content_height)
-        {
-            shadow.paint(&mut canvas, content, radius, scale);
-        }
         scene.paint(root, &mut canvas, &mut self.text, margin, margin)?;
         Ok(Rendered {
             pixmap: canvas.into_pixmap(),

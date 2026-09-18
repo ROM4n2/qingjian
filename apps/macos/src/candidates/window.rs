@@ -55,9 +55,14 @@ impl CandidateWindow {
             self.hide();
             return;
         }
-        let size = self.view.set_frame(&frame);
-        let origin = self.place(size, anchor);
-        self.panel.setFrame_display(NSRect::new(origin, size), true);
+        let bounds = self.view.set_frame(&frame);
+        let content = self.place(bounds.content.size, anchor);
+        let origin = NSPoint::new(
+            content.x - bounds.content.origin.x,
+            content.y - bounds.content.origin.y,
+        );
+        self.panel
+            .setFrame_display(NSRect::new(origin, bounds.size), true);
         self.order_front_on_active_space();
         if !self.panel.isVisible() {
             tracing::warn!(?anchor, ?origin, "候选窗口 orderFront 之后仍不可见");
@@ -90,6 +95,7 @@ impl CandidateWindow {
         self.panel.orderOut(None);
         let panel = build_panel(self.mtm, &self.view);
         panel.setAppearance(self.appearance.as_deref());
+        panel.setHasShadow(!self.view.uses_bitmap());
         panel.setFrame_display(frame, true);
         panel.orderFrontRegardless();
         self.panel = panel;
@@ -119,9 +125,10 @@ impl CandidateWindow {
         self.view.set_layout(layout);
     }
 
-    /// 青简渲染器 / 系统绘制。下一帧生效。
+    /// 青简渲染器 / 系统绘制。下一帧生效。青简渲染器的阴影由主题画进位图，系统阴影关掉。
     pub fn set_renderer(&self, renderer: CandidateRenderer) {
         self.view.set_renderer(renderer);
+        self.panel.setHasShadow(!self.view.uses_bitmap());
     }
 
     /// 渲染器主题（按 `[general] theme` 从主题库取出的），只对青简渲染器生效。
@@ -138,7 +145,7 @@ impl CandidateWindow {
         self.view.theme().max_rows
     }
 
-    /// 窗口左下角坐标：贴在光标行下方；下方放不下放上方；不出光标所在的那块屏幕。
+    /// 内容区左下角坐标：贴在光标行下方；下方放不下放上方；不出光标所在的那块屏幕。
     /// 光标矩形是零或落在所有屏幕之外（应用不支持、或给的是胡话）时以鼠标位置为准，至少落在用户看着的屏幕上。
     fn place(&self, size: NSSize, anchor: NSRect) -> NSPoint {
         let (anchor, screen) = match screen_containing(self.mtm, anchor.origin) {
@@ -175,7 +182,7 @@ impl CandidateWindow {
     }
 }
 
-/// 建一块面板并把内容视图装进去：无边框、不抢焦点、透明背景带阴影、不吃鼠标。
+/// 建一块面板并把内容视图装进去：无边框、不抢焦点、透明背景带系统阴影（用青简渲染器时再关）、不吃鼠标。
 fn build_panel(mtm: MainThreadMarker, view: &CandidateView) -> Retained<NSPanel> {
     let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
         mtm.alloc::<NSPanel>(),

@@ -1,7 +1,7 @@
 //! 候选窗口的位图绘制：一帧交给 `qingjian-render` 画成位图，`drawRect:` 里贴上去。
 //!
 //! 与自绘 NSView 的旧路径并存：配置 `[general] renderer = "system"` 走旧路（过渡期退路）。
-//! 面板背景透明、系统阴影按位图的 alpha 走，所以渲染器不画阴影。
+//! 阴影由主题定义、渲染器画进位图（位图四周留边），面板关掉系统阴影，与 Windows 一致。
 
 mod convert;
 mod font_files;
@@ -15,6 +15,7 @@ use objc2_foundation::{NSPoint, NSRect, NSSize};
 use qingjian_platform::LayoutMode;
 use qingjian_render::{FontLibrary, Layout, Renderer, Theme, UiFont};
 
+use super::bounds::ViewBounds;
 use super::frame::Frame;
 
 pub struct BitmapPainter {
@@ -36,8 +37,8 @@ pub struct BitmapPainter {
     /// 最近一帧的倍数。
     scale: f32,
 
-    /// 最近一帧的尺寸（点）。
-    size: NSSize,
+    /// 最近一帧的尺寸（点）与其中的内容区。
+    bounds: ViewBounds,
 
     /// 主题（浅色那一份，画的时候按外观取深浅）。
     theme: Theme,
@@ -76,7 +77,7 @@ impl BitmapPainter {
             layout: Layout::Vertical,
             dark: false,
             scale: 2.0,
-            size: NSSize::ZERO,
+            bounds: ViewBounds::filled(NSSize::ZERO),
             theme: Theme::light(),
         })
     }
@@ -87,14 +88,14 @@ impl BitmapPainter {
         self.repaint();
     }
 
-    /// 记下新一帧并画好，返回窗口该有的尺寸（点）。
+    /// 记下新一帧并画好，返回视图该有的尺寸与内容区（点）。
     pub fn set_frame(
         &mut self,
         frame: &Frame,
         layout: LayoutMode,
         dark: bool,
         scale: f32,
-    ) -> NSSize {
+    ) -> ViewBounds {
         self.frame = convert::frame(frame);
         self.layout = match layout {
             LayoutMode::Vertical => Layout::Vertical,
@@ -103,7 +104,7 @@ impl BitmapPainter {
         self.dark = dark;
         self.scale = scale;
         self.repaint();
-        self.size
+        self.bounds
     }
 
     /// 外观或倍数变了就重画一遍再贴。
@@ -116,7 +117,7 @@ impl BitmapPainter {
         let Some(image) = &self.image else {
             return;
         };
-        let rect = NSRect::new(NSPoint::ZERO, self.size);
+        let rect = NSRect::new(NSPoint::ZERO, self.bounds.size);
         // SAFETY: hints 传 None，其余参数都是普通值；在 drawRect: 内调用，有当前图形上下文。
         unsafe {
             image.drawInRect_fromRect_operation_fraction_respectFlipped_hints(
@@ -133,22 +134,38 @@ impl BitmapPainter {
     fn repaint(&mut self) {
         let theme = self.theme.with_dark(self.dark);
         let started = std::time::Instant::now();
-        let rendered =
-            match self
-                .renderer
-                .render(&self.frame, self.layout, &theme, self.scale, None)
-            {
-                Ok(rendered) => rendered,
-                Err(error) => {
-                    tracing::warn!(%error, "候选窗渲染失败");
-                    self.image = None;
-                    return;
-                }
-            };
+        let rendered = match self
+            .renderer
+            .render(&self.frame, self.layout, &theme, self.scale)
+        {
+            Ok(rendered) => rendered,
+            Err(error) => {
+                tracing::warn!(%error, "候选窗渲染失败");
+                self.image = None;
+                return;
+            }
+        };
         let (width, height) = rendered.content_size_points();
-        self.size = NSSize::new(f64::from(width), f64::from(height));
-        self.image = to_image(&rendered.pixmap, self.size);
+        self.bounds = bounds(&rendered);
+        self.image = to_image(&rendered.pixmap, self.bounds.size);
         tracing::debug!(elapsed = ?started.elapsed(), width, height, "候选窗位图已画");
+    }
+}
+
+/// 位图与内容区换成点；内容区原点换成左下角起算。
+fn bounds(rendered: &qingjian_render::Rendered) -> ViewBounds {
+    let points = |pixels: u32| f64::from(pixels) / f64::from(rendered.scale);
+    let (width, height) = (rendered.pixmap.width(), rendered.pixmap.height());
+    let below = height.saturating_sub(rendered.content_y + rendered.content_height);
+    ViewBounds {
+        size: NSSize::new(points(width), points(height)),
+        content: NSRect::new(
+            NSPoint::new(points(rendered.content_x), points(below)),
+            NSSize::new(
+                points(rendered.content_width),
+                points(rendered.content_height),
+            ),
+        ),
     }
 }
 

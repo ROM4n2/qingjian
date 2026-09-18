@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 use super::align::Align;
 use super::edges::Edges;
+use super::effect::EffectSpec;
 use super::position::Position;
 use super::span::Span;
 
@@ -34,6 +35,9 @@ pub(crate) struct BoxSpec {
 
     /// 不透明度（0–1），作用于节点连同子节点。
     pub(crate) opacity: Option<f32>,
+
+    /// 投影、内阴影。
+    pub(crate) effects: Option<Vec<EffectSpec>>,
 }
 
 impl BoxSpec {
@@ -51,6 +55,7 @@ impl BoxSpec {
             align_self: over.align_self.or(self.align_self),
             span: over.span.or(self.span),
             opacity: over.opacity.or(self.opacity),
+            effects: over.effects.clone().or_else(|| self.effects.clone()),
         }
     }
 }

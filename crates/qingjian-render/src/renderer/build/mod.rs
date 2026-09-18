@@ -13,11 +13,11 @@ use taffy::NodeId;
 use crate::error::RenderError;
 use crate::frame::Frame;
 use crate::layout::Layout;
-use crate::scene::{Scene, Visual};
+use crate::scene::{Effect, Scene, Visual};
 use crate::text::{TextPainter, TextStyle};
 use crate::theme::Theme;
-use crate::theme::file::ColorSpec;
-use crate::theme::file::node::{BoxSpec, NodeKind, NodeSpec};
+use crate::theme::file::node::{BoxSpec, EffectSpec, NodeKind, NodeSpec};
+use crate::theme::file::{ColorSpec, FontRef};
 
 use context::Context;
 
@@ -34,20 +34,12 @@ pub(super) struct Builder<'a> {
 }
 
 impl Builder<'_> {
-    /// 候选窗口的根节点与它的圆角（像素，给阴影用）。
-    pub(super) fn window(
-        &mut self,
-        frame: &Frame,
-        layout: Layout,
-    ) -> Result<(NodeId, f32), RenderError> {
+    /// 候选窗口的根节点。
+    pub(super) fn window(&mut self, frame: &Frame, layout: Layout) -> Result<NodeId, RenderError> {
         let windows = &self.theme.file().windows;
         let spec = match layout {
             Layout::Vertical => &windows.vertical,
             Layout::Horizontal => &windows.horizontal,
-        };
-        let radius = match &spec.kind {
-            NodeKind::Frame { radius, .. } => radius * self.scale,
-            _ => 0.0,
         };
         let mut out = Vec::with_capacity(1);
         self.node(spec, Context::new(frame), &BoxSpec::default(), &mut out)?;
@@ -57,7 +49,7 @@ impl Builder<'_> {
                 .scene
                 .node(taffy::Style::default(), Visual::Group, &[])?,
         };
-        Ok((root, radius))
+        Ok(root)
     }
 
     /// 实例化一个模板节点；`over` 是外层 `use` 写的盒子属性，盖过这个节点自己的。
@@ -100,13 +92,22 @@ impl Builder<'_> {
         }
     }
 
-    /// 盒子属性里写了不透明度就设上（作用于整棵子树）。
-    fn apply_opacity(&mut self, node: NodeId, layout: &BoxSpec) {
+    /// 盒子属性里的不透明度（作用于整棵子树）与效果设到节点上。
+    fn apply_layer(&mut self, node: NodeId, layout: &BoxSpec, ctx: Context) {
         if let Some(opacity) = layout.opacity
             && opacity < 1.0
         {
             self.scene.set_opacity(node, opacity);
         }
+        if let Some(effects) = &layout.effects {
+            let effects = effects.iter().map(|spec| self.effect(spec, ctx)).collect();
+            self.scene.set_effects(node, effects);
+        }
+    }
+
+    /// 效果换成像素、颜色按当前数据与外观取值。
+    fn effect(&self, spec: &EffectSpec, ctx: Context) -> Effect {
+        Effect::from_spec(spec, self.scale, self.color(&spec.shadow().color, ctx))
     }
 
     /// 节点颜色：条件写法按当前数据取分支，再按外观取值。
@@ -129,8 +130,8 @@ impl Builder<'_> {
     }
 
     /// 命名文字样式按倍数换成像素、配上颜色与当前外观的 gamma。
-    fn text_style(&self, font: &str, color: crate::color::Color) -> TextStyle {
-        let spec = self.theme.font(font);
+    fn text_style(&self, font: &FontRef, color: crate::color::Color) -> TextStyle {
+        let spec = self.theme.font_ref(font);
         TextStyle::new(
             spec.scaled(self.scale),
             spec.size,

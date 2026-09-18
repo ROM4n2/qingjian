@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use clap::Parser;
-use qingjian_render::{FontLibrary, Renderer, Shadow, Theme};
+use qingjian_render::{FontLibrary, Renderer, Theme};
 
 #[path = "../tests/scenes/mod.rs"]
 mod scenes;
@@ -24,10 +24,6 @@ struct Args {
     /// 中日字形回退用的 locale。
     #[arg(long, default_value = "zh-CN")]
     locale: String,
-
-    /// 不画阴影（对照壳自己带系统阴影的截图时用）。
-    #[arg(long)]
-    no_shadow: bool,
 
     /// 只量几段文字的宽度（点），不出图；与 AppKit 的 NSAttributedString.size() 对数。
     #[arg(long)]
@@ -76,13 +72,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         return Ok(());
     }
-    let shadow = (!args.no_shadow).then_some(Shadow::mac_panel());
-
     let samples = scenes::candidate_scenes();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
         for (scene, frame, layout) in &samples {
             let started = Instant::now();
-            let rendered = renderer.render(frame, *layout, &theme, args.scale, shadow.as_ref())?;
+            let rendered = renderer.render(frame, *layout, &theme, args.scale)?;
             let elapsed = started.elapsed();
             let path = args.out.join(format!("{scene}-{theme_name}.png"));
             rendered.pixmap.save_png(&path)?;
@@ -101,7 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Windows 的悬浮状态条：三格
     let cells = scenes::status_cells();
     for (theme_name, theme) in [("light", Theme::light()), ("dark", Theme::dark())] {
-        let status = renderer.render_status(&cells, &theme, args.scale, shadow.as_ref())?;
+        let status = renderer.render_status(&cells, &theme, args.scale)?;
         let path = args.out.join(format!("status-{theme_name}.png"));
         status.rendered.pixmap.save_png(&path)?;
         let (w, h) = status.rendered.content_size_points();

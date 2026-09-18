@@ -144,7 +144,7 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
 `extends` 目前只能以内置主题为底；主题包（`.qjtheme`）、图片与字体随包还没做。
 
 顶层：`extends`（可选，以某个内置主题为底：对象逐键合并、数组与标量整个替换）、`schema`、`meta`（id / name / author / license）、`variables`（颜色，`"#…"` 或 `{ "light", "dark" }`）、
-`text`（`gamma` 可分深浅；`styles` 是命名的字号行高，节点用 `"font": "名字"` 引用）、`components`、`windows`（`vertical` / `horizontal` 两个根节点）、`status`（状态条）。
+`text`（`gamma` 可分深浅；`styles` 是命名的字号、行高、字重，节点用 `"font": "名字"` 引用）、`components`、`windows`（`vertical` / `horizontal` 两个根节点）、`status`（状态条）。
 
 | 节点 `type` | 属性 |
 |---|---|
@@ -157,12 +157,19 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
 | `repeat` | `bind`（`candidates`）、`component`：每项候选实例化一份 |
 
 所有节点都可写：`when`（显示条件）、`margin` / `padding`（一个数或 `[上, 右, 下, 左]`，外边距可写 `"auto"`）、`gap`、`width` / `height` / `min_width`、
-`position: "absolute"` + `inset`、`align_self`（start / end / center / stretch）、`span: "row"`（表格里横跨整行）、`opacity`（整棵子树）。长度单位是点。
+`position: "absolute"` + `inset`、`align_self`（start / end / center / stretch）、`span: "row"`（表格里横跨整行）、`opacity`（整棵子树）、`effects`。长度单位是点。
 
 - **填充**（第 2 阶段第 1 步，2026-09-18）：颜色写法（含条件颜色）；`{ "linear": 角度, "stops": [...] }`（CSS 角度）；
   `{ "radial": [cx, cy], "stops": [...] }`（圆心按比例、半径到最远角）；色标是颜色（均分）或 `[颜色, 位置]`；
   `{ "image": "images/x.png", "slice": [上, 右, 下, 左], "scale": 2 }`（路径相对 theme.json，slice 为图片像素的九宫格切边、不写就拉伸，scale 为一个点对几个图片像素）。
   `border: { width, color }` 画在内侧。图片随主题目录加载（`Theme::from_dir`），只认 PNG、边长 ≤ 4096、路径不能出主题目录。
+- **效果**（第 2 阶段第 2 步）：`effects: [{ "type": "drop-shadow" | "inner-shadow", "x", "y", "blur", "spread", "color" }]`，按写的顺序画；
+  形状取节点自己画出来的 alpha（圆角框、九宫格图片的透明边、文字），不含子节点；`spread` 只对框生效。投影垫在节点底下、半透明填充会透出来，
+  内阴影压在填充上、子节点下。窗口阴影就是根节点的投影：渲染器按根节点投影伸出的距离在位图四周留边，壳按内容区对齐光标，
+  mac 面板关掉系统阴影（系统绘制退路仍用系统阴影），两端同一份像素。状态条的阴影写在 `status.effects`。
+- **字重与行内字体**：样式里 `weight` 写 100–900 或 `thin` / `extralight` / `light` / `regular` / `medium` / `semibold` / `bold` / `extrabold` / `black`；
+  节点的 `font` 也可以写 `{ "base": "index", "size": 12, "weight": "semibold" }` 在某个样式上改几项，只改字号时行高等比缩放。
+  mac 的 SF 是可变字体、苹方是多字重集合；Windows 另加载 Segoe UI 与雅黑 / 正黑的粗细体文件，缺的字重挑最近的一档。
 - **锁定外观**：`meta.appearance: "light" | "dark"`，不再跟随外观设置切换；用浅色图片做底的主题要锁浅色。
 - 能力展示主题在 `crates/qingjian-render/tests/themes/showcase/`（程序生成的图片），快照测试覆盖。
 
@@ -175,7 +182,7 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
   高亮候选换一套颜色（系统蓝、微信绿的白字）靠它；青简绿里 `hl_*` 变量与普通颜色同值。
 - **容错**：加载时检查颜色变量、文字样式、组件引用，找不到的记警告；渲染时颜色退回透明、样式退回 16/19、组件不画。
 
-还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、投影 / 内阴影等效果、伸出窗口的装饰、文字描边、动画、主题包与字体随包。
+还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、图层模糊、伸出窗口的装饰、文字描边、动画、主题包与字体随包。
 
 ## 渲染器要变成什么样
 

@@ -12,10 +12,11 @@ use taffy::{AlignItems, Dimension, Display, JustifyContent, NodeId, Position, Si
 use super::{Rendered, Renderer};
 use crate::canvas::Canvas;
 use crate::error::RenderError;
-use crate::scene::{Icon, Scene, Visual};
-use crate::shadow::Shadow;
+use crate::scene::{Effect, Icon, Scene, Visual};
 use crate::text::TextStyle;
 use crate::theme::Theme;
+use crate::theme::file::ColorSpec;
+use crate::theme::file::node::EffectSpec;
 
 /// 一次渲染里按倍数换算好的状态条参数。
 struct Metrics<'a> {
@@ -46,6 +47,17 @@ impl Metrics<'_> {
             self.theme.text_gamma(),
         )
     }
+
+    /// 状态条没有数据条件，条件颜色取 `else` 分支。
+    fn effect(&self, spec: &EffectSpec) -> Effect {
+        let color = match &spec.shadow().color {
+            ColorSpec::Fixed(color)
+            | ColorSpec::Switch {
+                otherwise: color, ..
+            } => color,
+        };
+        Effect::from_spec(spec, self.scale, self.theme.color(color))
+    }
 }
 
 impl Renderer {
@@ -55,13 +67,12 @@ impl Renderer {
         cells: &[StatusCell],
         theme: &Theme,
         scale: f32,
-        shadow: Option<&Shadow>,
     ) -> Result<RenderedStatus, RenderError> {
         let spec = &theme.file().status;
         let m = Metrics {
             theme,
             scale,
-            font: theme.font(&spec.font),
+            font: theme.font_ref(&spec.font),
         };
         let padding = m.px(spec.padding);
         let radius = m.px(spec.radius);
@@ -91,18 +102,14 @@ impl Renderer {
             Visual::solid(theme.color(&spec.background), radius),
             &children,
         )?;
+        let effects = spec.effects.iter().map(|effect| m.effect(effect)).collect();
+        scene.set_effects(root, effects);
         scene.layout(root, &mut self.text)?;
 
-        let margin = shadow.map_or(0.0, |s| m.px(s.margin()));
+        let margin = scene.overhang(root).ceil();
         let width = (content_width + margin * 2.0).ceil();
         let height = (content_height + margin * 2.0).ceil();
         let mut canvas = Canvas::new(width as u32, height as u32)?;
-        if let Some(shadow) = shadow
-            && let Some(content) =
-                tiny_skia::Rect::from_xywh(margin, margin, content_width, content_height)
-        {
-            shadow.paint(&mut canvas, content, radius, scale);
-        }
         scene.paint(root, &mut canvas, &mut self.text, margin, margin)?;
         let edges = widths
             .iter()
@@ -208,7 +215,6 @@ mod tests {
     use super::StatusCell;
     use crate::fonts::FontLibrary;
     use crate::renderer::Renderer;
-    use crate::shadow::Shadow;
     use crate::theme::Theme;
 
     #[test]
@@ -224,7 +230,7 @@ mod tests {
             StatusCell::Gear,
         ];
         let out = renderer
-            .render_status(&cells, &Theme::light(), 2.0, Some(&Shadow::mac_panel()))
+            .render_status(&cells, &Theme::light(), 2.0)
             .unwrap();
         assert_eq!(out.cell_edges.len(), 3);
         assert!(out.cell_edges.windows(2).all(|pair| pair[0] < pair[1]));
