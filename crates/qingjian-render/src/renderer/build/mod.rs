@@ -66,7 +66,11 @@ impl Builder<'_> {
         let layout = spec.layout.overridden_by(over);
         let theme = self.theme;
         match &spec.kind {
-            NodeKind::Frame { .. } => self.frame(spec, &layout, ctx, out),
+            NodeKind::Frame { .. } => {
+                self.frame(spec, &layout, ctx, out)?;
+                self.mark_transition(spec, out);
+                Ok(())
+            }
             NodeKind::Use { component } => match theme.file().components.get(component) {
                 Some(component) => self.node(component, ctx, &layout, out),
                 None => Ok(()),
@@ -86,9 +90,21 @@ impl Builder<'_> {
             _ => {
                 if let Some(node) = self.leaf(spec, &layout, ctx)? {
                     out.push(node);
+                    self.mark_transition(spec, out);
                 }
                 Ok(())
             }
+        }
+    }
+
+    /// 节点写了 `id` 与 `transition`：登记到刚产出的场景节点上（`out` 的最后一个）。
+    fn mark_transition(&mut self, spec: &NodeSpec, out: &[NodeId]) {
+        if let (Some(id), Some(transition), Some(&node)) = (&spec.id, &spec.transition, out.last())
+        {
+            let duration =
+                std::time::Duration::from_secs_f32(transition.duration.max(0.0) / 1000.0);
+            self.scene
+                .set_transition(node, id.clone(), duration, transition.easing);
         }
     }
 

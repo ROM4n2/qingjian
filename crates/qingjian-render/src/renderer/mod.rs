@@ -3,9 +3,13 @@
 //! 先按帧建一棵场景树（[`Scene`]），Taffy 算布局，再按树序画。内部全用像素：主题里的点数进来先乘缩放倍数。
 //! 文字节点的盒子顶边就是行框顶边，字形在行高里垂直居中。
 
+mod animate;
 mod build;
 mod rendered;
+mod retained;
 mod status;
+
+use std::time::Instant;
 
 use crate::canvas::Canvas;
 use crate::color::Color;
@@ -18,6 +22,7 @@ use crate::text::{TextPainter, TextStyle};
 use crate::theme::{FontSpec, Theme};
 
 use build::Builder;
+use retained::Retained;
 
 pub use rendered::Rendered;
 pub use status::{RenderedStatus, StatusCell};
@@ -31,22 +36,45 @@ const CANDIDATE_FONT: &str = "candidate";
 pub struct Renderer {
     /// 文字测绘。
     text: TextPainter,
+
+    /// 上一帧候选窗（过渡配对与动画帧重画用）；窗口隐藏后清掉。
+    last: Option<Retained>,
+
+    /// 系统开了「减少动态效果」：不播过渡。
+    reduce_motion: bool,
 }
 
 impl Renderer {
     pub fn new(library: FontLibrary) -> Self {
         let mut text = TextPainter::new(library);
         text.set_optical_size(Some(OPTICAL_SIZE));
-        Self { text }
+        Self {
+            text,
+            last: None,
+            reduce_motion: false,
+        }
     }
 
-    /// 画一帧。`scale` 是点 → 像素的倍数（Retina 为 2）；窗口根节点有投影时位图四周留出投影的边。
+    /// 画一帧。`scale` 是点 → 像素的倍数（Retina 为 2）；位图按画出范围开（投影、伸出的装饰），根节点的盒子是内容区。
+    /// 主题里带过渡的节点与上一帧配对，位置变了就从旧位置出发，[`Rendered::next_frame`] 告诉壳多久后要下一帧。
     pub fn render(
         &mut self,
         frame: &Frame,
         layout: Layout,
         theme: &Theme,
         scale: f32,
+    ) -> Result<Rendered, RenderError> {
+        self.render_at(frame, layout, theme, scale, Instant::now())
+    }
+
+    /// 同 [`Self::render`]，时间由调用方给（测试用固定时刻）。
+    pub fn render_at(
+        &mut self,
+        frame: &Frame,
+        layout: Layout,
+        theme: &Theme,
+        scale: f32,
+        now: Instant,
     ) -> Result<Rendered, RenderError> {
         let mut scene = Scene::new();
         let mut builder = Builder {
@@ -57,12 +85,36 @@ impl Renderer {
         };
         let root = builder.window(frame, layout)?;
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;
-        self.rasterize(
-            &scene,
+        let keyed = scene.keyed(root)?;
+        let transitions = self.transitions(&keyed, layout, scale, now);
+        // 画出范围按起止两头的并算，动画中途位图不变大小
+        let mut extent = scene.extent(root)?;
+        for transition in &transitions {
+            let from = transition.from;
+            let reach = scene.reach(transition.node).unwrap_or(0.0);
+            extent.include((from.x, from.y, from.width, from.height), reach);
+        }
+        let (x, y) = ((-extent.left).ceil(), (-extent.top).ceil());
+        let mut retained = Retained {
+            scene,
             root,
-            (content_width.ceil(), content_height.ceil()),
+            layout,
             scale,
-        )
+            size: (
+                (extent.right + x).ceil() as u32,
+                (extent.bottom + y).ceil() as u32,
+            ),
+            origin: (x, y),
+            content: (content_width.ceil(), content_height.ceil()),
+            placements: keyed
+                .iter()
+                .map(|keyed| (keyed.key.clone(), keyed.placement))
+                .collect(),
+            transitions,
+        };
+        let rendered = self.paint_retained(&mut retained, now);
+        self.last = Some(retained);
+        rendered
     }
 
     /// 按场景画出来的范围开位图（投影、伸出窗口的装饰都在里面），根节点的盒子是内容区。
@@ -86,6 +138,7 @@ impl Renderer {
             content_width: content_width as u32,
             content_height: content_height as u32,
             scale,
+            next_frame: None,
         })
     }
 

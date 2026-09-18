@@ -31,10 +31,22 @@
           "stroke": { "width": 1.5, "color": { "if": "highlighted", "then": "#c2386b", "else": "#00000000" } } }
       ]
     },
+    "item": {
+      "type": "frame", "height": 27,
+      "children": [
+        { "type": "frame", "id": "highlight", "transition": { "duration": 120, "easing": "ease-out" },
+          "when": "highlighted", "position": "absolute", "inset": [0, -5, 0, -5],
+          "fill": "@accent", "radius": 4 },
+        { "type": "text", "bind": "index", "font": "index", "margin": [8, 3, 0, 0],
+          "color": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" } },
+        { "type": "use", "component": "word", "margin": [4, 0, 0, 0] }
+      ]
+    },
     "row": {
       "type": "frame",
       "children": [
-        { "type": "frame", "when": "highlighted", "span": "row", "margin": [0, -4, 0, -4], "radius": 6,
+        { "type": "frame", "id": "highlight", "transition": { "duration": 120, "easing": "ease-out" },
+          "when": "highlighted", "span": "row", "margin": [0, -4, 0, -4], "radius": 6,
           "fill": { "linear": 90, "stops": ["#e85a8c", ["#ff9ec0", 0.7], "#ffc2d6"] },
           "border": { "width": 1, "color": "#c2386b" },
           "effects": [{ "type": "drop-shadow", "y": 2, "blur": 6, "color": "#e85a8c66" }] },

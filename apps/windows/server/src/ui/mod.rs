@@ -141,6 +141,10 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
         if got.0 <= 0 {
             break;
         }
+        if window.is_animation_timer(&msg) {
+            window.animation_frame();
+            continue;
+        }
         if msg.message == WM_WAKE {
             // 一次唤醒排空整个队列，保住 Hide→Show 的先后。
             while let Ok(command) = commands.try_recv() {

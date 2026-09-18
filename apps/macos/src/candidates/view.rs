@@ -18,6 +18,7 @@ use objc2_foundation::{
 };
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 
+use super::animation::AnimationTimer;
 use super::bitmap::BitmapPainter;
 use super::bounds::ViewBounds;
 use super::cloud_icon::CloudIcon;
@@ -49,6 +50,9 @@ pub struct Ivars {
 
     /// 渲染器用的主题（浅色那一份），重建渲染器时要带上。
     render_theme: RefCell<qingjian_render::Theme>,
+
+    /// 动画定时器：位图渲染器说有动画在播时跳。
+    animation: RefCell<AnimationTimer>,
 }
 
 /// preedit 光标的宽度。
@@ -125,6 +129,7 @@ impl CandidateView {
             bitmap: RefCell::new(None),
             font: RefCell::new(String::new()),
             render_theme: RefCell::new(qingjian_render::Theme::light()),
+            animation: RefCell::new(AnimationTimer::default()),
         });
         unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] }
     }
@@ -150,6 +155,7 @@ impl CandidateView {
             bitmap.set_theme(theme);
             self.setNeedsDisplay(true);
         }
+        self.sync_animation();
     }
 
     /// 新建位图渲染器并带上当前主题。
@@ -206,15 +212,56 @@ impl CandidateView {
     pub fn set_frame(&self, frame: &Frame) -> ViewBounds {
         *self.ivars().frame.borrow_mut() = frame.clone();
         self.setNeedsDisplay(true);
-        if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
-            return bitmap.set_frame(
+        let bounds = self.ivars().bitmap.borrow_mut().as_mut().map(|bitmap| {
+            bitmap.set_frame(
                 frame,
                 self.ivars().layout.get(),
                 self.is_dark(),
                 self.backing_scale(),
-            );
+            )
+        });
+        match bounds {
+            Some(bounds) => {
+                self.sync_animation();
+                bounds
+            }
+            None => ViewBounds::filled(self.preferred_size()),
         }
-        ViewBounds::filled(self.preferred_size())
+    }
+
+    /// 位图渲染器说有动画在播就起定时器。
+    fn sync_animation(&self) {
+        let animating = self
+            .ivars()
+            .bitmap
+            .borrow()
+            .as_ref()
+            .is_some_and(BitmapPainter::animating);
+        if animating && let Some(mtm) = MainThreadMarker::new() {
+            self.ivars().animation.borrow_mut().start(mtm, self);
+        }
+    }
+
+    /// 定时器每跳：要动画的下一帧并重画；播完就停。
+    pub fn animation_frame(&self) {
+        let more = self
+            .ivars()
+            .bitmap
+            .borrow_mut()
+            .as_mut()
+            .is_some_and(BitmapPainter::tick);
+        self.setNeedsDisplay(true);
+        if !more {
+            self.ivars().animation.borrow_mut().stop();
+        }
+    }
+
+    /// 窗口收起：停动画、忘掉上一帧。
+    pub fn stop_animation(&self) {
+        self.ivars().animation.borrow_mut().stop();
+        if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
+            bitmap.forget();
+        }
     }
 
     /// 在用青简渲染器（阴影画在位图里）；否则是 AppKit 逐项绘制，要系统阴影。

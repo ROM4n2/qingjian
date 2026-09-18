@@ -14,9 +14,9 @@ use windows::Win32::Foundation::{E_INVALIDARG, HWND, LPARAM, LRESULT, POINT, REC
 use windows::Win32::Graphics::Gdi::{GetDC, ReleaseDC};
 use windows::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, IDC_ARROW, LoadCursorW, SW_HIDE, SW_SHOWNA,
-    ShowWindow, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
-    WS_EX_TRANSPARENT, WS_POPUP,
+    CreateWindowExW, DefWindowProcW, DestroyWindow, IDC_ARROW, KillTimer, LoadCursorW, MSG,
+    SW_HIDE, SW_SHOWNA, SetTimer, ShowWindow, WM_TIMER, WNDCLASSEXW, WS_EX_LAYERED,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
@@ -32,6 +32,11 @@ use super::window_class::WindowClass;
 
 const CLASS_NAME: PCWSTR = w!("QingjianCandidateWindow");
 static CLASS: WindowClass = WindowClass::new();
+
+/// 动画定时器的 id 与间隔（约 60 帧；系统定时器精度约 15.6 ms）。
+const ANIMATION_TIMER: usize = 1;
+
+const ANIMATION_INTERVAL_MS: u32 = 16;
 
 /// 光标行与候选窗之间的间隙（逻辑像素）。
 const CARET_GAP: i32 = 2;
@@ -68,6 +73,9 @@ pub(crate) struct CandidateWindow {
 
     /// 青简渲染器；`None` 走 GDI。
     painter: SharedPainter,
+
+    /// 最近一次贴图时窗口左上角的屏幕坐标；动画帧贴在同一处。
+    position: Cell<(i32, i32)>,
 }
 
 impl CandidateWindow {
@@ -111,6 +119,7 @@ impl CandidateWindow {
             dpi: Cell::new(dpi),
             dark: Cell::new(dark),
             painter,
+            position: Cell::new((0, 0)),
         })
     }
 
@@ -144,14 +153,23 @@ impl CandidateWindow {
                     return;
                 }
                 let (content_x, content_y) = place(anchor, content);
-                layered::present(
-                    self.hwnd,
-                    &rendered.pixmap,
-                    (
-                        content_x - rendered.content_x as i32,
-                        content_y - rendered.content_y as i32,
-                    ),
-                )
+                let position = (
+                    content_x - rendered.content_x as i32,
+                    content_y - rendered.content_y as i32,
+                );
+                self.position.set(position);
+                if rendered.next_frame.is_some() {
+                    // SAFETY: 本线程建的窗口；定时器消息由 UI 线程的消息循环截下交给 animation_frame
+                    unsafe {
+                        SetTimer(
+                            Some(self.hwnd),
+                            ANIMATION_TIMER,
+                            ANIMATION_INTERVAL_MS,
+                            None,
+                        )
+                    };
+                }
+                layered::present(self.hwnd, &rendered.pixmap, position)
             }
             None => self.show_gdi(anchor),
         };
@@ -187,6 +205,37 @@ impl CandidateWindow {
 
     pub(crate) fn hide(&self) {
         let _ = unsafe { ShowWindow(self.hwnd, SW_HIDE) };
+        self.stop_animation();
+        if let Some(painter) = self.painter.borrow_mut().as_mut() {
+            painter.forget();
+        }
+    }
+
+    /// 这条消息是候选窗的动画定时器。
+    pub(crate) fn is_animation_timer(&self, msg: &MSG) -> bool {
+        msg.message == WM_TIMER && msg.hwnd == self.hwnd && msg.wParam.0 == ANIMATION_TIMER
+    }
+
+    /// 定时器每跳：要动画的下一帧贴在原处；播完就停。
+    pub(crate) fn animation_frame(&self) {
+        let rendered = self
+            .painter
+            .borrow_mut()
+            .as_mut()
+            .and_then(|painter| painter.tick());
+        let Some(rendered) = rendered else {
+            self.stop_animation();
+            return;
+        };
+        let _ = layered::present(self.hwnd, &rendered.pixmap, self.position.get());
+        if rendered.next_frame.is_none() {
+            self.stop_animation();
+        }
+    }
+
+    fn stop_animation(&self) {
+        // SAFETY: 没在跳时 KillTimer 返回错误，忽略
+        let _ = unsafe { KillTimer(Some(self.hwnd), ANIMATION_TIMER) };
     }
 
     /// DPI 或深浅变了就重建主题；每次 `show` 前调。

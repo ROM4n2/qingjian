@@ -95,6 +95,7 @@ impl Painter {
             LayoutMode::Horizontal => Layout::Horizontal,
         };
         let started = std::time::Instant::now();
+        self.renderer.set_reduce_motion(reduce_motion());
         let rendered = self
             .renderer
             .render(frame, layout, &self.theme.with_dark(dark), scale(dpi))
@@ -109,6 +110,20 @@ impl Painter {
         Some(rendered)
     }
 
+    /// 动画的下一帧；没有在播的返回 `None`。
+    pub(super) fn tick(&mut self) -> Option<Rendered> {
+        self.renderer
+            .tick()
+            .inspect_err(|error| tracing::warn!(%error, "候选窗动画帧渲染失败"))
+            .ok()
+            .flatten()
+    }
+
+    /// 候选窗收起：忘掉上一帧，下次显示不从旧位置过渡。
+    pub(super) fn forget(&mut self) {
+        self.renderer.forget();
+    }
+
     /// 画状态条。
     pub(super) fn render_status(
         &mut self,
@@ -121,6 +136,21 @@ impl Painter {
             .inspect_err(|error| tracing::warn!(%error, "状态条渲染失败"))
             .ok()
     }
+}
+
+/// 系统关了「动画效果」（设置 → 辅助功能 → 视觉效果）：不播过渡。读不到当开着。
+fn reduce_motion() -> bool {
+    let mut enabled = windows::core::BOOL(1);
+    // SAFETY: SPI_GETCLIENTAREAANIMATION 往 pvParam 写一个 BOOL。
+    let ok = unsafe {
+        windows::Win32::UI::WindowsAndMessaging::SystemParametersInfoW(
+            windows::Win32::UI::WindowsAndMessaging::SPI_GETCLIENTAREAANIMATION,
+            0,
+            Some((&raw mut enabled).cast()),
+            windows::Win32::UI::WindowsAndMessaging::SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    ok.is_ok() && !enabled.as_bool()
 }
 
 /// 点 → 像素的倍数。

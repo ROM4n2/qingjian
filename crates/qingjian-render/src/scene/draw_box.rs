@@ -176,6 +176,19 @@ fn nine_slice(
             if sx1 <= sx0 || sy1 <= sy0 || tx1 <= tx0 || ty1 <= ty0 {
                 continue;
             }
+            // 这一格在原图里是单一颜色（Skia 画九宫格时的「固定颜色格」）：纯色填，不做图片采样
+            if let Some(color) = uniform_color(pixmap, (sx0, sy0, sx1, sy1)) {
+                if let Some(rect) = Rect::from_xywh(tx0, ty0, tx1 - tx0, ty1 - ty0) {
+                    let path = tiny_skia::PathBuilder::from_rect(rect);
+                    let paint = tiny_skia::Paint {
+                        shader: Shader::SolidColor(color),
+                        anti_alias: true,
+                        ..tiny_skia::Paint::default()
+                    };
+                    canvas.fill_path_paint(&path, &paint, mask);
+                }
+                continue;
+            }
             let scale_x = (tx1 - tx0) / (sx1 - sx0);
             let scale_y = (ty1 - ty0) / (sy1 - sy0);
             let transform = Transform::from_row(
@@ -195,6 +208,33 @@ fn nine_slice(
             );
         }
     }
+}
+
+/// 原图 `(x0, y0, x1, y1)` 这块（图片像素，取整到整像素）所有像素同色时返回那个颜色。
+fn uniform_color(
+    pixmap: &tiny_skia::Pixmap,
+    (x0, y0, x1, y1): (f32, f32, f32, f32),
+) -> Option<tiny_skia::Color> {
+    let (x0, y0) = (x0.floor() as u32, y0.floor() as u32);
+    let (x1, y1) = (
+        (x1.ceil() as u32).min(pixmap.width()),
+        (y1.ceil() as u32).min(pixmap.height()),
+    );
+    if x1 <= x0 || y1 <= y0 {
+        return None;
+    }
+    let pixels = pixmap.pixels();
+    let width = pixmap.width() as usize;
+    let first = pixels[y0 as usize * width + x0 as usize];
+    let same = (y0..y1).all(|y| {
+        pixels[y as usize * width + x0 as usize..y as usize * width + x1 as usize]
+            .iter()
+            .all(|pixel| *pixel == first)
+    });
+    let color = first.demultiply();
+    same.then(|| {
+        tiny_skia::Color::from_rgba8(color.red(), color.green(), color.blue(), color.alpha())
+    })
 }
 
 /// 用图片图案填一块矩形。

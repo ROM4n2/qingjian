@@ -10,6 +10,7 @@ mod scenes;
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use qingjian_render::{FontLibrary, Layout, Pixmap, Rendered, Renderer, Theme};
 
@@ -126,6 +127,8 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             ("nihao-vertical", scenes::nihao(), Layout::Vertical),
             ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
         ] {
+            // 展示主题的高亮条带过渡：每张都从头画，不和上一张配对
+            renderer.forget();
             let rendered = renderer.render(&frame, layout, &theme, 2.0).unwrap();
             shots.push(shot(
                 format!("showcase-{scene}-{theme_name}"),
@@ -134,11 +137,48 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             ));
         }
     }
+    shots.push(transition_mid(&mut renderer, &showcase));
     let rendered = renderer
         .render(&scenes::nihao(), Layout::Vertical, &Theme::light(), 1.0)
         .unwrap();
     shots.push(shot("nihao-vertical-light-1x".to_owned(), rendered, None));
     shots
+}
+
+/// 过渡：高亮从第 1 项移到第 4 项，取 60 ms 处的一帧当快照；播完的最后一帧要与直接画第 4 项高亮逐像素一致。
+fn transition_mid(renderer: &mut Renderer, showcase: &Path) -> Shot {
+    let theme = Theme::from_dir(showcase, false).unwrap();
+    let from = scenes::nihao();
+    let mut to = scenes::nihao();
+    to.highlighted = Some(3);
+    let start = Instant::now();
+    renderer.forget();
+    renderer
+        .render_at(&from, Layout::Vertical, &theme, 2.0, start)
+        .unwrap();
+    let first = renderer
+        .render_at(&to, Layout::Vertical, &theme, 2.0, start)
+        .unwrap();
+    assert!(first.next_frame.is_some(), "高亮换行应当开始过渡");
+    let mid = renderer
+        .tick_at(start + Duration::from_millis(60))
+        .unwrap()
+        .expect("过渡中途应有新一帧");
+    let end = renderer
+        .tick_at(start + Duration::from_millis(200))
+        .unwrap()
+        .expect("播完的那一帧");
+    assert!(end.next_frame.is_none(), "播完不再要帧");
+    assert!(
+        renderer
+            .tick_at(start + Duration::from_millis(300))
+            .unwrap()
+            .is_none()
+    );
+    renderer.forget();
+    let still = renderer.render(&to, Layout::Vertical, &theme, 2.0).unwrap();
+    assert!(end.pixmap == still.pixmap, "过渡的最后一帧与直接画的不一致");
+    shot("showcase-transition-mid".to_owned(), mid, None)
 }
 
 fn shot(name: String, rendered: Rendered, cell_edges: Option<&[f32]>) -> Shot {

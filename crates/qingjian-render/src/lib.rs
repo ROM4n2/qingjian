@@ -6,6 +6,7 @@
 //!
 //! 设计与验收见 `docs/design/rendering.md`。
 
+mod animation;
 mod canvas;
 mod cloud;
 mod color;

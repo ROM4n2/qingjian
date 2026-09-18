@@ -42,6 +42,9 @@ pub struct BitmapPainter {
 
     /// 主题（浅色那一份，画的时候按外观取深浅）。
     theme: Theme,
+
+    /// 最近一帧还有动画在播，要定时调 [`Self::tick`]。
+    animating: bool,
 }
 
 impl BitmapPainter {
@@ -79,6 +82,7 @@ impl BitmapPainter {
             scale: 2.0,
             bounds: ViewBounds::filled(NSSize::ZERO),
             theme: Theme::light(),
+            animating: false,
         })
     }
 
@@ -97,6 +101,7 @@ impl BitmapPainter {
         scale: f32,
     ) -> ViewBounds {
         self.frame = convert::frame(frame);
+        self.renderer.set_reduce_motion(reduce_motion());
         self.layout = match layout {
             LayoutMode::Vertical => Layout::Vertical,
             LayoutMode::Horizontal => Layout::Horizontal,
@@ -131,6 +136,33 @@ impl BitmapPainter {
         }
     }
 
+    /// 有动画在播。
+    pub fn animating(&self) -> bool {
+        self.animating
+    }
+
+    /// 动画的下一帧：换上新位图（尺寸不变）；返回是否还要接着要。
+    pub fn tick(&mut self) -> bool {
+        match self.renderer.tick() {
+            Ok(Some(rendered)) => {
+                self.animating = rendered.next_frame.is_some();
+                self.image = to_image(&rendered.pixmap, self.bounds.size);
+            }
+            Ok(None) => self.animating = false,
+            Err(error) => {
+                tracing::warn!(%error, "候选窗动画帧渲染失败");
+                self.animating = false;
+            }
+        }
+        self.animating
+    }
+
+    /// 窗口收起：停动画、忘掉上一帧，下次显示不从旧位置过渡。
+    pub fn forget(&mut self) {
+        self.renderer.forget();
+        self.animating = false;
+    }
+
     fn repaint(&mut self) {
         let theme = self.theme.with_dark(self.dark);
         let started = std::time::Instant::now();
@@ -147,9 +179,15 @@ impl BitmapPainter {
         };
         let (width, height) = rendered.content_size_points();
         self.bounds = bounds(&rendered);
+        self.animating = rendered.next_frame.is_some();
         self.image = to_image(&rendered.pixmap, self.bounds.size);
         tracing::debug!(elapsed = ?started.elapsed(), width, height, "候选窗位图已画");
     }
+}
+
+/// 系统辅助功能里开了「减少动态效果」。
+fn reduce_motion() -> bool {
+    objc2_app_kit::NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
 }
 
 /// 位图与内容区换成点；内容区原点换成左下角起算。

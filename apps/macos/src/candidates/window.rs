@@ -78,6 +78,7 @@ impl CandidateWindow {
 
     pub fn hide(&self) {
         self.panel.orderOut(None);
+        self.view.stop_animation();
     }
 
     /// 排到最前，并确认真在当前 Space 上；不在就换一块新面板。
