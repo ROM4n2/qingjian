@@ -88,10 +88,7 @@ impl Renderer {
                 display: Display::Flex,
                 ..Style::default()
             },
-            Visual::Fill {
-                color: theme.color(&spec.background),
-                radius,
-            },
+            Visual::solid(theme.color(&spec.background), radius),
             &children,
         )?;
         scene.layout(root, &mut self.text)?;
@@ -164,10 +161,7 @@ fn status_cell(
             },
             ..Style::default()
         };
-        let visual = Visual::Fill {
-            color: m.theme.color(&spec.separator),
-            radius: 0.0,
-        };
+        let visual = Visual::solid(m.theme.color(&spec.separator), 0.0);
         children.push(scene.node(style, visual, &[])?);
     }
     let (content_style, content) = match cell {

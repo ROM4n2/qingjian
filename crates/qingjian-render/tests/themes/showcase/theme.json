@@ -1,0 +1,58 @@
+{
+  "extends": "qingjian",
+  "schema": 1,
+  "meta": { "id": "showcase", "name": "能力展示", "appearance": "light" },
+
+  "variables": {
+    "surface": "#fffaf2",
+    "accent": "#e85a8c",
+    "hl_text": "#ffffff",
+    "hl_gloss": "#ffffffd9",
+    "hl_faint": "#ffffffb3",
+    "hl_fresh": "#fff3b0",
+    "hl_cloud": "#ffffff"
+  },
+
+  "components": {
+    "top_line": {
+      "fill": { "radial": [0.1, 0.5], "stops": ["#ffd6e6", "#ffd6e600"] },
+      "radius": 6
+    },
+    "row": {
+      "type": "frame",
+      "children": [
+        { "type": "frame", "when": "highlighted", "span": "row", "margin": [0, -4, 0, -4], "radius": 6,
+          "fill": { "linear": 90, "stops": ["#e85a8c", ["#ff9ec0", 0.7], "#ffc2d6"] },
+          "border": { "width": 1, "color": "#c2386b" } },
+        { "type": "text", "bind": "index", "font": "index", "margin": [8, 0, 0, 0],
+          "color": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" } },
+        { "type": "use", "component": "word", "margin": [4, 0, 0, 8] },
+        { "type": "annotation", "bind": "annotation", "when": "annotations", "font": "annotation",
+          "gloss": { "if": "highlighted", "then": "@hl_gloss", "else": "@gloss" },
+          "fresh": { "if": "highlighted", "then": "@hl_fresh", "else": "@fresh" },
+          "faint": { "if": "highlighted", "then": "@hl_faint", "else": "@faint" },
+          "margin": [8, 0, 0, 8] }
+      ]
+    }
+  },
+
+  "windows": {
+    "vertical": {
+      "fill": { "image": "images/frame.png", "slice": [16, 16, 16, 16], "scale": 2 },
+      "padding": [12, 12, 10, 12],
+      "children": [
+        { "type": "frame", "position": "absolute", "inset": [4, 6, "auto", "auto"], "width": 12, "height": 12,
+          "opacity": 0.6, "fill": { "image": "images/petal.png", "scale": 2 } },
+        { "type": "use", "component": "top_line" },
+        { "type": "frame", "when": "candidates", "table": { "row_height": 27 }, "align_self": "stretch",
+          "children": [{ "type": "repeat", "bind": "candidates", "component": "row" }] },
+        { "type": "text", "bind": "page", "font": "index", "color": "@faint",
+          "align_self": "end", "margin": [4, 0, 0, 0] }
+      ]
+    },
+    "horizontal": {
+      "fill": { "linear": 180, "stops": ["@surface", "#ffe4ee"] },
+      "border": { "width": 1, "color": "#e85a8c80" }
+    }
+  }
+}

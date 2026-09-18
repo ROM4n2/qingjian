@@ -148,7 +148,7 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
 
 | 节点 `type` | 属性 |
 |---|---|
-| `frame` | `direction`（row / column）、`fill`、`radius`、`children`；带 `table: { row_height }` 时排成表格 |
+| `frame` | `direction`（row / column）、`fill`、`border`、`radius`、`children`；带 `table: { row_height }` 时排成表格 |
 | `text` | `bind` 或 `text`、`font`、`color` |
 | `icon` | `icon`（cloud / gear）、`size`、`color`；盒子缺省与图标同大，图标垂直居中 |
 | `preedit` | `font`、`typed` / `rest` / `struck` 三种拼音颜色、`caret: { width, color }` |
@@ -157,7 +157,14 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
 | `repeat` | `bind`（`candidates`）、`component`：每项候选实例化一份 |
 
 所有节点都可写：`when`（显示条件）、`margin` / `padding`（一个数或 `[上, 右, 下, 左]`，外边距可写 `"auto"`）、`gap`、`width` / `height` / `min_width`、
-`position: "absolute"` + `inset`、`align_self`（start / end / center / stretch）、`span: "row"`（表格里横跨整行）。长度单位是点。
+`position: "absolute"` + `inset`、`align_self`（start / end / center / stretch）、`span: "row"`（表格里横跨整行）、`opacity`（整棵子树）。长度单位是点。
+
+- **填充**（第 2 阶段第 1 步，2026-09-18）：颜色写法（含条件颜色）；`{ "linear": 角度, "stops": [...] }`（CSS 角度）；
+  `{ "radial": [cx, cy], "stops": [...] }`（圆心按比例、半径到最远角）；色标是颜色（均分）或 `[颜色, 位置]`；
+  `{ "image": "images/x.png", "slice": [上, 右, 下, 左], "scale": 2 }`（路径相对 theme.json，slice 为图片像素的九宫格切边、不写就拉伸，scale 为一个点对几个图片像素）。
+  `border: { width, color }` 画在内侧。图片随主题目录加载（`Theme::from_dir`），只认 PNG、边长 ≤ 4096、路径不能出主题目录。
+- **锁定外观**：`meta.appearance: "light" | "dark"`，不再跟随外观设置切换；用浅色图片做底的主题要锁浅色。
+- 能力展示主题在 `crates/qingjian-render/tests/themes/showcase/`（程序生成的图片），快照测试覆盖。
 
 - **表格**：`repeat` 出来的每份组件是一行，组件根节点的子节点依次是各列，每列取各行最宽，行高固定；末尾自动补一列吃掉剩余宽度，
   `span: "row"` 的格子（高亮条）因此能横跨整个表格。列间距用各格的外边距写。竖排三列对齐就靠它。
@@ -168,7 +175,7 @@ mac 在激活期间每秒的配置检查里 `refresh()`，Windows Server 在热�
   高亮候选换一套颜色（系统蓝、微信绿的白字）靠它；青简绿里 `hl_*` 变量与普通颜色同值。
 - **容错**：加载时检查颜色变量、文字样式、组件引用，找不到的记警告；渲染时颜色退回透明、样式退回 16/19、组件不画。
 
-还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、渐变 / 图片填充、描边、效果、动画、主题包与字体随包。
+还没做：变体覆盖（现在用 `when` 分支与条件颜色代替）、投影 / 内阴影等效果、伸出窗口的装饰、文字描边、动画、主题包与字体随包。
 
 ## 渲染器要变成什么样
 

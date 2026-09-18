@@ -1,10 +1,12 @@
 //! 主题里的节点：种类 + 显示条件 + 盒子属性。
 
 mod align;
+mod border;
 mod box_spec;
 mod caret;
 mod direction;
 mod edges;
+mod fill;
 mod kind;
 mod length;
 mod position;
@@ -17,6 +19,7 @@ pub(crate) use align::Align;
 pub(crate) use box_spec::BoxSpec;
 pub(crate) use direction::Direction;
 pub(crate) use edges::Edges;
+pub(crate) use fill::{FillSpec, StopSpec};
 pub(crate) use kind::NodeKind;
 pub(crate) use length::Length;
 pub(crate) use position::Position;

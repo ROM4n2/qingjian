@@ -93,6 +93,7 @@ impl Builder<'_> {
                 return Ok(None);
             }
         };
+        self.apply_opacity(node, layout);
         Ok(Some(node))
     }
 
@@ -155,10 +156,7 @@ impl Builder<'_> {
             },
             ..Style::default()
         };
-        let visual = Visual::Fill {
-            color: self.color(&caret.color, ctx),
-            radius: 0.0,
-        };
+        let visual = Visual::solid(self.color(&caret.color, ctx), 0.0);
         children.push(self.scene.node(caret_style, visual, &[])?);
         self.scene.node(
             layout_style::flex(style, Direction::Row),

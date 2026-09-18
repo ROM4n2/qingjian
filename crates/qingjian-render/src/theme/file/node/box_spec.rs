@@ -31,6 +31,9 @@ pub(crate) struct BoxSpec {
 
     /// 表格里跨列。
     pub(crate) span: Option<Span>,
+
+    /// 不透明度（0–1），作用于节点连同子节点。
+    pub(crate) opacity: Option<f32>,
 }
 
 impl BoxSpec {
@@ -47,6 +50,7 @@ impl BoxSpec {
             inset: over.inset.or(self.inset),
             align_self: over.align_self.or(self.align_self),
             span: over.span.or(self.span),
+            opacity: over.opacity.or(self.opacity),
         }
     }
 }

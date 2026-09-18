@@ -1,6 +1,6 @@
 //! 加载时检查一遍引用（颜色变量、文字样式、组件），有问题记警告；渲染时引用不到的退回缺省值，不让整个主题失败。
 
-use super::file::node::{NodeKind, NodeSpec};
+use super::file::node::{FillSpec, NodeKind, NodeSpec};
 use super::file::{ColorRef, ColorSpec, ThemeFile};
 
 /// 列出主题里引用不到的名字。
@@ -38,9 +38,17 @@ struct Checker<'a> {
 impl Checker<'_> {
     fn node(&mut self, node: &NodeSpec, path: &str) {
         match &node.kind {
-            NodeKind::Frame { fill, children, .. } => {
-                if let Some(fill) = fill {
-                    self.spec(fill, path);
+            NodeKind::Frame {
+                fill,
+                border,
+                children,
+                ..
+            } => {
+                for color in fill.iter().flat_map(FillSpec::colors) {
+                    self.spec(color, path);
+                }
+                if let Some(border) = border {
+                    self.spec(&border.color, path);
                 }
                 for (i, child) in children.iter().enumerate() {
                     self.node(child, &format!("{path}.children[{i}]"));

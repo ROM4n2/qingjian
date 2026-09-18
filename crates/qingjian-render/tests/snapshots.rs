@@ -123,6 +123,24 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             }
         }
     }
+    // 能力展示主题（tests/themes/showcase）：九宫格图片、渐变、边框、半透明装饰
+    let showcase = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/themes/showcase");
+    for (theme_name, dark) in [("light", false), ("dark", true)] {
+        let theme = Theme::from_dir(&showcase, dark).unwrap();
+        for (scene, frame, layout) in [
+            ("nihao-vertical", scenes::nihao(), Layout::Vertical),
+            ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
+        ] {
+            let rendered = renderer
+                .render(&frame, layout, &theme, 2.0, Some(&shadow))
+                .unwrap();
+            shots.push(shot(
+                format!("showcase-{scene}-{theme_name}"),
+                rendered,
+                None,
+            ));
+        }
+    }
     let rendered = renderer
         .render(
             &scenes::nihao(),

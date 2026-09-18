@@ -11,9 +11,10 @@ use taffy::{
 
 use super::layout_style;
 use super::{Builder, Context};
+use crate::color::Color;
 use crate::error::RenderError;
-use crate::scene::Visual;
-use crate::theme::file::node::{BoxSpec, NodeKind, NodeSpec, Span};
+use crate::scene::{BoxPaint, Fill, Visual};
+use crate::theme::file::node::{BoxSpec, FillSpec, NodeKind, NodeSpec, Span, StopSpec};
 
 impl Builder<'_> {
     pub(super) fn frame(
@@ -26,6 +27,7 @@ impl Builder<'_> {
         let NodeKind::Frame {
             direction,
             fill,
+            border,
             radius,
             table,
             children,
@@ -33,12 +35,16 @@ impl Builder<'_> {
         else {
             return Ok(());
         };
-        let visual = match fill {
-            Some(fill) => Visual::Fill {
-                color: self.color(fill, ctx),
+        let visual = if fill.is_some() || border.is_some() {
+            Visual::Box(BoxPaint {
+                fill: fill.as_ref().and_then(|fill| self.fill(fill, ctx)),
+                border: border
+                    .as_ref()
+                    .map(|border| (border.width * self.scale, self.color(&border.color, ctx))),
                 radius: radius * self.scale,
-            },
-            None => Visual::Group,
+            })
+        } else {
+            Visual::Group
         };
         let base = layout_style::from_box(layout, self.scale);
         let node = match table {
@@ -69,8 +75,44 @@ impl Builder<'_> {
                     .node(layout_style::flex(base, *direction), visual, &nodes)?
             }
         };
+        self.apply_opacity(node, layout);
         out.push(node);
         Ok(())
+    }
+
+    /// 填充写法 → 画法：颜色按数据与外观解析，图片从主题素材取（没有就不画）。
+    fn fill(&self, fill: &FillSpec, ctx: Context) -> Option<Fill> {
+        let stops = |stops: &[StopSpec]| -> Vec<(Color, f32)> {
+            let last = stops.len().saturating_sub(1).max(1) as f32;
+            stops
+                .iter()
+                .enumerate()
+                .map(|(i, stop)| match stop {
+                    StopSpec::At(color, position) => (self.color(color, ctx), *position),
+                    StopSpec::Even(color) => (self.color(color, ctx), i as f32 / last),
+                })
+                .collect()
+        };
+        Some(match fill {
+            FillSpec::Color(color) => Fill::Solid(self.color(color, ctx)),
+            FillSpec::Linear { linear, stops: s } => Fill::Linear {
+                angle: *linear,
+                stops: stops(s),
+            },
+            FillSpec::Radial { radial, stops: s } => Fill::Radial {
+                center: *radial,
+                stops: stops(s),
+            },
+            FillSpec::Image {
+                image,
+                slice,
+                scale,
+            } => Fill::Image {
+                pixmap: self.theme.image(image)?,
+                slice: *slice,
+                pixels_per_px: scale / self.scale,
+            },
+        })
     }
 
     /// 表格的格子（已放好行列）与列数。

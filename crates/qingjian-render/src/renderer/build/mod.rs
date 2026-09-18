@@ -100,6 +100,15 @@ impl Builder<'_> {
         }
     }
 
+    /// 盒子属性里写了不透明度就设上（作用于整棵子树）。
+    fn apply_opacity(&mut self, node: NodeId, layout: &BoxSpec) {
+        if let Some(opacity) = layout.opacity
+            && opacity < 1.0
+        {
+            self.scene.set_opacity(node, opacity);
+        }
+    }
+
     /// 节点颜色：条件写法按当前数据取分支，再按外观取值。
     fn color(&self, spec: &ColorSpec, ctx: Context) -> crate::color::Color {
         let color = match spec {

@@ -3,7 +3,11 @@
 //! 节点的位置全由布局给出：流内节点按 flex / grid 排，高亮条、光标这类叠在别的节点上的用绝对定位。
 //! 单位是像素（主题的点数在建树时已乘倍数），布局不取整，保证与直接算坐标的结果一致。
 
+mod box_paint;
+mod draw_box;
+mod fill;
 mod icon;
+mod node;
 mod paint;
 mod visual;
 
@@ -15,12 +19,15 @@ use taffy::{AlignItems, AvailableSpace, GridPlacement, Line, NodeId, Size, Style
 use crate::error::RenderError;
 use crate::text::{TextPainter, TextSize};
 
+pub(crate) use box_paint::BoxPaint;
+pub(crate) use fill::Fill;
 pub(crate) use icon::Icon;
+pub(crate) use node::SceneNode;
 pub(crate) use visual::Visual;
 
 pub(crate) struct Scene {
     /// 布局树，节点上下文是它画什么。
-    tree: TaffyTree<Visual>,
+    tree: TaffyTree<SceneNode>,
 }
 
 impl Scene {
@@ -38,8 +45,21 @@ impl Scene {
         children: &[NodeId],
     ) -> Result<NodeId, RenderError> {
         let node = self.tree.new_with_children(style, children)?;
-        self.tree.set_node_context(node, Some(visual))?;
+        self.tree.set_node_context(
+            node,
+            Some(SceneNode {
+                visual,
+                opacity: 1.0,
+            }),
+        )?;
         Ok(node)
+    }
+
+    /// 节点连同子节点的不透明度。
+    pub(crate) fn set_opacity(&mut self, node: NodeId, opacity: f32) {
+        if let Some(context) = self.tree.get_node_context_mut(node) {
+            context.opacity = opacity.clamp(0.0, 1.0);
+        }
     }
 
     /// 把表格里的格子放到指定的行、列；`stretch` 时撑满所占的格子（横跨整行的高亮条）。
@@ -78,9 +98,13 @@ impl Scene {
                     style,
                     |_, _| 0.0,
                     |known, _available: Size<AvailableSpace>| match visual {
-                        Some(Visual::Text {
-                            text: content,
-                            style,
+                        Some(SceneNode {
+                            visual:
+                                Visual::Text {
+                                    text: content,
+                                    style,
+                                },
+                            ..
                         }) => {
                             let size = *measured
                                 .entry(node)

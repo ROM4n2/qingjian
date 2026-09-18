@@ -18,7 +18,7 @@ pub(crate) use adaptive::Adaptive;
 pub(crate) use color_ref::ColorRef;
 pub(crate) use color_spec::ColorSpec;
 pub(crate) use color_value::ColorValue;
-pub(crate) use meta::Meta;
+pub(crate) use meta::{LockedAppearance, Meta};
 pub(crate) use status::StatusSpec;
 pub(crate) use text::TextSettings;
 pub(crate) use windows::Windows;

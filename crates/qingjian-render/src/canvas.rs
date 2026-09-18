@@ -1,7 +1,8 @@
 //! 位图画布：tiny-skia `Pixmap` 之上的几个填充原语，加字形位图的逐像素 source-over 混合。坐标一律是像素、左上角原点。
 
 use tiny_skia::{
-    BlendMode, FillRule, Paint, Path, PathBuilder, Pixmap, PremultipliedColorU8, Rect, Transform,
+    BlendMode, FillRule, Mask, Paint, Path, PathBuilder, Pixmap, PixmapPaint, PremultipliedColorU8,
+    Rect, Shader, Stroke, Transform,
 };
 
 use crate::color::{Color, mul_u8, premultiply};
@@ -69,6 +70,49 @@ impl Canvas {
             Transform::identity(),
             None,
         );
+    }
+
+    /// 按着色器（渐变、图片）填路径，可带遮罩（圆角裁切）。
+    pub(crate) fn fill_path_with(&mut self, path: &Path, shader: Shader, mask: Option<&Mask>) {
+        let paint = Paint {
+            shader,
+            anti_alias: true,
+            ..Paint::default()
+        };
+        self.pixmap
+            .fill_path(path, &paint, FillRule::Winding, Transform::identity(), mask);
+    }
+
+    /// 描路径（线宽像素）。
+    pub(crate) fn stroke_path(&mut self, path: &Path, width: f32, color: Color) {
+        let stroke = Stroke {
+            width,
+            ..Stroke::default()
+        };
+        self.pixmap.stroke_path(
+            path,
+            &paint(color, BlendMode::SourceOver),
+            &stroke,
+            Transform::identity(),
+            None,
+        );
+    }
+
+    /// 与画布同大的遮罩，`path` 里面为不透明。
+    pub(crate) fn mask(&self, path: &Path) -> Option<Mask> {
+        let mut mask = Mask::new(self.width(), self.height())?;
+        mask.fill_path(path, FillRule::Winding, true, Transform::identity());
+        Some(mask)
+    }
+
+    /// 把同大的离屏图层按不透明度合成上来。
+    pub(crate) fn draw_layer(&mut self, layer: &Pixmap, opacity: f32) {
+        let paint = PixmapPaint {
+            opacity,
+            ..PixmapPaint::default()
+        };
+        self.pixmap
+            .draw_pixmap(0, 0, layer.as_ref(), &paint, Transform::identity(), None);
     }
 
     /// 把另一张位图整张叠上来（左上角对齐到 `(x, y)`）。

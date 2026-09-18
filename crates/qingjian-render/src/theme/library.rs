@@ -107,10 +107,10 @@ fn read_user_themes(dir: &Path) -> Vec<Theme> {
     let mut themes = Vec::new();
     for (name, path) in theme_dirs(dir) {
         let file = path.join(THEME_FILE);
-        let Ok(json) = std::fs::read_to_string(&file) else {
+        if !file.is_file() {
             continue;
-        };
-        let theme = match Theme::from_json(&json, false) {
+        }
+        let theme = match Theme::from_dir(&path, false) {
             Ok(theme) => theme,
             Err(error) => {
                 tracing::warn!(path = %file.display(), %error, "用户主题读不进来，跳过");

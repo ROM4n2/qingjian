@@ -3,8 +3,10 @@
 use serde::Deserialize;
 
 use super::NodeSpec;
+use super::border::BorderSpec;
 use super::caret::CaretSpec;
 use super::direction::Direction;
+use super::fill::FillSpec;
 use super::table::TableSpec;
 use crate::scene::Icon;
 use crate::theme::file::ColorSpec;
@@ -12,12 +14,14 @@ use crate::theme::file::ColorSpec;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub(crate) enum NodeKind {
-    /// 框：按方向排子节点（或排成表格），可以有填充与圆角。
+    /// 框：按方向排子节点（或排成表格），可以有填充、边框与圆角。
     Frame {
         #[serde(default)]
         direction: Direction,
 
-        fill: Option<ColorSpec>,
+        fill: Option<FillSpec>,
+
+        border: Option<BorderSpec>,
 
         #[serde(default)]
         radius: f32,

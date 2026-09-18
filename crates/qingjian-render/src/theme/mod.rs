@@ -4,6 +4,7 @@
 //! 主题可以 `"extends": "<内置主题 id>"`，只写要改的部分（见 `extends.rs`）。
 //! 渲染时引用不到的颜色、样式退回缺省值，加载时 [`validate`] 先把这类问题记成警告。
 
+mod assets;
 mod error;
 mod extends;
 pub(crate) mod file;
@@ -11,7 +12,10 @@ mod font_spec;
 mod library;
 mod validate;
 
+use std::path::Path;
 use std::sync::{Arc, OnceLock};
+
+use tiny_skia::Pixmap;
 
 use crate::color::Color;
 
@@ -19,7 +23,8 @@ pub use error::ThemeError;
 pub use font_spec::FontSpec;
 pub use library::ThemeLibrary;
 
-use file::{ColorRef, SCHEMA, ThemeFile};
+use assets::Assets;
+use file::{ColorRef, LockedAppearance, SCHEMA, ThemeFile};
 
 /// 内置主题：id 与源文件，按设置界面列出的顺序；第一个是缺省主题。
 const BUILTINS: [(&str, &str); 3] = [
@@ -41,6 +46,9 @@ pub struct Theme {
 
     /// 用深色那一套值。
     dark: bool,
+
+    /// 图片素材（主题目录里的），同一主题的浅色 / 深色共用。
+    assets: Arc<Assets>,
 }
 
 impl Theme {
@@ -82,17 +90,28 @@ impl Theme {
         for problem in validate::problems(&file) {
             tracing::warn!(id = file.meta.id, "主题引用有误：{problem}");
         }
-        Ok(Self {
+        let theme = Self {
             file: Arc::new(file),
             dark,
-        })
+            assets: Arc::default(),
+        };
+        Ok(theme.with_dark(dark))
     }
 
-    /// 同一主题换外观。
+    /// 读主题目录：`dir/theme.json` 加它用到的图片（路径相对 `dir`）。
+    pub fn from_dir(dir: &Path, dark: bool) -> Result<Self, ThemeError> {
+        let json = std::fs::read_to_string(dir.join("theme.json"))?;
+        let mut theme = Self::from_json(&json, dark)?;
+        theme.assets = Arc::new(Assets::load(&theme.file, dir));
+        Ok(theme)
+    }
+
+    /// 同一主题换外观；主题锁定了外观（`meta.appearance`）时不换。
     pub fn with_dark(&self, dark: bool) -> Self {
         Self {
             file: Arc::clone(&self.file),
-            dark,
+            dark: self.locked_dark().unwrap_or(dark),
+            assets: Arc::clone(&self.assets),
         }
     }
 
@@ -119,6 +138,14 @@ impl Theme {
         &builtins()[0]
     }
 
+    /// 锁定的外观：`Some(true)` 只有深色，`Some(false)` 只有浅色。
+    fn locked_dark(&self) -> Option<bool> {
+        self.file
+            .meta
+            .appearance
+            .map(|appearance| appearance == LockedAppearance::Dark)
+    }
+
     pub(crate) fn file(&self) -> &ThemeFile {
         &self.file
     }
@@ -133,6 +160,11 @@ impl Theme {
                 .get(name)
                 .map_or(Color::rgba(0, 0, 0, 0), |value| value.get(self.dark).0),
         }
+    }
+
+    /// 主题里写的图片路径对应的位图；没有或没读进来为 `None`。
+    pub(crate) fn image(&self, path: &str) -> Option<Arc<Pixmap>> {
+        self.assets.image(path)
     }
 
     /// 命名文字样式（点）。

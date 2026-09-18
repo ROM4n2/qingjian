@@ -2,6 +2,10 @@
 
 #[derive(Debug, thiserror::Error)]
 pub enum ThemeError {
+    /// 读不到 `theme.json`。
+    #[error("cannot read theme file: {0}")]
+    Io(#[from] std::io::Error),
+
     /// 不是合法的 JSON，或结构对不上（缺必填项、类型错）。
     #[error("invalid theme file: {0}")]
     Json(#[from] serde_json::Error),
