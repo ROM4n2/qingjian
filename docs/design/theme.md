@@ -35,7 +35,7 @@ Figma 本身已经解决了「内容会变的设计稿」：自动布局（auto 
 | 数据 | 字段 |
 |---|---|
 | `preedit` | 各段文字与样式（已输入 / 未确认 / 删除线）、光标位置 |
-| `candidates[]` | `index`、`text`、`annotation[]`（每段带 `tone`：译文 / 生词 / 词性）、`cloud`、`highlighted` |
+| `candidates[]` | `index`、`text`、`code`（紧跟候选词的辅码，如 `[kf]`，没有时节点不产出）、`annotation[]`（每段带 `tone`：译文 / 生词 / 词性）、`cloud`、`highlighted` |
 | `trailing` | 整句补全或临时状态的文字、是否来自云端 |
 | `page` | 页码文字、有无上一页 / 下一页 |
 | `mode` | 中 / 英、全角 / 半角、方案名（状态条用） |

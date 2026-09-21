@@ -78,7 +78,8 @@ impl Builder<'_> {
                 let mut children = Vec::with_capacity(segments.len());
                 for (segment, tone) in segments {
                     let color = match tone {
-                        Tone::Gloss => gloss,
+                        // 码是词本身的属性，与译文同一个淡色
+                        Tone::Gloss | Tone::Code => gloss,
                         Tone::Fresh => fresh,
                         Tone::Faint => faint,
                     };
@@ -132,6 +133,11 @@ impl Builder<'_> {
             let text_style = match segment.style {
                 PreeditStyle::Typed => typed_style,
                 PreeditStyle::Rest => self.text_style(font, self.color(rest, ctx)).stroked(stroke),
+                // 辅码码段：与剩余拼音同色，再压一道下划线区分
+                PreeditStyle::AuxCode => self
+                    .text_style(font, self.color(rest, ctx))
+                    .stroked(stroke)
+                    .underlined(),
                 PreeditStyle::Struck => self
                     .text_style(font, self.color(struck, ctx))
                     .stroked(stroke)

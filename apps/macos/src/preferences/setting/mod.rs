@@ -110,6 +110,9 @@ pub enum Setting {
     /// `[general] chinese_first`，勾选框：中英混输时中文候选排在英文词前。
     ChineseFirst,
 
+    /// `[general] horizontal_grid`，勾选框：横排时上 / 下键展开成多行矩阵。
+    HorizontalGrid,
+
     /// `[general] shift_letter`，勾选框：中文模式下 Shift+字母进组句（勾上是 compose，否则 passthrough）。
     ShiftLetter,
 
@@ -204,6 +207,7 @@ impl Setting {
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
             Self::Theme => 51,
+            Self::HorizontalGrid => 52,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
@@ -265,6 +269,7 @@ impl Setting {
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
             51 => Self::Theme,
+            52 => Self::HorizontalGrid,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
@@ -355,6 +360,7 @@ mod tests {
             Setting::InputLog,
             Setting::SystemTextReplacements,
             Setting::ShiftLetter,
+            Setting::HorizontalGrid,
             Setting::ClearInputLog,
             Setting::TestCloud,
             Setting::OpenWebsite,

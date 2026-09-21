@@ -51,7 +51,9 @@
         { "type": "text", "bind": "text", "when": "cloud", "font": "candidate",
           "color": { "if": "highlighted", "then": "@hl_cloud", "else": "@cloud" } },
         { "type": "text", "bind": "text", "when": "!cloud", "font": "candidate",
-          "color": { "if": "highlighted", "then": "@hl_text", "else": "@text" } }
+          "color": { "if": "highlighted", "then": "@hl_text", "else": "@text" } },
+        { "type": "text", "bind": "code", "when": "code", "font": "annotation",
+          "color": { "if": "highlighted", "then": "@hl_gloss", "else": "@gloss" }, "margin": [2, 5, 0, 0] }
       ]
     },
 

@@ -43,6 +43,7 @@ impl<'a> Context<'a> {
                 "highlighted" => return self.frame.highlighted == Some(index),
                 "cloud" => return row.cloud,
                 "annotation" => return !row.annotation.is_empty(),
+                "code" => return row.code.is_some(),
                 "first" => return index == 0,
                 "last" => return index + 1 == count,
                 _ => {}
@@ -70,6 +71,7 @@ impl<'a> Context<'a> {
             match name {
                 "index" => return Some(&row.index),
                 "text" => return Some(&row.text),
+                "code" => return row.code.as_deref(),
                 _ => {}
             }
         }

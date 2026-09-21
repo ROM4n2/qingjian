@@ -27,6 +27,8 @@ pub fn candidate_scenes() -> Vec<(&'static str, Frame, Layout)> {
         ("probe", probe(), Layout::Vertical),
         ("preedit-only", preedit_only(), Layout::Vertical),
         ("short-vertical", short(), Layout::Vertical),
+        ("aux-code-vertical", aux_code(), Layout::Vertical),
+        ("aux-code-horizontal", aux_code(), Layout::Horizontal),
     ]
 }
 
@@ -90,6 +92,8 @@ pub fn nihao() -> Frame {
         footer: Some("1/6".to_owned()),
         sentence: None,
         status: None,
+        columns: 0,
+        column_ems: Vec::new(),
     }
 }
 
@@ -160,6 +164,8 @@ pub fn corrected_japanese() -> Frame {
         footer: None,
         sentence: None,
         status: Some("已删除「开放」".to_owned()),
+        columns: 0,
+        column_ems: Vec::new(),
     }
 }
 
@@ -172,6 +178,8 @@ pub fn probe() -> Frame {
         footer: None,
         sentence: None,
         status: None,
+        columns: 0,
+        column_ems: Vec::new(),
     }
 }
 
@@ -184,6 +192,51 @@ pub fn annotated(index: usize, text: &str, annotation: &[(&str, Tone)], cloud: b
             .map(|(s, tone)| ((*s).to_owned(), *tone))
             .collect(),
         cloud,
+        code: None,
+    }
+}
+
+/// 辅码态：拼音行末尾是触发键与带下划线的码段，候选词后面跟着命中的码。
+pub fn aux_code() -> Frame {
+    let mut rows = vec![
+        annotated(
+            0,
+            "开发",
+            &[("v. ", Tone::Faint), ("develop", Tone::Gloss)],
+            false,
+        ),
+        annotated(
+            1,
+            "开饭",
+            &[("v. ", Tone::Faint), ("serve meal", Tone::Gloss)],
+            false,
+        ),
+        annotated(2, "咖啡", &[], false),
+    ];
+    for (row, code) in rows.iter_mut().zip(["[kf]", "[kfu]", "[kfe]"]) {
+        row.code = Some(code.to_owned());
+    }
+    Frame {
+        preedit: Some(Preedit {
+            segments: vec![
+                PreeditSegment {
+                    text: "kai'fa;".into(),
+                    style: PreeditStyle::Typed,
+                },
+                PreeditSegment {
+                    text: "kf".into(),
+                    style: PreeditStyle::AuxCode,
+                },
+            ],
+            cursor: 9,
+        }),
+        rows,
+        highlighted: Some(0),
+        footer: Some("1/1".into()),
+        sentence: None,
+        status: None,
+        columns: 0,
+        column_ems: Vec::new(),
     }
 }
 
@@ -208,5 +261,7 @@ pub fn short() -> Frame {
         footer: None,
         sentence: None,
         status: None,
+        columns: 0,
+        column_ems: Vec::new(),
     }
 }
