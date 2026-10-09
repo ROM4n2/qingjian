@@ -13,7 +13,9 @@ pub(crate) enum Message {
     ShuangpinRawPreedit(bool),
     Wubi(bool),
     Traditional(bool),
+    Emoji(bool),
     EnglishCandidates(bool),
+    EnglishInChinese(bool),
     ChineseFirst(bool),
     /// 中文模式下 Shift+字母：交给应用（缺省）还是进组句缓冲区。
     ShiftLetter(Option<usize>),
