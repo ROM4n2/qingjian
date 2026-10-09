@@ -4,7 +4,8 @@ use std::path::PathBuf;
 
 use qingjian_render::{FontLibrary, Mode, Renderer, StatusCell, Theme};
 
-/// 左边按中英各画一个字、格子之间各夹一个 10 点宽的装饰，格子 4 点内边距。
+/// 左边按中英各画一个同尺寸不同色的方块（不用字：Linux CI 没有中文字体，两个字都画成同一个缺字框），
+/// 格子之间各夹一个 10 点宽的装饰，格子 4 点内边距。
 const THEME: &str = r##"{
     "extends": "qingjian", "schema": 1, "meta": { "id": "status-tree", "name": "status-tree" },
     "components": {
@@ -18,8 +19,8 @@ const THEME: &str = r##"{
         ] }
     },
     "status": { "root": { "type": "frame", "fill": "@surface", "children": [
-        { "type": "text", "text": "英", "when": "mode.english", "font": "candidate", "color": "@text" },
-        { "type": "text", "text": "中", "when": "!mode.english", "font": "candidate", "color": "@text" },
+        { "type": "frame", "width": 16, "height": 16, "when": "mode.english", "fill": "#0000ff" },
+        { "type": "frame", "width": 16, "height": 16, "when": "!mode.english", "fill": "#00ff00" },
         { "type": "repeat", "bind": "cells", "component": "status-item" }
     ] } }
 }"##;
@@ -57,7 +58,7 @@ fn status_tree_cells_and_mode() {
         *edges.last().unwrap(),
         chinese.rendered.content_width as f32
     );
-    // 第一格前面是「中」：第一格的右边界比它自己的宽度靠右
+    // 第一格前面是中文模式的方块：第一格的右边界比它自己的宽度靠右
     assert!(edges[0] > 0.0);
 
     // 第二格前的红点装饰画出来了：在第一格右边界之后 10 点（20 像素）以内找红色
@@ -70,7 +71,7 @@ fn status_tree_cells_and_mode() {
     });
     assert!(red, "格子之间的装饰没画出来");
 
-    // 英文模式左边换成「英」：与「中」同宽，格子边界不变
+    // 英文模式左边换成另一色的方块：同宽，格子边界不变
     let english = renderer
         .render_status(
             &cells,
