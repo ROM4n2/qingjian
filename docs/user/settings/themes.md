@@ -189,6 +189,31 @@ themes/
 - `mode.scheme` 是方案名，如「全拼」「小鹤双拼」「五笔（86） + 全拼」。
 - 这几个节点放在窗口的 `children` 里；`children` 要整组写出来（只写新加的会把原来的内容整个换掉），可以从内置主题的 `theme.json` 复制一份再改。
 
+## 悬浮状态条（Windows）
+
+Windows 屏幕右下角的悬浮状态条也可以按主题画，写法与候选窗口相同：在 `status` 下写 `root`，格子用 `repeat` 绑定 `cells` 一格一格展开（现在是「中 / 英」「标点」「设置齿轮」三格，点哪格就是切换哪一项）：
+
+```json
+"components": {
+  "status-cell": { "type": "frame", "padding": [4, 8], "children": [
+    { "type": "text", "bind": "text", "font": "candidate",
+      "color": { "if": "emphasized", "then": "@cloud", "else": "@gloss" } },
+    { "type": "icon", "icon": "gear", "when": "gear", "size": 15, "color": "@gloss" }
+  ] }
+},
+"status": {
+  "root": { "type": "frame", "fill": "@surface", "radius": 8, "children": [
+    { "type": "frame", "width": 24, "height": 24, "fill": { "image": "images/sakura.svg" } },
+    { "type": "repeat", "bind": "cells", "component": "status-cell" }
+  ] }
+}
+```
+
+- 每一格里可用：`text`（这一格的文字）、`emphasized`（当前生效的模式或全角标点）、`gear`（设置齿轮那一格）、`first` / `last`。
+- 整条状态条也能用「显示输入状态」里的 `mode.english` 等，自己决定画什么。
+- 格子之间可以夹装饰，点到装饰算前一格。
+- 不写 `root` 时状态条按原来的样子画，只用 `status` 里的颜色与尺寸。macOS 没有悬浮状态条。
+
 ## 过渡动画
 
 高亮换到另一个候选时，高亮条可以滑过去，而不是直接跳（三个内置主题都是这样）。给高亮条起个名字（`id`）并加上 `transition`：

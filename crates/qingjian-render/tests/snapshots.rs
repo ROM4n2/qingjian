@@ -12,7 +12,7 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use qingjian_render::{FontLibrary, Frame, Layout, Pixmap, Rendered, Renderer, Theme};
+use qingjian_render::{FontLibrary, Frame, Layout, Mode, Pixmap, Rendered, Renderer, Theme};
 
 const UPDATE_ENV: &str = "QINGJIAN_UPDATE_SNAPSHOTS";
 
@@ -98,7 +98,7 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
             shots.push(shot(format!("{scene}-{theme_name}"), rendered, None));
         }
         let status = renderer
-            .render_status(&scenes::status_cells(), &theme, 2.0)
+            .render_status(&scenes::status_cells(), &Mode::default(), &theme, 2.0)
             .unwrap();
         shots.push(shot(
             format!("status-{theme_name}"),

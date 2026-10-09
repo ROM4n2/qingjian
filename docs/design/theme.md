@@ -34,7 +34,7 @@
 | `fonts` | 随主题带的字体文件 `[{ "file": "fonts/x.ttf" }]` |
 | `components` | 可复用的节点，`use` / `repeat` 按名字引用 |
 | `windows` | `vertical` / `horizontal` 两个根节点，按用户选的排布取一个 |
-| `status` | 悬浮状态条：字体、内边距、圆角、各处颜色、`effects`；排法固定 |
+| `status` | 悬浮状态条（只有 Windows 有）：字体、内边距、圆角、各处颜色、`effects`，排法固定；写了 `root` 就按节点树画（见「状态条」） |
 
 节点：
 
@@ -63,6 +63,10 @@
 - **输入状态**（`Frame::mode`）：渲染器只给事实（三个布尔与方案名），显示什么字由主题用 `when` 分支写，渲染器里没有「中 / 英」这类文案。
   mac 壳组装候选帧时填（中英看 Caps Lock，与菜单栏一致；简繁、标点、方案看配置；英文模式标点算半角）；
   Windows 由 Router 现算（与状态条同一来源），经 `CandidateSink::show` 交给 UI 线程，不进 Server ↔ DLL 协议。方案名 `qingjian_platform::scheme_name`：同状态条的 `scheme_label`，单开全拼时也写「全拼」。
+- **状态条**：`status.root` 是一棵与候选窗口同写法的节点树，`repeat` 绑定 `cells` 展开格子（Windows 现在是模式、标点、齿轮三格）。
+  格子里的条件 `emphasized`（当前模式、生效的全角标点）、`gear`、`first`、`last`，文字绑定 `text`；整条能用 `mode.*`（`Renderer::render_status` 收一份 `Mode`，Windows 的 `StatusView` 带着，与候选窗口同一个 `Router::input_mode`）。
+  点击按格：每格第一个产出的节点的右边界（根坐标），没画出来的格同前一格，最后一格延到内容右边；格子之间的装饰算前一格（`renderer/status/tree.rs`）。
+  没写 `root` 走原来的固定排法（内置主题都是），Windows 的状态条快照不变。
 - **表格**：`repeat` 出来的每份组件是一行，组件根节点的子节点依次是各列，每列取各行最宽，行高固定；末尾自动补一列吃掉剩余宽度，
   `span: "row"` 的格子（高亮条）因此能横跨整个表格。列间距用各格的外边距写。竖排三列对齐就靠它。
 
@@ -142,7 +146,7 @@ theme.json + Frame 数据
 
 ## 预览版的限制
 
-- 状态条只能改颜色、字号、内边距与阴影，不能加图片和装饰。
+- 状态条的节点树画法不播动画；mac 没有悬浮状态条（菜单栏图标），主题的状态条只在 Windows 上显示。
 - 翻页只能显示页码文字；画出来的翻页按钮点不了。
 - 图片是 PNG 与 SVG；SVG 里的文字、内嵌位图不画；没有 APNG 帧动画。
 - 没有窗口出现 / 消失动画、混合模式、图层模糊、渐变字、变体覆盖（用 `when` 分支与条件颜色代替）。

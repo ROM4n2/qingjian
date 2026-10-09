@@ -15,6 +15,7 @@ mod fill;
 mod icon;
 mod keyed;
 mod layer_place;
+mod locate;
 mod node;
 mod paint;
 mod split;

@@ -1,9 +1,11 @@
-//! 实例化时的数据上下文：整帧，加上 `repeat` 展开中的那一项。显示条件（`when`）与绑定（`bind`）都在这里求值。
+//! 实例化时的数据上下文：整帧，加上 `repeat` 展开中的那一项（候选，或状态条的一格）。显示条件（`when`）与绑定（`bind`）都在这里求值。
 //!
 //! 名字先在候选项里找，再在整帧里找；不认识的条件为假、不认识的绑定为空（节点不画）。
 
+use super::cell::CellContext;
 use super::row::RowContext;
 use crate::frame::{Frame, Row, Tone};
+use crate::renderer::StatusCell;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct Context<'a> {
@@ -11,11 +13,38 @@ pub(super) struct Context<'a> {
 
     /// 在 `repeat` 里时绑定的那一项。
     pub(super) row: Option<RowContext<'a>>,
+
+    /// 状态条的格子（`repeat` 绑定 `cells`）；画候选窗口时为空。
+    pub(super) cells: &'a [StatusCell],
+
+    /// 在 `repeat` 里时绑定的那一格。
+    pub(super) cell: Option<CellContext<'a>>,
 }
 
 impl<'a> Context<'a> {
     pub(super) fn new(frame: &'a Frame) -> Self {
-        Self { frame, row: None }
+        Self {
+            frame,
+            row: None,
+            cells: &[],
+            cell: None,
+        }
+    }
+
+    /// 状态条：整帧只用到输入状态，格子供 `repeat` 展开。
+    pub(super) fn status(frame: &'a Frame, cells: &'a [StatusCell]) -> Self {
+        Self {
+            cells,
+            ..Self::new(frame)
+        }
+    }
+
+    /// 展开格子时每一格的上下文。
+    pub(super) fn with_cell(self, cell: &'a StatusCell, index: usize, count: usize) -> Self {
+        Self {
+            cell: Some(CellContext { cell, index, count }),
+            ..self
+        }
     }
 
     /// 展开列表时每一项的上下文。
@@ -38,6 +67,23 @@ impl<'a> Context<'a> {
     }
 
     fn flag(&self, name: &str) -> bool {
+        if let Some(CellContext { cell, index, count }) = self.cell {
+            match name {
+                "emphasized" => {
+                    return matches!(
+                        cell,
+                        StatusCell::Text {
+                            emphasized: true,
+                            ..
+                        }
+                    );
+                }
+                "gear" => return *cell == StatusCell::Gear,
+                "first" => return index == 0,
+                "last" => return index + 1 == count,
+                _ => {}
+            }
+        }
         if let Some(RowContext { row, index, count }) = self.row {
             match name {
                 "highlighted" => return self.frame.highlighted == Some(index),
@@ -70,6 +116,14 @@ impl<'a> Context<'a> {
 
     /// 文字绑定。
     pub(super) fn text(&self, name: &str) -> Option<&'a str> {
+        if let Some(CellContext {
+            cell: StatusCell::Text { text, .. },
+            ..
+        }) = self.cell
+            && name == "text"
+        {
+            return Some(text);
+        }
         if let Some(RowContext { row, .. }) = self.row {
             match name {
                 "index" => return Some(&row.index),

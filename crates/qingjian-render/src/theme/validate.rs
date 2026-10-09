@@ -16,6 +16,9 @@ pub(super) fn problems(file: &ThemeFile) -> Vec<String> {
     check.node(&file.windows.vertical, "windows.vertical");
     check.node(&file.windows.horizontal, "windows.horizontal");
     let status = &file.status;
+    if let Some(root) = &status.root {
+        check.node(root, "status.root");
+    }
     check.font(&status.font, "status");
     for color in [
         &status.background,

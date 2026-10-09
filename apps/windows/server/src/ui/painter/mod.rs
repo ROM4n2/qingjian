@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 use qingjian_render::{
-    FontLibrary, Frame, Layout, Rendered, RenderedStatus, Renderer, StatusCell, Theme,
+    FontLibrary, Frame, Layout, Mode, Rendered, RenderedStatus, Renderer, StatusCell, Theme,
     ThemeLibrary, UiFont, system_fonts,
 };
 
@@ -131,11 +131,12 @@ impl Painter {
     pub(super) fn render_status(
         &mut self,
         cells: &[StatusCell],
+        mode: &Mode,
         dark: bool,
         dpi: u32,
     ) -> Option<RenderedStatus> {
         self.renderer
-            .render_status(cells, &self.theme.with_dark(dark), scale(dpi))
+            .render_status(cells, mode, &self.theme.with_dark(dark), scale(dpi))
             .inspect_err(|error| tracing::warn!(%error, "状态条渲染失败"))
             .ok()
     }

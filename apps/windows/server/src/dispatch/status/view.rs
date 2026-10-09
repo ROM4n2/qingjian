@@ -1,4 +1,5 @@
 use qingjian_platform::Appearance;
+use qingjian_render::Mode;
 
 /// 状态条一次要显示的内容。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,4 +21,7 @@ pub struct StatusView {
 
     /// 配置里记住的内容左上角物理像素；`None` 首次按屏幕右下角摆。
     pub anchor: Option<(i32, i32)>,
+
+    /// 输入状态，给节点树画法的主题显示（与候选窗口同一份）。
+    pub mode: Mode,
 }

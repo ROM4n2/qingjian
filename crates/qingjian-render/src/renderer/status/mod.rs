@@ -1,8 +1,9 @@
 //! 悬浮状态条（Windows）：几格并排的小条 `[中 / 英][，。/ ,.][⚙]`，每格文字居中、格间一条细线，圆角背景加阴影。
-//! macOS 用菜单栏状态项，没有这一块。排法固定，尺寸与颜色取主题的 `status` 分节。
+//! macOS 用菜单栏状态项，没有这一块。主题没写 `status.root` 时排法固定，尺寸与颜色取 `status` 分节；写了走节点树（`tree.rs`）。
 
 mod cell;
 mod rendered;
+mod tree;
 
 pub use cell::StatusCell;
 pub use rendered::RenderedStatus;
@@ -11,6 +12,7 @@ use taffy::{AlignItems, Dimension, Display, JustifyContent, NodeId, Position, Si
 
 use super::Renderer;
 use crate::error::RenderError;
+use crate::frame::Mode;
 use crate::scene::{Effect, Icon, Scene, Visual};
 use crate::text::TextStyle;
 use crate::theme::Theme;
@@ -60,15 +62,20 @@ impl Metrics<'_> {
 }
 
 impl Renderer {
-    /// 画状态条。每格宽 = 内容宽 + 两侧内边距，高 = 行高 + 内边距；返回位图与各格右边界（供点击命中）。
+    /// 画状态条，返回位图与各格右边界（供点击命中）。`mode` 给节点树画法的主题显示中 / 英等状态。
+    /// 固定排法：每格宽 = 内容宽 + 两侧内边距，高 = 行高 + 内边距。
     pub fn render_status(
         &mut self,
         cells: &[StatusCell],
+        mode: &Mode,
         theme: &Theme,
         scale: f32,
     ) -> Result<RenderedStatus, RenderError> {
         self.text.use_families(theme.families());
         let spec = &theme.file().status;
+        if let Some(root) = &spec.root {
+            return self.render_status_tree(root, cells, mode, theme, scale);
+        }
         let m = Metrics {
             theme,
             scale,
@@ -202,6 +209,7 @@ fn status_cell(
 mod tests {
     use super::StatusCell;
     use crate::fonts::FontLibrary;
+    use crate::frame::Mode;
     use crate::renderer::Renderer;
     use crate::theme::Theme;
 
@@ -218,7 +226,7 @@ mod tests {
             StatusCell::Gear,
         ];
         let out = renderer
-            .render_status(&cells, &Theme::light(), 2.0)
+            .render_status(&cells, &Mode::default(), &Theme::light(), 2.0)
             .unwrap();
         assert_eq!(out.cell_edges.len(), 3);
         assert!(out.cell_edges.windows(2).all(|pair| pair[0] < pair[1]));

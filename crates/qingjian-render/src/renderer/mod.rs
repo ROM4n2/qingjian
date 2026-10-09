@@ -104,6 +104,7 @@ impl Renderer {
             theme,
             scale,
             text: &mut self.text,
+            cell_nodes: Vec::new(),
         };
         let root = builder.window(frame, layout)?;
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;

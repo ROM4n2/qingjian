@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use clap::Parser;
-use qingjian_render::{FontLibrary, Renderer, Theme};
+use qingjian_render::{FontLibrary, Mode, Renderer, Theme};
 
 #[path = "../tests/scenes/mod.rs"]
 mod scenes;
@@ -159,7 +159,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Windows 的悬浮状态条：三格
     let cells = scenes::status_cells();
     for (theme_name, theme) in &themes {
-        let status = renderer.render_status(&cells, theme, args.scale)?;
+        let status = renderer.render_status(&cells, &Mode::default(), theme, args.scale)?;
         let path = args.out.join(format!("status-{theme_name}.png"));
         status.rendered.pixmap.save_png(&path)?;
         let (w, h) = status.rendered.content_size_points();

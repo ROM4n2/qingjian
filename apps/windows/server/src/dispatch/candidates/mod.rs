@@ -16,7 +16,7 @@ impl Router {
             self.engine.note_displayed(std::iter::empty());
             self.hide_candidate_window();
         } else if let Some(rect) = self.last_rect {
-            let mode = self.candidate_mode();
+            let mode = self.input_mode();
             let unchanged = matches!(&self.last_shown,
                 Some((f, m, r)) if f == frame && *m == mode && *r == rect);
             if !unchanged {
@@ -28,8 +28,8 @@ impl Router {
         }
     }
 
-    /// 给候选窗口主题显示的输入状态，与状态条同一来源。
-    fn candidate_mode(&self) -> Mode {
+    /// 给主题显示的输入状态，候选窗口与状态条共用。
+    pub(super) fn input_mode(&self) -> Mode {
         Mode {
             english: self.english,
             traditional: self.config.traditional,

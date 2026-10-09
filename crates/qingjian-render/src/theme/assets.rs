@@ -177,6 +177,9 @@ pub(super) fn image_paths(file: &ThemeFile) -> Vec<String> {
     }
     collect(&file.windows.vertical, &mut paths);
     collect(&file.windows.horizontal, &mut paths);
+    if let Some(root) = &file.status.root {
+        collect(root, &mut paths);
+    }
     paths
 }
 

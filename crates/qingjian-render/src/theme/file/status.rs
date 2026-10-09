@@ -1,10 +1,11 @@
-//! 悬浮状态条（Windows）的样式。格子的排法固定（每格内容居中、格间细线），这里只给尺寸与颜色。
+//! 悬浮状态条（Windows）的样式。不写 `root` 时格子的排法固定（每格内容居中、格间细线），用这里的尺寸与颜色；
+//! 写了 `root` 就按节点树画（与候选窗口同一套写法），格子用 `repeat` 绑定 `cells`。
 
 use serde::Deserialize;
 
 use super::FontRef;
 use super::color_ref::ColorRef;
-use super::node::EffectSpec;
+use super::node::{EffectSpec, NodeSpec};
 
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct StatusSpec {
@@ -38,4 +39,8 @@ pub(crate) struct StatusSpec {
     /// 整条的投影、内阴影。
     #[serde(default)]
     pub(crate) effects: Vec<EffectSpec>,
+
+    /// 节点树画法的根节点；写了它上面几项就不用了。
+    #[serde(default)]
+    pub(crate) root: Option<NodeSpec>,
 }

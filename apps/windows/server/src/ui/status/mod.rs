@@ -229,6 +229,7 @@ impl StatusBar {
             match (data.as_ref(), painter.as_mut()) {
                 (Some(view), Some(painter)) => painter.render_status(
                     &Self::status_cells(view),
+                    &view.mode,
                     self.dark.get(),
                     self.dpi.get(),
                 ),
