@@ -232,6 +232,8 @@ english_candidates = true
 traditional = false
 # 中文模式下整段输入是英文词时（hello / key）是否让中文候选排第一、英文词第二；缺省 false：拼音不像话的输入英文词排第一
 chinese_first = false
+# 候选后面配 emoji（kaixin → 开心 😄）；false 时候选里只有字词
+emoji = true
 # 中文模式下按住 Shift 敲的字母：passthrough 拼音原样上屏、字母交给应用（缺省，与以前一致）/ compose 收进组句
 # 缓冲区参与匹配，这样 Cpan 与 cpan 一样能出「C盘」。英文模式与英文直输段（no-Way）不受影响
 shift_letter = "passthrough"

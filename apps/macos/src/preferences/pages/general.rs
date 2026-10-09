@@ -31,6 +31,9 @@ pub struct GeneralPage {
     /// 繁体输出模式。
     traditional: Retained<NSButton>,
 
+    /// 候选后面配 emoji。
+    emoji: Retained<NSButton>,
+
     /// 英文模式也给候选。
     english: Retained<NSButton>,
 
@@ -134,6 +137,8 @@ impl GeneralPage {
         );
         let traditional = checkbox(mtm, "繁体输出", Setting::Traditional, target);
         row_checkbox(layout, &traditional);
+        let emoji = checkbox(mtm, "候选后面显示 emoji", Setting::Emoji, target);
+        row_checkbox(layout, &emoji);
         let english = checkbox(
             mtm,
             "英文模式（Caps Lock）也给候选",
@@ -189,6 +194,7 @@ impl GeneralPage {
             wubi,
             shuangpin_raw_preedit,
             traditional,
+            emoji,
             english,
             english_off_in_apps,
             chinese_first,
@@ -229,6 +235,7 @@ impl GeneralPage {
         self.shuangpin_raw_preedit
             .setEnabled(general.scheme().is_shuangpin());
         set_checked(&self.traditional, general.traditional);
+        set_checked(&self.emoji, general.emoji);
         set_checked(&self.english, general.english_candidates);
         set_checked(
             &self.english_off_in_apps,
