@@ -30,6 +30,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{Error, Result};
 
 use qingjian_platform::protocol::{Frame, ScreenRect};
+use qingjian_render::Mode;
 
 use self::candidates::CandidateWindow;
 use self::command::UiCommand;
@@ -81,8 +82,8 @@ impl UiHandle {
 }
 
 impl CandidateSink for UiHandle {
-    fn show(&self, frame: Frame, rect: ScreenRect) {
-        self.post(UiCommand::Show(Box::new((frame, rect))));
+    fn show(&self, frame: Frame, mode: Mode, rect: ScreenRect) {
+        self.post(UiCommand::Show(Box::new((frame, mode, rect))));
     }
 
     fn hide(&self) {
@@ -192,8 +193,8 @@ fn apply(
 ) {
     match command {
         UiCommand::Show(payload) => {
-            let (frame, rect) = *payload;
-            window.set_content(&frame);
+            let (frame, mode, rect) = *payload;
+            window.set_content(&frame, mode);
             window.show(to_win_rect(rect));
         }
         UiCommand::Hide => window.hide(),

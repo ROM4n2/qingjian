@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 
 use qingjian_render::{
-    Frame, Layout, Preedit, PreeditSegment, PreeditStyle, Row, StatusCell, Tone,
+    Frame, Layout, Mode, Preedit, PreeditSegment, PreeditStyle, Row, StatusCell, Tone,
 };
 
 /// 候选窗样例：名字、帧、排布。
@@ -92,6 +92,7 @@ pub fn nihao() -> Frame {
         footer: Some("1/6".to_owned()),
         sentence: None,
         status: None,
+        mode: Mode::default(),
         columns: 0,
         column_ems: Vec::new(),
     }
@@ -164,6 +165,7 @@ pub fn corrected_japanese() -> Frame {
         footer: None,
         sentence: None,
         status: Some("已删除「开放」".to_owned()),
+        mode: Mode::default(),
         columns: 0,
         column_ems: Vec::new(),
     }
@@ -178,6 +180,7 @@ pub fn probe() -> Frame {
         footer: None,
         sentence: None,
         status: None,
+        mode: Mode::default(),
         columns: 0,
         column_ems: Vec::new(),
     }
@@ -235,6 +238,7 @@ pub fn aux_code() -> Frame {
         footer: Some("1/1".into()),
         sentence: None,
         status: None,
+        mode: Mode::default(),
         columns: 0,
         column_ems: Vec::new(),
     }
@@ -261,6 +265,7 @@ pub fn short() -> Frame {
         footer: None,
         sentence: None,
         status: None,
+        mode: Mode::default(),
         columns: 0,
         column_ems: Vec::new(),
     }

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use qingjian_platform::protocol::{Frame, PreeditKind};
 use qingjian_platform::{Appearance, LayoutMode};
-use qingjian_render::{Preedit, PreeditSegment, PreeditStyle, Row};
+use qingjian_render::{Mode, Preedit, PreeditSegment, PreeditStyle, Row};
 
 use super::row;
 use super::theme::Theme;
@@ -43,6 +43,9 @@ pub(crate) struct RenderData {
 
     /// 候选上是否显示辅码（随帧下发的 `[general] aux_code_show`）。
     pub(super) show_code: bool,
+
+    /// 输入状态，给主题显示中 / 英、简 / 繁等。
+    pub(super) mode: Mode,
 }
 
 impl RenderData {
@@ -59,10 +62,12 @@ impl RenderData {
             layout: LayoutMode::default(),
             appearance: Appearance::default(),
             show_code: false,
+            mode: Mode::default(),
         }
     }
 
-    pub(super) fn set(&mut self, frame: &Frame) {
+    pub(super) fn set(&mut self, frame: &Frame, mode: Mode) {
+        self.mode = mode;
         self.layout = frame.layout;
         self.appearance = frame.appearance;
         self.show_code = frame.aux_code_show;
@@ -110,6 +115,7 @@ impl RenderData {
             footer: self.footer.clone(),
             sentence: self.sentence.clone(),
             status: self.notice.clone(),
+            mode: self.mode.clone(),
         }
     }
 }

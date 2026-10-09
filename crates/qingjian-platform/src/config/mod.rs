@@ -44,7 +44,7 @@ pub use log_level::LogLevel;
 pub use model::LocalModelConfig;
 pub use modifiers::Modifiers;
 pub use preedit_mode::PreeditMode;
-pub use scheme::{Scheme, scheme_label};
+pub use scheme::{Scheme, scheme_label, scheme_name};
 pub use shift_letter::ShiftLetter;
 pub use shortcut::ShortcutConfig;
 pub use status_bar::StatusBarConfig;

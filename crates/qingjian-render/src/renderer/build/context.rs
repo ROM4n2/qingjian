@@ -61,6 +61,9 @@ impl<'a> Context<'a> {
             "highlighted.annotation" => self
                 .highlighted()
                 .is_some_and(|row| !row.annotation.is_empty()),
+            "mode.english" => frame.mode.english,
+            "mode.traditional" => frame.mode.traditional,
+            "mode.full_width" => frame.mode.full_width,
             _ => false,
         }
     }
@@ -78,6 +81,7 @@ impl<'a> Context<'a> {
         match name {
             "page" => self.frame.footer.as_deref(),
             "trailing.text" => self.frame.trailing().map(|(text, _)| text),
+            "mode.scheme" => Some(self.frame.mode.scheme.as_str()).filter(|s| !s.is_empty()),
             _ => None,
         }
     }
@@ -100,5 +104,29 @@ impl<'a> Context<'a> {
 
     fn highlighted(&self) -> Option<&'a Row> {
         self.frame.highlighted.and_then(|i| self.frame.rows.get(i))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Context;
+    use crate::frame::{Frame, Mode};
+
+    #[test]
+    fn mode_conditions_and_scheme_binding() {
+        let frame = Frame {
+            mode: Mode {
+                english: true,
+                traditional: false,
+                full_width: true,
+                scheme: "小鹤双拼".to_owned(),
+            },
+            ..Frame::default()
+        };
+        let ctx = Context::new(&frame);
+        assert!(ctx.holds("mode.english") && !ctx.holds("!mode.english"));
+        assert!(!ctx.holds("mode.traditional") && ctx.holds("mode.full_width"));
+        assert_eq!(ctx.text("mode.scheme"), Some("小鹤双拼"));
+        assert_eq!(Context::new(&Frame::default()).text("mode.scheme"), None);
     }
 }

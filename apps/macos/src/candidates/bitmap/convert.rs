@@ -14,6 +14,7 @@ pub(super) fn frame(frame: &Frame) -> qingjian_render::Frame {
         footer: frame.footer.clone(),
         sentence: frame.sentence.clone(),
         status: frame.status.clone(),
+        mode: frame.mode.clone(),
     }
 }
 

@@ -54,9 +54,13 @@
 ### 数据
 
 - **条件**：`when` 是数据字段名，`!` 取反，`a|b` 任一成立。候选项里：`highlighted`、`cloud`、`annotation`、`first`、`last`；
-  整帧：`preedit`、`trailing`、`trailing.cloud`、`page`、`candidates`、`annotations`（任一候选有译文）、`highlighted`、`highlighted.annotation`。
-- **绑定**：文字 `index`、`text`（候选项）、`page`、`trailing.text`；译文 `annotation`（候选项）、`highlighted.annotation`；列表 `candidates`。
+  整帧：`preedit`、`trailing`、`trailing.cloud`、`page`、`candidates`、`annotations`（任一候选有译文）、`highlighted`、`highlighted.annotation`；
+  输入状态：`mode.english`、`mode.traditional`、`mode.full_width`。
+- **绑定**：文字 `index`、`text`（候选项）、`page`、`trailing.text`、`mode.scheme`（方案显示名）；译文 `annotation`（候选项）、`highlighted.annotation`；列表 `candidates`。
 - **条件颜色**：`{ "if": "highlighted", "then": "@hl_text", "else": "@text" }`，条件写法同 `when`。系统蓝、微信绿的高亮白字靠它；青简绿里 `hl_*` 与普通颜色同值。
+- **输入状态**（`Frame::mode`）：渲染器只给事实（三个布尔与方案名），显示什么字由主题用 `when` 分支写，渲染器里没有「中 / 英」这类文案。
+  mac 壳组装候选帧时填（中英看 Caps Lock，与菜单栏一致；简繁、标点、方案看配置；英文模式标点算半角）；
+  Windows 由 Router 现算（与状态条同一来源），经 `CandidateSink::show` 交给 UI 线程，不进 Server ↔ DLL 协议。方案名 `qingjian_platform::scheme_name`：同状态条的 `scheme_label`，单开全拼时也写「全拼」。
 - **表格**：`repeat` 出来的每份组件是一行，组件根节点的子节点依次是各列，每列取各行最宽，行高固定；末尾自动补一列吃掉剩余宽度，
   `span: "row"` 的格子（高亮条）因此能横跨整个表格。列间距用各格的外边距写。竖排三列对齐就靠它。
 
@@ -136,7 +140,6 @@ theme.json + Frame 数据
 
 ## 预览版的限制
 
-- 候选窗口拿不到中 / 英、全 / 半角、简 / 繁等输入状态，主题里没法显示它们。
 - 状态条只能改颜色、字号、内边距与阴影，不能加图片和装饰。
 - 译文整段一个节点，词性与释义不能分开排。
 - 翻页只能显示页码文字；画出来的翻页按钮点不了。

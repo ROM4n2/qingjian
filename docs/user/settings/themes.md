@@ -158,6 +158,22 @@ themes/
 
 上例是右上角探出 24 点。候选窗口仍按窗口本身贴着光标摆放，装饰不影响位置，贴近屏幕边缘时装饰可能露在屏幕外。装饰不挡鼠标。
 
+## 显示输入状态
+
+候选窗口里可以显示当前是中文还是英文、简体还是繁体、标点全角还是半角，以及输入方案名。显示什么字由主题自己写：
+用 `when` 让两个文字只出现一个，方案名用 `"bind": "mode.scheme"`：
+
+```json
+{ "type": "text", "text": "中", "when": "!mode.english", "font": "index", "color": "@gloss" },
+{ "type": "text", "text": "英", "when": "mode.english", "font": "index", "color": "@gloss" },
+{ "type": "text", "text": "繁", "when": "mode.traditional", "font": "index", "color": "@gloss" },
+{ "type": "text", "bind": "mode.scheme", "font": "index", "color": "@faint" }
+```
+
+- `mode.english`：英文模式；`mode.traditional`：繁体输出；`mode.full_width`：标点是全角。前面加 `!` 表示「不是」。
+- `mode.scheme` 是方案名，如「全拼」「小鹤双拼」「五笔（86） + 全拼」。
+- 这几个节点放在窗口的 `children` 里；`children` 要整组写出来（只写新加的会把原来的内容整个换掉），可以从内置主题的 `theme.json` 复制一份再改。
+
 ## 过渡动画
 
 高亮换到另一个候选时，高亮条可以滑过去，而不是直接跳（三个内置主题都是这样）。给高亮条起个名字（`id`）并加上 `transition`：

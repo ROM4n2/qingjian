@@ -22,6 +22,7 @@ use windows::core::{Error, PCWSTR, Result, w};
 
 use qingjian_platform::Appearance;
 use qingjian_platform::protocol::Frame;
+use qingjian_render::Mode;
 
 pub(crate) use self::render_data::RenderData;
 use self::theme::Theme;
@@ -126,8 +127,8 @@ impl CandidateWindow {
     }
 
     /// 刷新内容（不定位、不显示）。
-    pub(crate) fn set_content(&self, frame: &Frame) {
-        self.data.borrow_mut().set(frame);
+    pub(crate) fn set_content(&self, frame: &Frame, mode: Mode) {
+        self.data.borrow_mut().set(frame, mode);
     }
 
     /// 按光标矩形定位并显示：贴光标下方（放不下放上方），四周留出阴影。
