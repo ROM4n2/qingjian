@@ -80,6 +80,7 @@ impl Host {
                     open_with_system(&[&dir.to_string_lossy()]);
                 }
             }
+            MenuAction::OpenDownload => open_with_system(&[qingjian_update::DOWNLOAD_URL]),
         }
     }
 
@@ -346,6 +347,14 @@ impl Host {
             (Setting::LocalModelEnabled, SettingValue::Bool(on)) => {
                 self.settings.set_bool("model", "enabled", on);
             }
+            (Setting::UpdateCheck, SettingValue::Bool(on)) => {
+                self.settings.set_bool("update", "check", on);
+            }
+            (Setting::UpdateChannel, SettingValue::Index(index)) => {
+                if let Some(channel) = UpdateChannel::ALL.get(index) {
+                    self.settings.set_value("update", "channel", channel.key());
+                }
+            }
             (Setting::CloudSlots, SettingValue::Index(index)) => {
                 self.settings.set_value("predict", "slots", index as i64);
             }
@@ -384,6 +393,10 @@ impl Host {
                     .get(index)
                     .map_or(Scheme::Pinyin.key(), |scheme| scheme.key());
                 self.settings.set_value("general", "scheme", key);
+            }
+            (Setting::ShuangpinRawPreedit, SettingValue::Bool(on)) => {
+                self.settings
+                    .set_bool("general", "shuangpin_raw_preedit", on);
             }
             // 五笔：勾上就是 86 版，取消就是关。与上面的拼音方案同时开着就是混输。
             (Setting::Wubi, SettingValue::Bool(on)) => {
@@ -452,6 +465,17 @@ impl Host {
             (Setting::VerboseLog, SettingValue::Bool(on)) => {
                 let level = if on { LogLevel::Debug } else { LogLevel::Info };
                 self.settings.set_value("general", "log_level", level.key());
+            }
+            (Setting::CheckUpdateNow, _) => {
+                if let Some(updates) = &self.updates {
+                    updates.check_now(&self.settings.config().update);
+                }
+                self.sync_update();
+                return;
+            }
+            (Setting::OpenDownload, _) => {
+                open_with_system(&[qingjian_update::DOWNLOAD_URL]);
+                return;
             }
             (Setting::OpenWebsite, _) => {
                 open_with_system(&[crate::preferences::WEBSITE_URL]);

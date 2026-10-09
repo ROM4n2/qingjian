@@ -50,7 +50,7 @@ fn general_and_shortcut_sections_parse() {
         config.shortcut.translation,
         Config::default().shortcut.translation
     );
-    assert_eq!(config.shortcut.switch_mode, SwitchKey::Shift);
+    assert_eq!(config.shortcut.switch_mode, SwitchKeys::default());
     assert!(config.general.english_mode);
 }
 

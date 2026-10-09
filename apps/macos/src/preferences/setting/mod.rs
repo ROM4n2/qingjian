@@ -59,6 +59,18 @@ pub enum Setting {
     /// `[model] enabled`。
     LocalModelEnabled,
 
+    /// `[update] check`。
+    UpdateCheck,
+
+    /// `[update] channel`，弹出菜单 正式版 / 测试版。
+    UpdateChannel,
+
+    /// 立即检查更新。
+    CheckUpdateNow,
+
+    /// 打开下载页。
+    OpenDownload,
+
     /// 默认中文标点模式。
     FullWidthPunctuation,
 
@@ -140,6 +152,9 @@ pub enum Setting {
     /// `[general] scheme`，弹出菜单：全拼 + 五套双拼 + 大千注音 + 关。
     Scheme,
 
+    /// `[general] shuangpin_raw_preedit`，勾选框：双拼模式下输入框保留原始输入按键。
+    ShuangpinRawPreedit,
+
     /// `[general] wubi`，勾选框：勾上是五笔（86 版）。与拼音同时开着就是混输。
     Wubi,
 
@@ -207,7 +222,7 @@ impl Setting {
             Self::ChineseFirst => 42,
             Self::ShiftLetter => 50,
             Self::Theme => 51,
-            Self::HorizontalGrid => 52,
+            Self::HorizontalGrid => 57,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
@@ -215,6 +230,7 @@ impl Setting {
             Self::ImportDictionary => 19,
             Self::Scheme => 20,
             Self::Traditional => 47,
+            Self::ShuangpinRawPreedit => 52,
             Self::VerboseLog => 21,
             Self::OpenLogDirectory => 22,
             Self::CopyDiagnostics => 23,
@@ -229,6 +245,10 @@ impl Setting {
             Self::OpenWebsite => 30,
             Self::OpenRepository => 31,
             Self::LocalModelEnabled => 32,
+            Self::UpdateCheck => 53,
+            Self::UpdateChannel => 54,
+            Self::CheckUpdateNow => 55,
+            Self::OpenDownload => 56,
             Self::FullWidthPunctuation => 33,
             Self::SelectPhrase => 34,
             Self::PhraseDraft => 35,
@@ -269,7 +289,7 @@ impl Setting {
             42 => Self::ChineseFirst,
             50 => Self::ShiftLetter,
             51 => Self::Theme,
-            52 => Self::HorizontalGrid,
+            57 => Self::HorizontalGrid,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
@@ -278,6 +298,7 @@ impl Setting {
             20 => Self::Scheme,
             49 => Self::Wubi,
             47 => Self::Traditional,
+            52 => Self::ShuangpinRawPreedit,
             21 => Self::VerboseLog,
             22 => Self::OpenLogDirectory,
             23 => Self::CopyDiagnostics,
@@ -292,6 +313,10 @@ impl Setting {
             30 => Self::OpenWebsite,
             31 => Self::OpenRepository,
             32 => Self::LocalModelEnabled,
+            53 => Self::UpdateCheck,
+            54 => Self::UpdateChannel,
+            55 => Self::CheckUpdateNow,
+            56 => Self::OpenDownload,
             33 => Self::FullWidthPunctuation,
             34 => Self::SelectPhrase,
             35 => Self::PhraseDraft,
@@ -335,6 +360,10 @@ mod tests {
             Setting::QuestionKey,
             Setting::CloudEnabled,
             Setting::LocalModelEnabled,
+            Setting::UpdateCheck,
+            Setting::UpdateChannel,
+            Setting::CheckUpdateNow,
+            Setting::OpenDownload,
             Setting::BaseUrl,
             Setting::Model,
             Setting::ApiKey,
@@ -349,6 +378,7 @@ mod tests {
             Setting::ImportDictionary,
             Setting::Scheme,
             Setting::Wubi,
+            Setting::ShuangpinRawPreedit,
             Setting::Traditional,
             Setting::VerboseLog,
             Setting::OpenLogDirectory,
