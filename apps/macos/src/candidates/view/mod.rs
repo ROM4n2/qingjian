@@ -678,7 +678,7 @@ impl CandidateView {
         match tone {
             Tone::Gloss => &self.theme().gloss_color,
             Tone::Fresh => &self.theme().fresh_color,
-            Tone::Faint => &self.theme().pos_color,
+            Tone::Faint | Tone::Pos | Tone::Separator => &self.theme().pos_color,
         }
     }
 

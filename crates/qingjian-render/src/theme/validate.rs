@@ -84,12 +84,18 @@ impl Checker<'_> {
                 gloss,
                 fresh,
                 faint,
+                pos,
+                separator,
                 stroke,
                 ..
             } => {
                 self.font(font, path);
                 self.stroke(stroke.as_ref(), path);
-                for color in [gloss, fresh, faint] {
+                for color in [gloss, fresh, faint]
+                    .into_iter()
+                    .chain(pos)
+                    .chain(separator)
+                {
                     self.spec(color, path);
                 }
             }

@@ -14,6 +14,7 @@ mod length;
 mod position;
 mod span;
 mod table;
+mod tone_filter;
 mod transition;
 
 use serde::Deserialize;
@@ -30,6 +31,7 @@ pub(crate) use kind::NodeKind;
 pub(crate) use length::Length;
 pub(crate) use position::Position;
 pub(crate) use span::Span;
+pub(crate) use tone_filter::ToneFilter;
 pub(crate) use transition::TransitionSpec;
 
 #[derive(Debug, Clone, Deserialize)]

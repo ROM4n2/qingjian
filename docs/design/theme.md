@@ -44,7 +44,7 @@
 | `text` | `bind` 或 `text`（固定文字）、`font`、`color`、`stroke` |
 | `icon` | `icon`（cloud / gear）、`size`、`color`；盒子缺省与图标同大，图标垂直居中 |
 | `preedit` | `font`、`typed` / `rest` / `struck` 三种拼音颜色、`caret: { width, color }`、`stroke` |
-| `annotation` | `bind`、`font`、`gloss` / `fresh` / `faint` 三种深浅、`stroke` |
+| `annotation` | `bind`、`font`、`gloss` / `fresh` / `faint` 三种颜色（`pos`、`separator` 可单独写，缺省同 `faint`）、`tones`（只画哪几种片段）、`senses`（只画前几个义项）、`stroke` |
 | `use` | `component`：引用组件，这里写的盒子属性盖过组件根节点的 |
 | `repeat` | `bind`（`candidates`）、`component`：每项候选实例化一份 |
 
@@ -58,6 +58,8 @@
   输入状态：`mode.english`、`mode.traditional`、`mode.full_width`。
 - **绑定**：文字 `index`、`text`（候选项）、`page`、`trailing.text`、`mode.scheme`（方案显示名）；译文 `annotation`（候选项）、`highlighted.annotation`；列表 `candidates`。
 - **条件颜色**：`{ "if": "highlighted", "then": "@hl_text", "else": "@text" }`，条件写法同 `when`。系统蓝、微信绿的高亮白字靠它；青简绿里 `hl_*` 与普通颜色同值。
+- **译文片段**：壳把译文拼成一串带种类（`Tone`）的片段：`gloss` 译文、`fresh` 生词译文、`pos` 词性、`separator` 义项间的 ` · `、`faint` 假名注音、`code` 辅码。
+  `tones` 按种类挑、`senses` 按分隔数截前几个义项，词性与译文分两行排就是两个节点；挑完是空的也留着节点，主题给它定高就照样占行。系统绘制的旧路径把 `pos` / `separator` 画成与 `faint` 同色。
 - **输入状态**（`Frame::mode`）：渲染器只给事实（三个布尔与方案名），显示什么字由主题用 `when` 分支写，渲染器里没有「中 / 英」这类文案。
   mac 壳组装候选帧时填（中英看 Caps Lock，与菜单栏一致；简繁、标点、方案看配置；英文模式标点算半角）；
   Windows 由 Router 现算（与状态条同一来源），经 `CandidateSink::show` 交给 UI 线程，不进 Server ↔ DLL 协议。方案名 `qingjian_platform::scheme_name`：同状态条的 `scheme_label`，单开全拼时也写「全拼」。
@@ -141,7 +143,6 @@ theme.json + Frame 数据
 ## 预览版的限制
 
 - 状态条只能改颜色、字号、内边距与阴影，不能加图片和装饰。
-- 译文整段一个节点，词性与释义不能分开排。
 - 翻页只能显示页码文字；画出来的翻页按钮点不了。
 - 图片是 PNG 与 SVG；SVG 里的文字、内嵌位图不画；没有 APNG 帧动画。
 - 没有窗口出现 / 消失动画、混合模式、图层模糊、渐变字、变体覆盖（用 `when` 分支与条件颜色代替）。

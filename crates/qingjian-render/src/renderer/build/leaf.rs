@@ -7,7 +7,7 @@ use super::{Builder, Context};
 use crate::error::RenderError;
 use crate::frame::{Preedit, PreeditStyle, Tone};
 use crate::scene::Visual;
-use crate::theme::file::node::{BoxSpec, Direction, NodeKind, NodeSpec};
+use crate::theme::file::node::{BoxSpec, Direction, NodeKind, NodeSpec, ToneFilter};
 
 impl Builder<'_> {
     pub(super) fn leaf(
@@ -69,11 +69,17 @@ impl Builder<'_> {
                 gloss,
                 fresh,
                 faint,
+                pos,
+                separator,
+                tones,
+                senses,
                 stroke,
             } => {
                 let Some(segments) = ctx.annotation(bind) else {
                     return Ok(None);
                 };
+                // 挑完是空的也留着节点（与没有译文时一样）：主题写了高度就照样占住这一行，几列对得齐
+                let segments = pick_segments(segments, tones.as_deref(), *senses);
                 let stroke = self.stroke(stroke.as_ref(), ctx);
                 let mut children = Vec::with_capacity(segments.len());
                 for (segment, tone) in segments {
@@ -82,6 +88,8 @@ impl Builder<'_> {
                         Tone::Gloss | Tone::Code => gloss,
                         Tone::Fresh => fresh,
                         Tone::Faint => faint,
+                        Tone::Pos => pos.as_ref().unwrap_or(faint),
+                        Tone::Separator => separator.as_ref().unwrap_or(faint),
                     };
                     let visual = Visual::Text {
                         text: segment.clone(),
@@ -183,5 +191,66 @@ impl Builder<'_> {
             Visual::Group,
             &children,
         )
+    }
+}
+
+/// 按 `senses`（前几个义项，按分隔数）与 `tones`（只要哪几种片段）挑出要画的片段。
+fn pick_segments<'a>(
+    segments: &'a [(String, Tone)],
+    tones: Option<&[ToneFilter]>,
+    senses: Option<usize>,
+) -> Vec<&'a (String, Tone)> {
+    let mut seen = 0;
+    segments
+        .iter()
+        .take_while(|(_, tone)| {
+            if *tone == Tone::Separator {
+                seen += 1;
+            }
+            senses.is_none_or(|senses| seen < senses)
+        })
+        .filter(|(_, tone)| tones.is_none_or(|tones| tones.iter().any(|t| t.matches(*tone))))
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pick_segments;
+    use crate::frame::Tone;
+    use crate::theme::file::node::ToneFilter;
+
+    fn texts(picked: Vec<&(String, Tone)>) -> Vec<&str> {
+        picked.iter().map(|(text, _)| text.as_str()).collect()
+    }
+
+    #[test]
+    fn picks_by_tone_and_sense() {
+        let segments: Vec<(String, Tone)> = [
+            ("int. ", Tone::Pos),
+            ("hello", Tone::Gloss),
+            (" · ", Tone::Separator),
+            ("int. ", Tone::Pos),
+            ("hi", Tone::Fresh),
+        ]
+        .into_iter()
+        .map(|(text, tone)| (text.to_owned(), tone))
+        .collect();
+        assert_eq!(texts(pick_segments(&segments, None, None)).len(), 5);
+        assert_eq!(
+            texts(pick_segments(&segments, Some(&[ToneFilter::Pos]), Some(1))),
+            ["int. "]
+        );
+        assert_eq!(
+            texts(pick_segments(
+                &segments,
+                Some(&[ToneFilter::Gloss, ToneFilter::Fresh]),
+                None
+            )),
+            ["hello", "hi"]
+        );
+        assert_eq!(
+            texts(pick_segments(&segments, None, Some(1))),
+            ["int. ", "hello"]
+        );
     }
 }

@@ -158,6 +158,21 @@ themes/
 
 上例是右上角探出 24 点。候选窗口仍按窗口本身贴着光标摆放，装饰不影响位置，贴近屏幕边缘时装饰可能露在屏幕外。装饰不挡鼠标。
 
+## 词性与释义分开排
+
+译文默认排成一行（`n. pure letters · …`）。想让词性和释义各占一行，在候选里写两个译文节点，用 `tones` 指定每个只画哪几种内容，`senses` 指定只画前几个义项：
+
+```json
+{ "type": "annotation", "bind": "annotation", "font": "annotation", "tones": ["pos"], "senses": 1, "height": 15,
+  "gloss": "@gloss", "fresh": "@fresh", "faint": "@faint" },
+{ "type": "annotation", "bind": "annotation", "font": "annotation", "tones": ["gloss", "fresh"], "senses": 1,
+  "gloss": "@gloss", "fresh": "@fresh", "faint": "@faint" }
+```
+
+- `tones` 可写：`pos`（词性）、`gloss`（释义）、`fresh`（生词的释义）、`separator`（义项之间的 ` · `）、`faint`（日文的假名注音）、`code`（辅码）。不写全画。
+- 有的候选没有词性（比如 emoji），给词性那一行写上 `height`，空着也占住位置，几列才对得齐。
+- 词性和分隔符的颜色可以单独写 `pos`、`separator`，不写用 `faint`。
+
 ## 显示输入状态
 
 候选窗口里可以显示当前是中文还是英文、简体还是繁体、标点全角还是半角，以及输入方案名。显示什么字由主题自己写：

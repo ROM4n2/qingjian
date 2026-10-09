@@ -49,6 +49,8 @@ fn row(row: &Row) -> qingjian_render::Row {
                     Tone::Gloss => qingjian_render::Tone::Gloss,
                     Tone::Fresh => qingjian_render::Tone::Fresh,
                     Tone::Faint => qingjian_render::Tone::Faint,
+                    Tone::Pos => qingjian_render::Tone::Pos,
+                    Tone::Separator => qingjian_render::Tone::Separator,
                 };
                 (text.clone(), tone)
             })

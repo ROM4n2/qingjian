@@ -8,6 +8,7 @@ use super::caret::CaretSpec;
 use super::direction::Direction;
 use super::fill::FillSpec;
 use super::table::TableSpec;
+use super::tone_filter::ToneFilter;
 use crate::scene::Icon;
 use crate::theme::file::{ColorSpec, FontRef};
 
@@ -87,8 +88,20 @@ pub(crate) enum NodeKind {
         /// 生词的译文。
         fresh: ColorSpec,
 
-        /// 词性与分隔符。
+        /// 淡色片段（假名注音）；词性与分隔符没单独写颜色时也用它。
         faint: ColorSpec,
+
+        /// 词性；不写用 `faint`。
+        pos: Option<ColorSpec>,
+
+        /// 义项间的分隔；不写用 `faint`。
+        separator: Option<ColorSpec>,
+
+        /// 只画这几种片段（词性、译文分两行排时各写一个节点）；不写全画。
+        tones: Option<Vec<ToneFilter>>,
+
+        /// 只画前几个义项（按分隔数）；不写全画。
+        senses: Option<usize>,
 
         /// 描边。
         stroke: Option<BorderSpec>,
