@@ -1,14 +1,14 @@
 //! 画一个节点自己的画面（不含子节点）；阴影取形状时盒子可以外扩 / 内缩。
 
-use super::draw_box::draw_box;
-use super::{BoxPaint, Icon, Visual};
+use super::draw_box;
 use crate::canvas::Canvas;
 use crate::cloud::draw_cloud;
 use crate::gear::draw_gear;
+use crate::scene::{BoxPaint, Icon, Visual};
 use crate::text::TextPainter;
 
 /// `rect` 是节点盒子（像素，画布坐标）。
-pub(super) fn draw_visual(
+pub(in crate::scene) fn draw_visual(
     canvas: &mut Canvas,
     text: &mut TextPainter,
     visual: &Visual,
@@ -35,7 +35,7 @@ pub(super) fn draw_visual(
 }
 
 /// 阴影用的形状：盒子按 `spread` 外扩（负数内缩），圆角随之变；别的画面不管 `spread`。
-pub(super) fn draw_shape(
+pub(in crate::scene) fn draw_shape(
     canvas: &mut Canvas,
     text: &mut TextPainter,
     visual: &Visual,

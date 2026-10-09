@@ -2,31 +2,31 @@
 //! 离屏图只取形状加模糊铺开的那一块，不是整张画布。形状怎么画由调用方给（节点自己的画面，或容器的子节点）。
 //! 算好的遮罩交回调用方合成并缓存：动画帧里没动的节点直接贴缓存，不再重画形状、重做模糊。
 
-use super::{Effect, EffectKind};
 use crate::canvas::Canvas;
 use crate::error::RenderError;
+use crate::scene::{Effect, EffectKind};
 use crate::shadow;
 
 /// 在离屏图上画形状：盒子在 `rect`（离屏图坐标），按 `spread` 外扩（负数内缩）。
-pub(super) type DrawShape<'a> =
+pub(in crate::scene) type DrawShape<'a> =
     dyn FnMut(&mut Canvas, (f32, f32, f32, f32), f32) -> Result<(), RenderError> + 'a;
 
 /// 一个效果算好的遮罩：左上角在画布里的位置、宽高、alpha。
 #[derive(Debug, Clone)]
-pub(super) struct EffectMask {
-    pub(super) left: i32,
+pub(in crate::scene) struct EffectMask {
+    pub(in crate::scene) left: i32,
 
-    pub(super) top: i32,
+    pub(in crate::scene) top: i32,
 
-    pub(super) width: u32,
+    pub(in crate::scene) width: u32,
 
-    pub(super) height: u32,
+    pub(in crate::scene) height: u32,
 
-    pub(super) alpha: Vec<u8>,
+    pub(in crate::scene) alpha: Vec<u8>,
 }
 
 /// 算一个效果的遮罩；`rect` 是节点盒子（像素，画布坐标），`bounds` 是画布宽高。整块落在画布外时为 `None`。
-pub(super) fn effect_mask(
+pub(in crate::scene) fn effect_mask(
     bounds: (u32, u32),
     rect: (f32, f32, f32, f32),
     effect: &Effect,

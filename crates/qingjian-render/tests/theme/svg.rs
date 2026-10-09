@@ -1,11 +1,10 @@
 //! 主题里的 SVG 图片：窗口底用九宫格、超出主题目录的路径不读。走完整的渲染器，按像素核对。
 
-#[path = "scenes/mod.rs"]
-mod scenes;
-
 use std::path::{Path, PathBuf};
 
 use qingjian_render::{FontLibrary, Layout, Rendered, Renderer, Theme};
+
+use crate::scenes;
 
 /// 四边各 4 个单位红边、中间蓝色的 20×20 SVG。
 const FRAME: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20">

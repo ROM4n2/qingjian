@@ -4,8 +4,7 @@
 use taffy::NodeId;
 
 use super::cache_key::{CacheKey, Slot};
-use super::draw_effect::effect_mask;
-use super::draw_visual::{draw_shape, draw_visual};
+use super::draw::{draw_shape, draw_visual, effect_mask};
 use super::{CachedVisual, Fill, LayerPlace};
 use super::{EffectKind, Scene, SceneNode, Visual};
 use crate::canvas::Canvas;

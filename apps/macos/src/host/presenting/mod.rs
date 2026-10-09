@@ -68,8 +68,7 @@ impl Host {
     }
 
     /// 横排矩阵这套按键是否生效：开关开着（`[general] horizontal_grid`）、排布是横排，而且在用系统绘制。
-    /// 青简渲染器换成场景树之后还没有矩阵窗口（旧的 `renderer/matrix.rs` 随手算坐标那套一起删了），
-    /// 移植之前用青简渲染器时不展开，横排照单行走。
+    /// 青简渲染器还没有矩阵窗口，用它时不展开，横排照单行走（见 `docs/notes/crate-notes.md`）。
     pub fn grid_keys(&self) -> bool {
         self.horizontal_grid && self.layout == LayoutMode::Horizontal && !self.window.uses_bitmap()
     }

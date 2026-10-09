@@ -7,9 +7,7 @@ mod animated;
 mod baseline;
 mod box_paint;
 mod cache_key;
-mod draw_box;
-mod draw_effect;
-mod draw_visual;
+mod draw;
 mod effect;
 mod extent;
 mod fill;
@@ -31,7 +29,7 @@ use taffy::{AlignItems, AvailableSpace, GridPlacement, Line, NodeId, Size, Style
 use crate::error::RenderError;
 use crate::text::{TextPainter, TextSize};
 use cache_key::CacheKey;
-use draw_effect::EffectMask;
+use draw::EffectMask;
 use tiny_skia::Pixmap;
 
 pub(crate) use box_paint::BoxPaint;

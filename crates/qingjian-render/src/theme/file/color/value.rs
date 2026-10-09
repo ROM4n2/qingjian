@@ -2,7 +2,7 @@
 
 use serde::Deserialize;
 
-use super::color_ref::parse_hex;
+use super::parse_hex;
 use crate::color::Color;
 
 #[derive(Debug, Clone, Copy, Deserialize)]

@@ -1,17 +1,20 @@
-//! 画一个盒子：填充（纯色 / 渐变 / 图片 / SVG）再画内侧边框。纯色走原来的画法，保证与改动前逐像素一致。
+//! 画一个盒子：填充（纯色 / 渐变 / 图片 / SVG）再画内侧边框。
 
 use tiny_skia::{
     FilterQuality, GradientStop, LinearGradient, Mask, Pattern, Point, RadialGradient, Rect,
     Shader, SpreadMode, Transform,
 };
 
-use super::box_paint::BoxPaint;
-use super::fill::Fill;
 use crate::canvas::{Canvas, round_rect};
 use crate::color::Color;
+use crate::scene::{BoxPaint, Fill};
 
 /// 在 `(x, y, width, height)`（像素）画 `paint`。
-pub(super) fn draw_box(canvas: &mut Canvas, rect: (f32, f32, f32, f32), paint: &BoxPaint) {
+pub(in crate::scene) fn draw_box(
+    canvas: &mut Canvas,
+    rect: (f32, f32, f32, f32),
+    paint: &BoxPaint,
+) {
     let (x, y, width, height) = rect;
     let radius = paint.radius;
     match &paint.fill {

@@ -3,8 +3,8 @@
 
 use serde::Deserialize;
 
+use super::ColorRef;
 use super::FontRef;
-use super::color_ref::ColorRef;
 use super::node::{EffectSpec, NodeSpec};
 
 #[derive(Debug, Clone, Deserialize)]

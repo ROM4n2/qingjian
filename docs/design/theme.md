@@ -145,8 +145,10 @@ theme.json + Frame 数据
 
 - 快照测试 `crates/qingjian-render/tests/snapshots.rs`：样例帧（`tests/scenes/`）按浅 / 深色画成位图，与 `tests/snapshots/<os>/` 的基准逐像素比；字体环境与基准不一致时跳过。
 - 能力展示主题 `crates/qingjian-render/tests/themes/showcase/`（程序生成的图片）覆盖九宫格、阴影、伸出装饰、过渡与循环动画。
-- 主题字体 `tests/theme_fonts.rs`：系统字族经壳查文件加载、回退链、随主题带的字体。
-- 主题 SVG `tests/theme_svg.rs`：九宫格四角按倍数、超出主题目录的路径不读；`theme/svg_image.rs` 里测了不读外部文件。
+- 主题功能 `tests/theme/`：
+  - `fonts.rs`：系统字族经壳查文件加载、回退链、随主题带的字体；
+  - `status.rs`：状态条节点树按 `cells` 展开、点击边界、`mode.*` 分支；
+  - `svg.rs`：九宫格四角按倍数、超出主题目录的路径不读；`theme/svg_image.rs` 里测了不读外部文件。
 - 离线预览：`cargo run --release -p qingjian-render --example preview -- --theme <主题目录>`，把样例帧画成 PNG；主题写的系统字族在 `--font-dir` 里按名字找。
 
 ## 预览版的限制

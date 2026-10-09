@@ -3,7 +3,7 @@
 
 use serde::Deserialize;
 
-use super::color_ref::ColorRef;
+use super::ColorRef;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]

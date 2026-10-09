@@ -1,9 +1,7 @@
 //! 主题文件 `theme.json` 的结构，见 `docs/design/theme.md`。只管反序列化，解析引用、实例化在别处。
 
 mod adaptive;
-mod color_ref;
-mod color_spec;
-mod color_value;
+mod color;
 mod font;
 mod meta;
 pub(crate) mod node;
@@ -16,9 +14,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 
 pub(crate) use adaptive::Adaptive;
-pub(crate) use color_ref::ColorRef;
-pub(crate) use color_spec::ColorSpec;
-pub(crate) use color_value::ColorValue;
+pub(crate) use color::{ColorRef, ColorSpec, ColorValue};
 pub(crate) use font::{BundledFont, FamilyList, FontRef, FontStyle};
 pub(crate) use meta::{LockedAppearance, Meta};
 pub(crate) use status::StatusSpec;
