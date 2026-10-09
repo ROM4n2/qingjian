@@ -124,6 +124,7 @@ impl Renderer {
             content_height: retained.content.1 as u32,
             scale: retained.scale,
             next_frame: self.loops_running(retained, now).then_some(LOOP_INTERVAL),
+            hits: retained.hits.clone(),
         }))
     }
 

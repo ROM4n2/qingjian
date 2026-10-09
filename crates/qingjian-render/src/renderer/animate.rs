@@ -137,6 +137,7 @@ impl Renderer {
             } else {
                 None
             },
+            hits: retained.hits.clone(),
         })
     }
 

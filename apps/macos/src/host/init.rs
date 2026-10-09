@@ -115,6 +115,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
         engine = engine.with_language_model(Box::new(model));
     }
     let window = CandidateWindow::new(mtm);
+    window.set_click_handler(Box::new(crate::imk::click));
     let indicator = ModeIndicator::new(mtm);
     let menu = InputMenu::new(mtm, version);
     indicator.set_menu(&menu.ns_menu());

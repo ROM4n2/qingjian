@@ -9,6 +9,7 @@ use crate::animation::{Keyframes, Placement, Transition};
 use crate::layout::Layout;
 use crate::scene::Scene;
 
+use super::HitRegion;
 use super::partial::Partial;
 
 pub(super) struct Retained {
@@ -41,6 +42,9 @@ pub(super) struct Retained {
 
     /// 循环动画局部重画的缓存；整张重画后作废。
     pub(super) partial: Option<Partial>,
+
+    /// 候选与译词的点击区域，动画帧照抄（布局不变）。
+    pub(super) hits: Vec<HitRegion>,
 }
 
 impl Retained {

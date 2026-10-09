@@ -13,7 +13,7 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSBitmapImageRep, NSCalibratedRGBColorSpace, NSCompositingOperation, NSImage};
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 use qingjian_platform::LayoutMode;
-use qingjian_render::{FontLibrary, Layout, Renderer, Theme, UiFont};
+use qingjian_render::{FontLibrary, HitRegion, HitTarget, Layout, Renderer, Theme, UiFont};
 
 use super::bounds::ViewBounds;
 use super::frame::Frame;
@@ -45,6 +45,12 @@ pub struct BitmapPainter {
 
     /// 最近一帧还有动画在播：隔多久要调 [`Self::tick`]。
     next_frame: Option<std::time::Duration>,
+
+    /// 最近一帧里候选与译词的点击区域（内容区像素）。
+    hits: Vec<HitRegion>,
+
+    /// 内容区左上角在视图里的位置（点，左上为原点）：位图四周留了投影的边。
+    content_origin: NSPoint,
 }
 
 impl BitmapPainter {
@@ -83,6 +89,8 @@ impl BitmapPainter {
             bounds: ViewBounds::filled(NSSize::ZERO),
             theme: Theme::light(),
             next_frame: None,
+            hits: Vec::new(),
+            content_origin: NSPoint::ZERO,
         })
     }
 
@@ -138,6 +146,17 @@ impl BitmapPainter {
         }
     }
 
+    /// 视图里一点（点，左上为原点）点中了哪个候选或哪条译词。
+    pub fn hit(&self, point: NSPoint) -> Option<HitTarget> {
+        let scale = f64::from(self.scale);
+        let x = ((point.x - self.content_origin.x) * scale) as f32;
+        let y = ((point.y - self.content_origin.y) * scale) as f32;
+        self.hits
+            .iter()
+            .find(|region| region.contains(x, y))
+            .map(|region| region.target)
+    }
+
     /// 有动画在播时隔多久要下一帧。
     pub fn next_frame(&self) -> Option<std::time::Duration> {
         self.next_frame
@@ -176,12 +195,18 @@ impl BitmapPainter {
             Err(error) => {
                 tracing::warn!(%error, "候选窗渲染失败");
                 self.image = None;
+                self.hits.clear();
                 return;
             }
         };
         let (width, height) = rendered.content_size_points();
         self.bounds = bounds(&rendered);
         self.next_frame = rendered.next_frame;
+        self.content_origin = NSPoint::new(
+            f64::from(rendered.content_x) / f64::from(rendered.scale),
+            f64::from(rendered.content_y) / f64::from(rendered.scale),
+        );
+        self.hits = rendered.hits;
         self.image = to_image(&rendered.pixmap, self.bounds.size);
         tracing::debug!(elapsed = ?started.elapsed(), width, height, "候选窗位图已画");
     }

@@ -64,6 +64,9 @@ pub struct Router {
     /// 已发出、等 DLL 回选区的请求号；对不上的 `Selection` 丢弃。
     pending_selection: Option<u64>,
 
+    /// 鼠标点候选窗口上屏、还没交给 DLL 的文本（哪个会话的）：下一拍轮询或下一个键带走。
+    clicked: Option<(SessionId, String)>,
+
     /// 「翻译选中文字」请求号计数器。
     selection_seq: u64,
 
@@ -133,6 +136,7 @@ impl Router {
             composed: None,
             translation: None,
             pending_selection: None,
+            clicked: None,
             selection_seq: 0,
             sentence: None,
             notice: None,

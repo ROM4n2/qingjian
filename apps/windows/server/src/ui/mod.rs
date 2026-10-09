@@ -32,6 +32,7 @@ use windows::core::{Error, Result};
 use qingjian_platform::protocol::{Frame, ScreenRect};
 use qingjian_render::Mode;
 
+pub use self::candidates::CandidateClicks;
 use self::candidates::CandidateWindow;
 use self::command::UiCommand;
 use self::painter::{Painter, SharedPainter};
@@ -56,13 +57,13 @@ pub struct UiHandle {
 
 impl UiHandle {
     /// 起 UI 线程并等它建好候选窗口。失败返回 `Err`，调用方退化为不画。
-    pub fn spawn(on_status: StatusEvents) -> Result<Self> {
+    pub fn spawn(on_status: StatusEvents, on_click: CandidateClicks) -> Result<Self> {
         // 用 Option<u32> 而非 Result 回报，免得 windows Error 跨线程。
         let (ready_tx, ready_rx) = mpsc::channel::<Option<u32>>();
         let (command_tx, command_rx) = mpsc::channel::<UiCommand>();
         thread::Builder::new()
             .name("qingjian-candidates".to_owned())
-            .spawn(move || run(command_rx, &ready_tx, on_status))
+            .spawn(move || run(command_rx, &ready_tx, on_status, on_click))
             .map_err(|_| Error::from(E_FAIL))?;
         match ready_rx.recv() {
             Ok(Some(thread_id)) => Ok(Self {
@@ -136,14 +137,19 @@ pub(super) fn module_handle() -> HINSTANCE {
 }
 
 /// UI 线程主体：建窗口、报回线程 id、跑消息循环。
-fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: StatusEvents) {
+fn run(
+    commands: Receiver<UiCommand>,
+    ready: &Sender<Option<u32>>,
+    on_status: StatusEvents,
+    on_click: CandidateClicks,
+) {
     // 按物理像素定位，与应用报来的组句屏幕矩形对齐；已设过会失败，忽略。
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
     let thread_id = unsafe { GetCurrentThreadId() };
     // 装上时随 Configure 命令建。
     let painter: SharedPainter = Rc::new(RefCell::new(None));
     // 先建窗口再报 id：建窗口顺带建起本线程的消息队列，之后 PostThreadMessageW 才有处可投。
-    let window = match CandidateWindow::new(painter.clone()) {
+    let window = match CandidateWindow::new(painter.clone(), on_click) {
         Ok(window) => window,
         Err(error) => {
             tracing::error!(%error, "建候选窗口失败，Server 将不显示候选框");

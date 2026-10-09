@@ -2,6 +2,7 @@
 //! 缺省交给青简渲染器出位图再贴（[`super::painter`]），配置 `renderer = "system"` 时走 GDI：绘制在 [`view`]，
 //! 配色 / 字体在 [`theme`]。绘制内容在 [`RenderData`]，一行的展示形态在 [`row`]。设计语言对齐 macOS 端。
 
+mod click;
 mod render_data;
 pub(crate) mod row;
 pub(crate) mod theme;
@@ -15,8 +16,9 @@ use windows::Win32::Graphics::Gdi::{GetDC, ReleaseDC};
 use windows::Win32::UI::HiDpi::{GetDpiForSystem, GetDpiForWindow};
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, IDC_ARROW, KillTimer, LoadCursorW, MSG,
-    SW_HIDE, SW_SHOWNA, SetTimer, ShowWindow, WM_TIMER, WNDCLASSEXW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
+    SW_HIDE, SW_SHOWNA, SetTimer, ShowWindow, WM_LBUTTONDOWN, WM_MOUSEACTIVATE, WM_NCHITTEST,
+    WM_TIMER, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    WS_POPUP,
 };
 use windows::core::{Error, PCWSTR, Result, w};
 
@@ -24,6 +26,7 @@ use qingjian_platform::Appearance;
 use qingjian_platform::protocol::Frame;
 use qingjian_render::Mode;
 
+pub use self::click::CandidateClicks;
 pub(crate) use self::render_data::RenderData;
 use self::theme::Theme;
 use super::layered::{self, Layered};
@@ -81,8 +84,8 @@ pub(crate) struct CandidateWindow {
 }
 
 impl CandidateWindow {
-    /// 建一个隐藏的候选窗口。
-    pub(crate) fn new(painter: SharedPainter) -> Result<Self> {
+    /// 建一个隐藏的候选窗口；点中候选或译词时调 `on_click`。
+    pub(crate) fn new(painter: SharedPainter, on_click: CandidateClicks) -> Result<Self> {
         CLASS.ensure(|| WNDCLASSEXW {
             lpfnWndProc: Some(wndproc),
             hInstance: super::module_handle(),
@@ -93,15 +96,11 @@ impl CandidateWindow {
         let dpi = unsafe { GetDpiForSystem() }.max(96);
         let dark = resolve_dark(Appearance::default());
         let data = RefCell::new(RenderData::empty(Rc::new(Theme::new(dpi, dark))));
-        // NOACTIVATE：显示时不抢应用焦点。TRANSPARENT：鼠标整个穿透（与 mac 面板一致）——候选窗不收点击，
-        // 主题装饰伸出窗口本体、盖住应用的那一块也不能挡鼠标。
+        // NOACTIVATE：显示时不抢应用焦点。鼠标只在候选与译词上收，其余穿透（见 [`click`]）。
+        click::install(on_click);
         let hwnd = unsafe {
             CreateWindowExW(
-                WS_EX_LAYERED
-                    | WS_EX_TOOLWINDOW
-                    | WS_EX_TOPMOST
-                    | WS_EX_NOACTIVATE
-                    | WS_EX_TRANSPARENT,
+                WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
                 CLASS_NAME,
                 w!("青简候选"),
                 WS_POPUP,
@@ -162,9 +161,13 @@ impl CandidateWindow {
                 );
                 self.position.set(position);
                 self.schedule(rendered.next_frame);
+                click::set_hits(rendered.hits.clone(), (content_x, content_y));
                 layered::present(self.hwnd, &rendered.pixmap, position)
             }
-            None => self.show_gdi(anchor),
+            None => {
+                click::set_hits(Vec::new(), (0, 0));
+                self.show_gdi(anchor)
+            }
         };
         if updated.is_ok() {
             let _ = unsafe { ShowWindow(self.hwnd, SW_SHOWNA) };
@@ -198,6 +201,7 @@ impl CandidateWindow {
 
     pub(crate) fn hide(&self) {
         let _ = unsafe { ShowWindow(self.hwnd, SW_HIDE) };
+        click::set_hits(Vec::new(), (0, 0));
         self.stop_animation();
         if let Some(painter) = self.painter.borrow_mut().as_mut() {
             painter.forget();
@@ -320,7 +324,15 @@ fn place(anchor: RECT, content: (i32, i32)) -> (i32, i32) {
     (x, y)
 }
 
-/// 分层窗口无需 `WM_PAINT`，全交默认处理。
+/// 分层窗口无需 `WM_PAINT`；鼠标交给 [`click`]，其余全交默认处理。
 unsafe extern "system" fn wndproc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
+    match msg {
+        WM_NCHITTEST => click::hit_test(lparam),
+        WM_MOUSEACTIVATE => click::mouse_activate(),
+        WM_LBUTTONDOWN => {
+            click::button_down();
+            LRESULT(0)
+        }
+        _ => unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) },
+    }
 }
