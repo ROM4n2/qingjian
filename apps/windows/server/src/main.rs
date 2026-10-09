@@ -268,7 +268,11 @@ fn serve(mut router: Router) {
     let on_status = Box::new(move |event| {
         let _ = status_events.send(Work::Status(event));
     });
-    match UiHandle::spawn(on_status) {
+    let clicks = work_tx.clone();
+    let on_click = Box::new(move |target| {
+        let _ = clicks.send(Work::Click(target));
+    });
+    match UiHandle::spawn(on_status, on_click) {
         Ok(ui) => {
             router.set_candidate_sink(Box::new(ui.clone()));
             router.set_status_sink(Box::new(ui));
