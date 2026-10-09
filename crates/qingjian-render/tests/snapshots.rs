@@ -156,6 +156,21 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
         let rendered = still(&mut renderer, &frame, layout, &large, 2.0);
         shots.push(shot(format!("large-text-{scene}-light"), rendered, None));
     }
+    // 候选与译文按不同比例改字号：一行里各格按基线对齐
+    for (name, sizes) in [
+        ("large-candidate", TextSizes::new(32.0, 0.0)),
+        ("large-annotation", TextSizes::new(0.0, 22.0)),
+    ] {
+        let theme = Theme::light().with_text_sizes(sizes);
+        let rendered = still(
+            &mut renderer,
+            &scenes::nihao(),
+            Layout::Vertical,
+            &theme,
+            2.0,
+        );
+        shots.push(shot(format!("{name}-nihao-vertical-light"), rendered, None));
+    }
     shots
 }
 

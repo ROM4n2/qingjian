@@ -161,6 +161,7 @@ impl Builder<'_> {
                     end: GridPlacement::AUTO,
                 };
                 let mut column = 0;
+                let mut aligned = Vec::with_capacity(row_cells.len());
                 for cell in row_cells {
                     let mut built = Vec::with_capacity(1);
                     self.node(cell, row_ctx, &BoxSpec::default(), &mut built)?;
@@ -180,9 +181,13 @@ impl Builder<'_> {
                         };
                         self.scene
                             .place(node, grid_row.clone(), grid_column, span)?;
+                        if !span {
+                            aligned.push(node);
+                        }
                         cells.push(node);
                     }
                 }
+                self.scene.add_table_row(aligned);
                 columns = columns.max(column);
             }
         }

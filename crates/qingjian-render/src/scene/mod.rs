@@ -4,6 +4,7 @@
 //! 单位是像素（主题的点数在建树时已乘倍数），布局不取整，保证与直接算坐标的结果一致。
 
 mod animated;
+mod baseline;
 mod box_paint;
 mod cache_key;
 mod draw_box;
@@ -61,6 +62,9 @@ pub(crate) struct Scene {
 
     /// 分段模式下跳过的动画节点。
     marks: RefCell<Vec<SplitMark>>,
+
+    /// 表格的各行（不含横跨整行的格子），布局时按基线对齐。
+    table_rows: Vec<Vec<NodeId>>,
 }
 
 /// 缓存的一块画面：左上角在画布里的整数位置与位图。
@@ -83,6 +87,7 @@ impl Scene {
             split: RefCell::new(None),
             order: std::cell::Cell::new(0),
             marks: RefCell::new(Vec::new()),
+            table_rows: Vec::new(),
         }
     }
 
@@ -142,7 +147,7 @@ impl Scene {
         Ok(())
     }
 
-    /// 以 `root` 为根按内容撑开算布局，返回根节点的宽高。
+    /// 以 `root` 为根按内容撑开算布局，返回根节点的宽高。表格行里的格子基线没对齐时补上边距再算一遍。
     pub(crate) fn layout(
         &mut self,
         root: NodeId,
@@ -150,6 +155,20 @@ impl Scene {
     ) -> Result<(f32, f32), RenderError> {
         // 布局会对同一个叶子按不同约束量好几次；单行文字的尺寸与约束无关，量一次记下来
         let mut measured: HashMap<NodeId, TextSize> = HashMap::new();
+        self.compute(root, text, &mut measured)?;
+        if self.align_baselines(&measured)? {
+            self.compute(root, text, &mut measured)?;
+        }
+        let size = self.tree.layout(root)?.size;
+        Ok((size.width, size.height))
+    }
+
+    fn compute(
+        &mut self,
+        root: NodeId,
+        text: &mut TextPainter,
+        measured: &mut HashMap<NodeId, TextSize>,
+    ) -> Result<(), RenderError> {
         self.tree.compute_layout_with_measure(
             root,
             Size::MAX_CONTENT,
@@ -183,7 +202,6 @@ impl Scene {
                 )
             },
         )?;
-        let size = self.tree.layout(root)?.size;
-        Ok((size.width, size.height))
+        Ok(())
     }
 }

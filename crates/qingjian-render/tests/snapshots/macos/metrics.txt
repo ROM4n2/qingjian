@@ -39,3 +39,5 @@ showcase-loop  bitmap 677x740  content 60,68 549x612
 nihao-vertical-light-1x  bitmap 326x360  content 30,30 266x300
 large-text-nihao-vertical-light  bitmap 806x987  content 60,60 686x867
 large-text-cloud-horizontal-light  bitmap 845x314  content 60,60 725x194
+large-candidate-nihao-vertical-light  bitmap 762x1234  content 60,60 642x1114
+large-annotation-nihao-vertical-light  bitmap 934x830  content 60,60 814x710

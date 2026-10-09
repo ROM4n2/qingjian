@@ -127,7 +127,9 @@ impl TextPainter {
     pub(crate) fn measure(&mut self, text: &str, style: &TextStyle) -> TextSize {
         self.shape(text, style);
         let mut width = 0.0_f32;
+        let mut baseline = None;
         for run in self.buffer.layout_runs() {
+            baseline.get_or_insert(run.line_y.round());
             let tracked: f32 = run
                 .glyphs
                 .iter()
@@ -140,6 +142,7 @@ impl TextPainter {
         TextSize {
             width,
             height: style.line_height,
+            baseline: baseline.unwrap_or(0.0),
         }
     }
 
