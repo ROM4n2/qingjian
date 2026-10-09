@@ -110,6 +110,7 @@ impl<'a> Context<'a> {
             "mode.english" => frame.mode.english,
             "mode.traditional" => frame.mode.traditional,
             "mode.full_width" => frame.mode.full_width,
+            "mode.scheme" => !frame.mode.scheme.is_empty(),
             _ => false,
         }
     }
@@ -180,6 +181,7 @@ mod tests {
         let ctx = Context::new(&frame);
         assert!(ctx.holds("mode.english") && !ctx.holds("!mode.english"));
         assert!(!ctx.holds("mode.traditional") && ctx.holds("mode.full_width"));
+        assert!(ctx.holds("mode.scheme") && !Context::new(&Frame::default()).holds("mode.scheme"));
         assert_eq!(ctx.text("mode.scheme"), Some("小鹤双拼"));
         assert_eq!(Context::new(&Frame::default()).text("mode.scheme"), None);
     }

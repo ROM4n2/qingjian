@@ -35,7 +35,7 @@ pub(crate) use svg_image::SvgImage;
 type EmbeddedFiles = &'static [(&'static str, &'static [u8])];
 
 /// 内置主题：id、源文件与图片，按设置界面列出的顺序；第一个是缺省主题。
-const BUILTINS: [(&str, &str, EmbeddedFiles); 3] = [
+const BUILTINS: [(&str, &str, EmbeddedFiles); 4] = [
     (
         "qingjian",
         include_str!("../../themes/qingjian/theme.json"),
@@ -51,7 +51,64 @@ const BUILTINS: [(&str, &str, EmbeddedFiles); 3] = [
         include_str!("../../themes/wechat/theme.json"),
         &[],
     ),
+    (
+        "sakura",
+        include_str!("../../themes/sakura/theme.json"),
+        &[
+            (
+                "images/character.png",
+                include_bytes!("../../themes/sakura/images/character.png"),
+            ),
+            (
+                "images/charm.png",
+                include_bytes!("../../themes/sakura/images/charm.png"),
+            ),
+            (
+                "images/cat.png",
+                include_bytes!("../../themes/sakura/images/cat.png"),
+            ),
+            (
+                "images/blossom.png",
+                include_bytes!("../../themes/sakura/images/blossom.png"),
+            ),
+            (
+                "images/bow.svg",
+                include_bytes!("../../themes/sakura/images/bow.svg"),
+            ),
+            (
+                "images/crown.svg",
+                include_bytes!("../../themes/sakura/images/crown.svg"),
+            ),
+            (
+                "images/heart.svg",
+                include_bytes!("../../themes/sakura/images/heart.svg"),
+            ),
+            (
+                "images/sparkle.svg",
+                include_bytes!("../../themes/sakura/images/sparkle.svg"),
+            ),
+            (
+                "images/petal.svg",
+                include_bytes!("../../themes/sakura/images/petal.svg"),
+            ),
+            (
+                "images/moon.svg",
+                include_bytes!("../../themes/sakura/images/moon.svg"),
+            ),
+            (
+                "images/chevron-left.svg",
+                include_bytes!("../../themes/sakura/images/chevron-left.svg"),
+            ),
+            (
+                "images/chevron-right.svg",
+                include_bytes!("../../themes/sakura/images/chevron-right.svg"),
+            ),
+        ],
+    ),
 ];
+
+/// 最底层的主题：没写 `extends` 的主题都以它为底，它自己不再往下找。
+const ROOT_THEME: &str = "qingjian";
 
 /// 引用不到的文字样式退回这个（点）。
 const FALLBACK_FONT: FontSpec = FontSpec::new(16.0, 19.0);
@@ -96,8 +153,9 @@ impl Theme {
     }
 
     /// 从 `theme.json` 的内容读主题。可以 `extends` 内置主题；引用不到的名字只记警告。
+    /// 没写 `extends` 时以青简绿为底（青简绿自己除外）。
     pub fn from_json(json: &str, dark: bool) -> Result<Self, ThemeError> {
-        let value = extends::resolve(json, &builtin_source)?;
+        let value = extends::resolve(json, &builtin_source, ROOT_THEME)?;
         let file: ThemeFile = serde_json::from_value(value)?;
         if file.schema > SCHEMA {
             tracing::warn!(
@@ -123,7 +181,8 @@ impl Theme {
     pub fn from_dir(dir: &Path, dark: bool) -> Result<Self, ThemeError> {
         let json = std::fs::read_to_string(dir.join("theme.json"))?;
         let mut theme = Self::from_json(&json, dark)?;
-        theme.assets = Arc::new(Assets::load(&theme.file, dir));
+        let inherited = extends::base_id(&json).map_or(&[][..], |id| builtin_files(&id));
+        theme.assets = Arc::new(Assets::load(&theme.file, dir, inherited));
         Ok(theme)
     }
 
@@ -242,6 +301,14 @@ fn builtins() -> &'static [Theme] {
     })
 }
 
+/// 内置主题编进程序的图片；不是内置主题为空。
+fn builtin_files(id: &str) -> EmbeddedFiles {
+    BUILTINS
+        .iter()
+        .find(|(builtin, ..)| *builtin == id)
+        .map_or(&[], |(.., files)| *files)
+}
+
 /// `extends` 按 id 找内置主题的源文件。
 fn builtin_source(id: &str) -> Option<&'static str> {
     BUILTINS
@@ -311,5 +378,36 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn user_theme_inherits_builtin_images() {
+        let dir = std::env::temp_dir().join("qingjian-theme-inherits-sakura");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("theme.json"),
+            r##"{ "extends": "sakura", "schema": 1, "meta": { "id": "my-sakura", "name": "我的樱花" },
+                 "variables": { "text": "#000000" } }"##,
+        )
+        .unwrap();
+        let theme = Theme::from_dir(&dir, false).unwrap();
+        assert!(theme.image("images/character.png").is_some());
+        assert!(theme.svg("images/heart.svg").is_some());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn user_theme_without_extends_builds_on_qingjian() {
+        let theme = Theme::from_json(
+            r##"{ "schema": 1, "meta": { "id": "red", "name": "红" }, "variables": { "accent": "#ff0000" } }"##,
+            false,
+        )
+        .unwrap();
+        assert_eq!(
+            theme.color(&ColorRef::Variable("accent".to_owned())),
+            Color::rgb(255, 0, 0)
+        );
+        assert_eq!(theme.font("candidate"), Theme::light().font("candidate"));
     }
 }

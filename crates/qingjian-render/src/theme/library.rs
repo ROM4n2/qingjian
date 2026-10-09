@@ -154,7 +154,7 @@ mod tests {
     fn loads_user_themes_after_builtins_and_skips_bad_ones() {
         let dir = std::env::temp_dir().join("qingjian-theme-library-test");
         let _ = std::fs::remove_dir_all(&dir);
-        write_theme(&dir, "sakura", "sakura");
+        write_theme(&dir, "peach", "peach");
         write_theme(&dir, "mismatch", "other");
         write_theme(&dir, "wechat", "wechat");
         write_theme(&dir, "dark", "dark");
@@ -165,8 +165,8 @@ mod tests {
         let ids: Vec<&str> = library.themes().iter().map(Theme::id).collect();
         let builtin = Theme::builtins().len();
         assert_eq!(ids.len(), builtin + 1);
-        assert_eq!(ids[builtin], "sakura");
-        assert_eq!(library.resolve("sakura", true).id(), "sakura");
+        assert_eq!(ids[builtin], "peach");
+        assert_eq!(library.resolve("peach", true).id(), "peach");
         assert_eq!(library.resolve("nope", false).id(), "qingjian");
         assert!(!library.refresh());
 

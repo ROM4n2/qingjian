@@ -132,9 +132,14 @@ mod tests {
     }
 
     #[test]
-    fn builtin_themes_use_only_the_ui_font() {
+    fn builtin_theme_families() {
         for theme in Theme::builtins() {
-            assert!(theme.font_families().is_empty(), "{}", theme.id());
+            let families = theme.font_families();
+            match theme.id() {
+                // 候选宋体（mac / Windows 各一个名字），标语 Georgia 斜体
+                "sakura" => assert_eq!(families, ["Songti SC", "SimSun", "Georgia"]),
+                id => assert!(families.is_empty(), "{id}"),
+            }
         }
     }
 }
