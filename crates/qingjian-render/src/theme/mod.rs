@@ -31,14 +31,26 @@ use assets::Assets;
 use file::{ColorRef, FontRef, LockedAppearance, SCHEMA, ThemeFile};
 pub(crate) use svg_image::SvgImage;
 
-/// 内置主题：id 与源文件，按设置界面列出的顺序；第一个是缺省主题。
-const BUILTINS: [(&str, &str); 3] = [
-    ("qingjian", include_str!("../../themes/qingjian/theme.json")),
+/// 内置主题编进程序的图片：主题里写的路径与文件内容。
+type EmbeddedFiles = &'static [(&'static str, &'static [u8])];
+
+/// 内置主题：id、源文件与图片，按设置界面列出的顺序；第一个是缺省主题。
+const BUILTINS: [(&str, &str, EmbeddedFiles); 3] = [
+    (
+        "qingjian",
+        include_str!("../../themes/qingjian/theme.json"),
+        &[],
+    ),
     (
         "system-blue",
         include_str!("../../themes/system-blue/theme.json"),
+        &[],
     ),
-    ("wechat", include_str!("../../themes/wechat/theme.json")),
+    (
+        "wechat",
+        include_str!("../../themes/wechat/theme.json"),
+        &[],
+    ),
 ];
 
 /// 引用不到的文字样式退回这个（点）。
@@ -219,10 +231,11 @@ fn builtins() -> &'static [Theme] {
     THEMES.get_or_init(|| {
         BUILTINS
             .iter()
-            .map(|(id, source)| {
-                let theme = Theme::from_json(source, false)
+            .map(|(id, source, files)| {
+                let mut theme = Theme::from_json(source, false)
                     .unwrap_or_else(|error| panic!("内置主题 {id} 解析失败：{error}"));
                 debug_assert_eq!(theme.id(), *id, "内置主题 id 与目录名不一致");
+                theme.assets = Arc::new(Assets::embedded(&theme.file, files));
                 theme
             })
             .collect()
@@ -233,8 +246,8 @@ fn builtins() -> &'static [Theme] {
 fn builtin_source(id: &str) -> Option<&'static str> {
     BUILTINS
         .iter()
-        .find(|(builtin, _)| *builtin == id)
-        .map(|(_, source)| *source)
+        .find(|(builtin, ..)| *builtin == id)
+        .map(|(_, source, _)| *source)
 }
 
 #[cfg(test)]
@@ -285,5 +298,18 @@ mod tests {
             theme.color(&ColorRef::Variable("accent".to_owned())),
             Color::rgb(0xff, 0xb7, 0xd5)
         );
+    }
+
+    #[test]
+    fn builtin_images_are_all_embedded() {
+        for theme in Theme::builtins() {
+            for path in assets::image_paths(theme.file()) {
+                assert!(
+                    theme.image(&path).is_some() || theme.svg(&path).is_some(),
+                    "内置主题 {} 用到的 {path} 没有编进程序",
+                    theme.id()
+                );
+            }
+        }
     }
 }

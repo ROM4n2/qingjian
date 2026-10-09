@@ -1,9 +1,11 @@
-//! 主题的图片与字体素材：加载主题时从主题目录读进来，图片解码一次、渲染时按路径取；字体只核对路径，由渲染器加载。内置主题不带素材。
+//! 主题的图片与字体素材：加载主题时读进来，图片解码一次、渲染时按路径取；字体只核对路径，由渲染器加载。
+//! 用户主题从主题目录读；内置主题的图片编进程序（`include_bytes!`），按同样的路径查表，不带字体（只用系统字体）。
 //!
 //! 路径相对 `theme.json`，不能是绝对路径、不能含 `..`（主题不能读主题目录以外的文件）；图片认 PNG（边长上限 [`MAX_SIDE`]）
 //! 与 SVG（`.svg` 结尾，文件上限 [`MAX_SVG_BYTES`]、原始尺寸不超过 [`MAX_SIDE`]）；
 //! 字体单个文件上限 [`MAX_FONT_BYTES`]。读不进来的记警告，用到图片的填充不画，用到字体的样式按回退链往后找。
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -36,37 +38,12 @@ pub(crate) struct Assets {
 }
 
 impl Assets {
-    /// 读 `file` 里用到的全部图片；`dir` 是主题目录。
+    /// 读 `file` 里用到的全部图片与字体；`dir` 是主题目录。
     pub(crate) fn load(file: &ThemeFile, dir: &Path) -> Self {
-        let mut paths = Vec::new();
-        for component in file.components.values() {
-            collect(component, &mut paths);
-        }
-        collect(&file.windows.vertical, &mut paths);
-        collect(&file.windows.horizontal, &mut paths);
-        let mut images = HashMap::new();
-        let mut svgs = HashMap::new();
-        for path in paths {
-            if images.contains_key(&path) || svgs.contains_key(&path) {
-                continue;
-            }
-            let loaded = if is_svg(&path) {
-                load_svg(dir, &path).map(|svg| {
-                    svgs.insert(path.clone(), Arc::new(svg));
-                })
-            } else {
-                load_image(dir, &path).map(|image| {
-                    images.insert(path.clone(), Arc::new(image));
-                })
-            };
-            if let Err(problem) = loaded {
-                tracing::warn!(id = file.meta.id, path, "主题图片{problem}，不画");
-            }
-        }
-        let mut fonts = Vec::new();
+        let mut assets = Self::decode(file, |path, limit| read_file(dir, path, limit));
         for font in &file.fonts {
             match font_path(dir, &font.file) {
-                Ok(path) if !fonts.contains(&path) => fonts.push(path),
+                Ok(path) if !assets.fonts.contains(&path) => assets.fonts.push(path),
                 Ok(_) => {}
                 Err(problem) => {
                     tracing::warn!(
@@ -77,10 +54,52 @@ impl Assets {
                 }
             }
         }
+        assets
+    }
+
+    /// 内置主题：图片从编进程序的文件表（路径 → 内容）里取。
+    pub(crate) fn embedded(file: &ThemeFile, files: &[(&str, &'static [u8])]) -> Self {
+        Self::decode(file, |path, _| {
+            files
+                .iter()
+                .find(|(name, _)| *name == path)
+                .map(|(_, data)| Cow::Borrowed(*data))
+                .ok_or("不存在")
+        })
+    }
+
+    /// 解码节点树里用到的全部图片；`read` 按路径给文件内容，第二个参数是这种图片的字节上限。
+    fn decode<'a>(
+        file: &ThemeFile,
+        read: impl Fn(&str, u64) -> Result<Cow<'a, [u8]>, &'static str>,
+    ) -> Self {
+        let mut images = HashMap::new();
+        let mut svgs = HashMap::new();
+        for path in image_paths(file) {
+            if images.contains_key(&path) || svgs.contains_key(&path) {
+                continue;
+            }
+            let loaded = if is_svg(&path) {
+                read(&path, MAX_SVG_BYTES)
+                    .and_then(|data| decode_svg(&data))
+                    .map(|svg| {
+                        svgs.insert(path.clone(), Arc::new(svg));
+                    })
+            } else {
+                read(&path, u64::MAX)
+                    .and_then(|data| decode_png(&data))
+                    .map(|image| {
+                        images.insert(path.clone(), Arc::new(image));
+                    })
+            };
+            if let Err(problem) = loaded {
+                tracing::warn!(id = file.meta.id, path, "主题图片{problem}，不画");
+            }
+        }
         Self {
             images,
             svgs,
-            fonts,
+            fonts: Vec::new(),
         }
     }
 
@@ -124,13 +143,17 @@ fn is_svg(path: &str) -> bool {
         .is_some_and(|extension| extension.eq_ignore_ascii_case("svg"))
 }
 
-fn load_svg(dir: &Path, path: &str) -> Result<SvgImage, &'static str> {
+/// 主题目录里的文件，超过 `limit` 字节的不读。
+fn read_file(dir: &Path, path: &str, limit: u64) -> Result<Cow<'static, [u8]>, &'static str> {
     let path = inside(dir, path)?;
-    if std::fs::metadata(&path).map_err(|_| "不存在")?.len() > MAX_SVG_BYTES {
+    if std::fs::metadata(&path).map_err(|_| "不存在")?.len() > limit {
         return Err("太大");
     }
-    let data = std::fs::read(&path).map_err(|_| "读不进来")?;
-    let svg = SvgImage::parse(&data).map_err(|_| "不是能解析的 SVG")?;
+    std::fs::read(&path).map(Cow::Owned).map_err(|_| "读不进来")
+}
+
+fn decode_svg(data: &[u8]) -> Result<SvgImage, &'static str> {
+    let svg = SvgImage::parse(data).map_err(|_| "不是能解析的 SVG")?;
     let (width, height) = svg.size();
     if width > MAX_SIDE as f32 || height > MAX_SIDE as f32 {
         return Err("太大");
@@ -138,12 +161,23 @@ fn load_svg(dir: &Path, path: &str) -> Result<SvgImage, &'static str> {
     Ok(svg)
 }
 
-fn load_image(dir: &Path, path: &str) -> Result<Pixmap, &'static str> {
-    let image = Pixmap::load_png(inside(dir, path)?).map_err(|_| "读不进来（只认 PNG）")?;
+fn decode_png(data: &[u8]) -> Result<Pixmap, &'static str> {
+    let image = Pixmap::decode_png(data).map_err(|_| "读不进来（只认 PNG）")?;
     if image.width() > MAX_SIDE || image.height() > MAX_SIDE {
         return Err("太大");
     }
     Ok(image)
+}
+
+/// 主题里写到的全部图片路径（可能重复）。
+pub(super) fn image_paths(file: &ThemeFile) -> Vec<String> {
+    let mut paths = Vec::new();
+    for component in file.components.values() {
+        collect(component, &mut paths);
+    }
+    collect(&file.windows.vertical, &mut paths);
+    collect(&file.windows.horizontal, &mut paths);
+    paths
 }
 
 /// 收集节点树里的图片路径。
@@ -155,5 +189,28 @@ fn collect(node: &NodeSpec, out: &mut Vec<String>) {
         for child in children {
             collect(child, out);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Assets;
+    use crate::theme::Theme;
+
+    const SVG: &[u8] = br#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>"#;
+
+    #[test]
+    fn embedded_files_are_found_by_theme_path() {
+        let theme = Theme::from_json(
+            r#"{ "extends": "qingjian", "schema": 1, "meta": { "id": "e", "name": "e" },
+                 "windows": { "vertical": { "fill": { "image": "images/a.svg" } },
+                              "horizontal": { "fill": { "image": "images/missing.png" } } } }"#,
+            false,
+        )
+        .unwrap();
+        let assets = Assets::embedded(theme.file(), &[("images/a.svg", SVG)]);
+        assert!(assets.svg("images/a.svg").is_some());
+        assert!(assets.image("images/missing.png").is_none());
+        assert!(assets.fonts().is_empty());
     }
 }
