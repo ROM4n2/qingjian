@@ -1,10 +1,11 @@
-//! 盒子的填充：纯色、线性 / 径向渐变、图片。颜色已按外观与数据解析好，长度已是像素。
+//! 盒子的填充：纯色、线性 / 径向渐变、图片（PNG 或 SVG）。颜色已按外观与数据解析好，长度已是像素。
 
 use std::sync::Arc;
 
 use tiny_skia::Pixmap;
 
 use crate::color::Color;
+use crate::theme::SvgImage;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Fill {
@@ -30,5 +31,15 @@ pub(crate) enum Fill {
         slice: Option<[f32; 4]>,
 
         pixels_per_px: f32,
+    },
+
+    /// SVG：画的时候按盒子（拉伸）或原始尺寸 × `px_per_unit`（九宫格）栅格；`slice` 是 SVG 单位的切边。
+    Svg {
+        image: Arc<SvgImage>,
+
+        slice: Option<[f32; 4]>,
+
+        /// 一个 SVG 单位（点）对几个画布像素。
+        px_per_unit: f32,
     },
 }

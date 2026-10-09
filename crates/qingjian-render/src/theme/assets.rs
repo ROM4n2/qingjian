@@ -1,6 +1,7 @@
 //! 主题的图片与字体素材：加载主题时从主题目录读进来，图片解码一次、渲染时按路径取；字体只核对路径，由渲染器加载。内置主题不带素材。
 //!
-//! 路径相对 `theme.json`，不能是绝对路径、不能含 `..`（主题不能读主题目录以外的文件）；图片只认 PNG，边长上限 [`MAX_SIDE`]；
+//! 路径相对 `theme.json`，不能是绝对路径、不能含 `..`（主题不能读主题目录以外的文件）；图片认 PNG（边长上限 [`MAX_SIDE`]）
+//! 与 SVG（`.svg` 结尾，文件上限 [`MAX_SVG_BYTES`]、原始尺寸不超过 [`MAX_SIDE`]）；
 //! 字体单个文件上限 [`MAX_FONT_BYTES`]。读不进来的记警告，用到图片的填充不画，用到字体的样式按回退链往后找。
 
 use std::collections::HashMap;
@@ -9,11 +10,15 @@ use std::sync::Arc;
 
 use tiny_skia::Pixmap;
 
+use super::SvgImage;
 use super::file::ThemeFile;
 use super::file::node::{FillSpec, NodeKind, NodeSpec};
 
 /// 图片边长上限（像素）。
 const MAX_SIDE: u32 = 4096;
+
+/// 单个 SVG 文件上限（字节）。
+const MAX_SVG_BYTES: u64 = 4 * 1024 * 1024;
 
 /// 随主题带的单个字体文件上限（字节）：裁过字的中文字体在 10 MB 以内，整个主题包上限 32 MB。
 const MAX_FONT_BYTES: u64 = 32 * 1024 * 1024;
@@ -22,6 +27,9 @@ const MAX_FONT_BYTES: u64 = 32 * 1024 * 1024;
 pub(crate) struct Assets {
     /// 主题里写的路径 → 解码好的预乘位图。
     images: HashMap<String, Arc<Pixmap>>,
+
+    /// 主题里写的路径 → 解析好的 SVG。
+    svgs: HashMap<String, Arc<SvgImage>>,
 
     /// 随主题带的字体文件。
     fonts: Vec<PathBuf>,
@@ -37,17 +45,22 @@ impl Assets {
         collect(&file.windows.vertical, &mut paths);
         collect(&file.windows.horizontal, &mut paths);
         let mut images = HashMap::new();
+        let mut svgs = HashMap::new();
         for path in paths {
-            if images.contains_key(&path) {
+            if images.contains_key(&path) || svgs.contains_key(&path) {
                 continue;
             }
-            match load_image(dir, &path) {
-                Ok(image) => {
-                    images.insert(path, Arc::new(image));
-                }
-                Err(problem) => {
-                    tracing::warn!(id = file.meta.id, path, "主题图片{problem}，不画");
-                }
+            let loaded = if is_svg(&path) {
+                load_svg(dir, &path).map(|svg| {
+                    svgs.insert(path.clone(), Arc::new(svg));
+                })
+            } else {
+                load_image(dir, &path).map(|image| {
+                    images.insert(path.clone(), Arc::new(image));
+                })
+            };
+            if let Err(problem) = loaded {
+                tracing::warn!(id = file.meta.id, path, "主题图片{problem}，不画");
             }
         }
         let mut fonts = Vec::new();
@@ -64,11 +77,19 @@ impl Assets {
                 }
             }
         }
-        Self { images, fonts }
+        Self {
+            images,
+            svgs,
+            fonts,
+        }
     }
 
     pub(crate) fn image(&self, path: &str) -> Option<Arc<Pixmap>> {
         self.images.get(path).cloned()
+    }
+
+    pub(crate) fn svg(&self, path: &str) -> Option<Arc<SvgImage>> {
+        self.svgs.get(path).cloned()
     }
 
     pub(crate) fn fonts(&self) -> &[PathBuf] {
@@ -95,6 +116,26 @@ fn font_path(dir: &Path, path: &str) -> Result<PathBuf, &'static str> {
         return Err("太大");
     }
     Ok(path)
+}
+
+fn is_svg(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("svg"))
+}
+
+fn load_svg(dir: &Path, path: &str) -> Result<SvgImage, &'static str> {
+    let path = inside(dir, path)?;
+    if std::fs::metadata(&path).map_err(|_| "不存在")?.len() > MAX_SVG_BYTES {
+        return Err("太大");
+    }
+    let data = std::fs::read(&path).map_err(|_| "读不进来")?;
+    let svg = SvgImage::parse(&data).map_err(|_| "不是能解析的 SVG")?;
+    let (width, height) = svg.size();
+    if width > MAX_SIDE as f32 || height > MAX_SIDE as f32 {
+        return Err("太大");
+    }
+    Ok(svg)
 }
 
 fn load_image(dir: &Path, path: &str) -> Result<Pixmap, &'static str> {

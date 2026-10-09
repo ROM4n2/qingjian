@@ -80,7 +80,7 @@ impl Builder<'_> {
         Ok(())
     }
 
-    /// 填充写法 → 画法：颜色按数据与外观解析，图片从主题素材取（没有就不画）。
+    /// 填充写法 → 画法：颜色按数据与外观解析，图片从主题素材取（没有就不画；SVG 不管 `scale`，它的单位就是点）。
     fn fill(&self, fill: &FillSpec, ctx: Context) -> Option<Fill> {
         let stops = |stops: &[StopSpec]| -> Vec<(Color, f32)> {
             let last = stops.len().saturating_sub(1).max(1) as f32;
@@ -107,10 +107,17 @@ impl Builder<'_> {
                 image,
                 slice,
                 scale,
-            } => Fill::Image {
-                pixmap: self.theme.image(image)?,
-                slice: *slice,
-                pixels_per_px: scale / self.scale,
+            } => match self.theme.svg(image) {
+                Some(svg) => Fill::Svg {
+                    image: svg,
+                    slice: *slice,
+                    px_per_unit: self.scale,
+                },
+                None => Fill::Image {
+                    pixmap: self.theme.image(image)?,
+                    slice: *slice,
+                    pixels_per_px: scale / self.scale,
+                },
             },
         })
     }

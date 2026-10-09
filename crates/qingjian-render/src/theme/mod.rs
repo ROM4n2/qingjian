@@ -12,6 +12,7 @@ pub(crate) mod file;
 mod font;
 mod jsonc;
 mod library;
+mod svg_image;
 mod validate;
 
 use std::path::{Path, PathBuf};
@@ -28,6 +29,7 @@ pub use library::ThemeLibrary;
 
 use assets::Assets;
 use file::{ColorRef, FontRef, LockedAppearance, SCHEMA, ThemeFile};
+pub(crate) use svg_image::SvgImage;
 
 /// 内置主题：id 与源文件，按设置界面列出的顺序；第一个是缺省主题。
 const BUILTINS: [(&str, &str); 3] = [
@@ -180,9 +182,14 @@ impl Theme {
         }
     }
 
-    /// 主题里写的图片路径对应的位图；没有或没读进来为 `None`。
+    /// 主题里写的图片路径对应的位图；没有、没读进来或是 SVG 时为 `None`。
     pub(crate) fn image(&self, path: &str) -> Option<Arc<Pixmap>> {
         self.assets.image(path)
+    }
+
+    /// 主题里写的 SVG 图片；没有、没读进来或不是 SVG 时为 `None`。
+    pub(crate) fn svg(&self, path: &str) -> Option<Arc<SvgImage>> {
+        self.assets.svg(path)
     }
 
     /// 命名文字样式（点）。

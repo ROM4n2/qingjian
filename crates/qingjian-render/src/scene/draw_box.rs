@@ -1,4 +1,4 @@
-//! 画一个盒子：填充（纯色 / 渐变 / 图片）再画内侧边框。纯色走原来的画法，保证与改动前逐像素一致。
+//! 画一个盒子：填充（纯色 / 渐变 / 图片 / SVG）再画内侧边框。纯色走原来的画法，保证与改动前逐像素一致。
 
 use tiny_skia::{
     FilterQuality, GradientStop, LinearGradient, Mask, Pattern, Point, RadialGradient, Rect,
@@ -40,15 +40,41 @@ pub(super) fn draw_box(canvas: &mut Canvas, rect: (f32, f32, f32, f32), paint: &
             slice,
             pixels_per_px,
         }) => {
-            let mask = (radius > 0.0)
-                .then(|| round_rect(x, y, width, height, radius))
-                .flatten()
-                .and_then(|path| canvas.mask(&path));
+            let mask = corner_mask(canvas, rect, radius);
             match slice {
                 Some(slice) => {
                     nine_slice(canvas, rect, pixmap, *slice, *pixels_per_px, mask.as_ref())
                 }
                 None => stretch(canvas, rect, pixmap, mask.as_ref()),
+            }
+        }
+        Some(Fill::Svg {
+            image,
+            slice,
+            px_per_unit,
+        }) => {
+            let mask = corner_mask(canvas, rect, radius);
+            match slice {
+                // 九宫格按原始尺寸栅格，四角按倍数原样贴；切边从 SVG 单位换成栅格像素
+                Some(slice) => {
+                    let (svg_width, svg_height) = image.size();
+                    let raster = image.raster(
+                        (svg_width * px_per_unit).round() as u32,
+                        (svg_height * px_per_unit).round() as u32,
+                    );
+                    if let Some(pixmap) = raster {
+                        let per_unit = pixmap.width() as f32 / svg_width;
+                        let slice = slice.map(|edge| edge * per_unit);
+                        nine_slice(canvas, rect, &pixmap, slice, 1.0, mask.as_ref());
+                    }
+                }
+                // 拉伸直接按盒子的像素尺寸栅格，不经过位图缩放
+                None => {
+                    if let Some(pixmap) = image.raster(width.round() as u32, height.round() as u32)
+                    {
+                        stretch(canvas, rect, &pixmap, mask.as_ref());
+                    }
+                }
             }
         }
         None => {}
@@ -121,6 +147,15 @@ fn radial(
         SpreadMode::Pad,
         Transform::identity(),
     )
+}
+
+/// 圆角框裁图片用的遮罩；没有圆角为 `None`。
+fn corner_mask(canvas: &Canvas, rect: (f32, f32, f32, f32), radius: f32) -> Option<Mask> {
+    let (x, y, width, height) = rect;
+    (radius > 0.0)
+        .then(|| round_rect(x, y, width, height, radius))
+        .flatten()
+        .and_then(|path| canvas.mask(&path))
 }
 
 /// 整张图拉伸到盒子。

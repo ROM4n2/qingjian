@@ -5,7 +5,7 @@
 
 ## 主题文件
 
-- 一个主题一个目录：`theme.json`，加上它引用的 `images/…`（PNG）与 `fonts/…`（TTF / OTF / TTC）。包内路径一律相对 `theme.json`，拒绝 `..` 与绝对路径。
+- 一个主题一个目录：`theme.json`，加上它引用的 `images/…`（PNG、SVG）与 `fonts/…`（TTF / OTF / TTC）。包内路径一律相对 `theme.json`，拒绝 `..` 与绝对路径。
 - 内置主题三个，随 crate 编进来（`crates/qingjian-render/themes/<id>/theme.json`）：`qingjian` 青简绿（缺省）、`system-blue` 系统蓝、`wechat` 微信绿，后两个 `extends` 青简绿、只改颜色变量。
 - 用户主题放在 `<用户数据目录>/themes/<id>/`，由 `ThemeLibrary` 与内置主题合成一个列表（内置在前、用户按 id 排）。目录名必须等于 `meta.id`，不能与内置主题重名，
   不能是 `system` / `light` / `dark`；读不进来的跳过并记警告。设置界面（mac 偏好设置、Windows 设置程序「候选窗口」页）按显示名列出，写回 `[general] theme` 的 id。
@@ -63,7 +63,10 @@
 
 - **填充**：颜色（含条件颜色）；`{ "linear": 角度, "stops": [...] }`（CSS 角度）；`{ "radial": [cx, cy], "stops": [...] }`（圆心按比例、半径到最远角）；
   色标是颜色（均分）或 `[颜色, 位置]`；`{ "image": "images/x.png", "slice": [上, 右, 下, 左], "scale": 2 }`（slice 为图片像素的九宫格切边、不写就拉伸，scale 为一个点对几个图片像素）。
-  `border: { width, color }` 画在内侧。图片随主题目录加载（`Theme::from_dir`），只认 PNG、边长 ≤ 4096。
+  `border: { width, color }` 画在内侧。图片随主题目录加载（`Theme::from_dir`），PNG 边长 ≤ 4096。
+- **SVG**：路径以 `.svg` 结尾的图片用 resvg 解析（`theme/svg_image.rs`），单位当作点、不管 `scale`，`slice` 也按 SVG 单位写。加载时解析一次（文件 ≤ 4 MB、原始尺寸 ≤ 4096），
+  画的时候才栅格：拉伸按盒子的像素尺寸直接栅格，九宫格按原始尺寸 × 倍数栅格再切，每张最多缓存 8 种尺寸，之后与 PNG 同一条贴图路径（图片框的离屏缓存也一样）。
+  不读外部文件（`<image href>` 的字符串解析器换成一律返回空，否则 usvg 会按路径读盘），不开 `raster-images`（内嵌位图不解码）、不开 `text`（`<text>` 不画、不带字体库）。
 - **效果**：`effects: [{ "type": "drop-shadow" | "inner-shadow", "x", "y", "blur", "spread", "color" }]`，按写的顺序画。
   形状取节点自己画出来的 alpha（圆角框、九宫格图片的透明边、文字），不含子节点；自己不画东西的容器（没填充的框、译文、拼音行）取子节点；`spread` 只对框生效。
   投影垫在节点底下、半透明填充会透出来；内阴影压在填充上、子节点下。
@@ -127,6 +130,7 @@ theme.json + Frame 数据
 - 快照测试 `crates/qingjian-render/tests/snapshots.rs`：样例帧（`tests/scenes/`）按浅 / 深色画成位图，与 `tests/snapshots/<os>/` 的基准逐像素比；字体环境与基准不一致时跳过。
 - 能力展示主题 `crates/qingjian-render/tests/themes/showcase/`（程序生成的图片）覆盖九宫格、阴影、伸出装饰、过渡与循环动画。
 - 主题字体 `tests/theme_fonts.rs`：系统字族经壳查文件加载、回退链、随主题带的字体。
+- 主题 SVG `tests/theme_svg.rs`：九宫格四角按倍数、超出主题目录的路径不读；`theme/svg_image.rs` 里测了不读外部文件。
 - 离线预览：`cargo run --release -p qingjian-render --example preview -- --theme <主题目录>`，把样例帧画成 PNG；主题写的系统字族在 `--font-dir` 里按名字找。
 
 ## 预览版的限制
@@ -135,7 +139,7 @@ theme.json + Frame 数据
 - 状态条只能改颜色、字号、内边距与阴影，不能加图片和装饰。
 - 译文整段一个节点，词性与释义不能分开排。
 - 翻页只能显示页码文字；画出来的翻页按钮点不了。
-- 图片只认 PNG，没有 SVG，没有 APNG 帧动画。
+- 图片是 PNG 与 SVG；SVG 里的文字、内嵌位图不画；没有 APNG 帧动画。
 - 没有窗口出现 / 消失动画、混合模式、图层模糊、渐变字、变体覆盖（用 `when` 分支与条件颜色代替）。
 - 背景毛玻璃做不到：自绘位图读不到窗口后面的内容。
 - 主题只能以目录形式安装，`extends` 只能继承内置主题。

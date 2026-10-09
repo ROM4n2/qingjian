@@ -281,8 +281,8 @@ impl Scene {
         visual: &Visual,
         rect: (f32, f32, f32, f32),
     ) -> Result<(), RenderError> {
-        let is_image =
-            matches!(visual, Visual::Box(paint) if matches!(paint.fill, Some(Fill::Image { .. })));
+        let is_image = matches!(visual, Visual::Box(paint)
+            if matches!(paint.fill, Some(Fill::Image { .. } | Fill::Svg { .. })));
         if !is_image {
             draw_visual(canvas, text, visual, rect);
             return Ok(());
