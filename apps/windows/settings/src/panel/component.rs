@@ -1,9 +1,10 @@
 //! 根组件的 Reactor 生命周期：建状态、按消息落盘、画左侧导航 + 当前页。
 
 use qingjian_platform::{
-    CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode, LogLevel,
-    PreeditMode, ShiftLetter, ThemeMode, UpdateChannel,
+    Appearance, CandidateRenderer, Config, DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS, LayoutMode,
+    LogLevel, PreeditMode, ShiftLetter, UpdateChannel,
 };
+use qingjian_render::ThemeLibrary;
 use windows_reactor::*;
 
 use super::cloud_status::CloudStatus;
@@ -91,8 +92,16 @@ impl Component for Settings {
             Message::EnglishMode(on) => self.save("general", "english_mode", on),
 
             // 候选窗口页
-            Message::Theme(Some(i)) if i < ThemeMode::ALL.len() => {
-                self.save("general", "theme", ThemeMode::ALL[i].key());
+            Message::Appearance(Some(i)) if i < Appearance::ALL.len() => {
+                self.save("general", "appearance", Appearance::ALL[i].key());
+            }
+            Message::Theme(Some(i)) => {
+                // 与下拉同源：主题库（内置在前、用户主题按 id 排）
+                let themes = ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
+                if let Some(theme) = themes.themes().get(i) {
+                    let id = theme.id().to_owned();
+                    self.save("general", "theme", id.as_str());
+                }
             }
             Message::Layout(Some(i)) if i < LayoutMode::ALL.len() => {
                 self.save("general", "layout", LayoutMode::ALL[i].key());
@@ -128,6 +137,13 @@ impl Component for Settings {
             Message::Font(family) => {
                 self.font_query = None;
                 self.save("general", "font", family);
+            }
+            Message::CandidateFontSize(size) => self.save_font_size("candidate", size),
+            Message::AnnotationFontSize(size) => self.save_font_size("annotation", size),
+            Message::Animations(on) => self.save("general", "animations", on),
+            Message::ResetFontSizes => {
+                self.save("general", "candidate_font_size", 0);
+                self.save("general", "annotation_font_size", 0);
             }
             Message::StatusBar(on) => self.save("status_bar", "enabled", on),
 

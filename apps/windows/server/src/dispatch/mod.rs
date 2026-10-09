@@ -24,6 +24,7 @@ use qingjian_platform::LocalModelConfig;
 use qingjian_platform::protocol::{
     ClientMessage, Frame, IndicatorState, InputSettings, ScreenRect, ServerMessage, SessionId,
 };
+use qingjian_render::Mode;
 
 pub use self::candidates::{CandidateSink, NoopSink, RenderSettings};
 pub use self::code::find_code_table;
@@ -101,7 +102,7 @@ pub struct Router {
     last_rect: Option<ScreenRect>,
 
     /// 上次真正显示的帧与位置：没变就不重画（组字期间的空转 Poll 很多）。
-    last_shown: Option<(Frame, ScreenRect)>,
+    last_shown: Option<(Frame, Mode, ScreenRect)>,
 
     /// 本地整句模型（`.qjm` 或三件套目录）；没有模型文件为 `None`。
     model_path: Option<PathBuf>,

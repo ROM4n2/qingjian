@@ -6,6 +6,7 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+use qingjian_render::ThemeLibrary;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
@@ -162,6 +163,17 @@ impl Router {
                 .set_extra_dictionaries(reload.load_dictionaries());
             reload.dictionary_files = files;
         }
+        // 用户主题文件改了：戳变了设置就不等，UI 线程重读主题当场换上（边改主题边看效果）
+        if let Some(dir) = qingjian_platform::dirs::themes_dir() {
+            let stamp = ThemeLibrary::stamp(&dir);
+            if stamp != self.config.themes_stamp {
+                self.config.themes_stamp = stamp;
+                self.candidates.configure(self.config.render_settings());
+            }
+        }
+        let Some(reload) = &mut self.reload else {
+            return;
+        };
         let config_changed = {
             let current = mtime(&reload.config_path);
             let changed = current != reload.last_mtime;
@@ -211,7 +223,9 @@ impl Router {
         self.engine
             .set_shuangpin_raw_preedit(config.general.shuangpin_raw_preedit);
         let previous = self.config.render_settings();
+        let themes_stamp = self.config.themes_stamp;
         self.config = RouterConfig::from(config);
+        self.config.themes_stamp = themes_stamp;
         let settings = self.config.render_settings();
         if settings != previous {
             self.candidates.configure(settings);

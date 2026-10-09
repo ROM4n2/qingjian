@@ -18,6 +18,9 @@ pub struct Rendered {
 
     /// 渲染用的倍数，壳把像素换回点用。
     pub scale: f32,
+
+    /// 还有动画在播：隔这么久调 [`crate::Renderer::tick`] 要下一帧；`None` 表示画完了，不用再要。
+    pub next_frame: Option<std::time::Duration>,
 }
 
 impl Rendered {

@@ -30,6 +30,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{Error, Result};
 
 use qingjian_platform::protocol::{Frame, ScreenRect};
+use qingjian_render::Mode;
 
 use self::candidates::CandidateWindow;
 use self::command::UiCommand;
@@ -81,8 +82,8 @@ impl UiHandle {
 }
 
 impl CandidateSink for UiHandle {
-    fn show(&self, frame: Frame, rect: ScreenRect) {
-        self.post(UiCommand::Show(Box::new((frame, rect))));
+    fn show(&self, frame: Frame, mode: Mode, rect: ScreenRect) {
+        self.post(UiCommand::Show(Box::new((frame, mode, rect))));
     }
 
     fn hide(&self) {
@@ -166,6 +167,10 @@ fn run(commands: Receiver<UiCommand>, ready: &Sender<Option<u32>>, on_status: St
         if got.0 <= 0 {
             break;
         }
+        if window.is_animation_timer(&msg) {
+            window.animation_frame();
+            continue;
+        }
         if msg.message == WM_WAKE {
             // 一次唤醒排空整个队列，保住 Hide→Show 的先后。
             while let Ok(command) = commands.try_recv() {
@@ -188,8 +193,8 @@ fn apply(
 ) {
     match command {
         UiCommand::Show(payload) => {
-            let (frame, rect) = *payload;
-            window.set_content(&frame);
+            let (frame, mode, rect) = *payload;
+            window.set_content(&frame, mode);
             window.show(to_win_rect(rect));
         }
         UiCommand::Hide => window.hide(),

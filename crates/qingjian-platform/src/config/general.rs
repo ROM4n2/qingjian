@@ -2,7 +2,9 @@ use qingjian_core::ShuangpinScheme;
 use serde::{Deserialize, Serialize};
 
 use super::scheme::{Scheme, scheme_label};
-use super::{CandidateRenderer, LayoutMode, LogLevel, PreeditMode, ShiftLetter, ThemeMode};
+use super::{
+    Appearance, CandidateRenderer, FontSize, LayoutMode, LogLevel, PreeditMode, ShiftLetter,
+};
 
 /// 每页最多几个候选：数字键只有 1–9。
 pub const MAX_PAGE_SIZE: usize = 9;
@@ -11,6 +13,9 @@ pub const MAX_PAGE_SIZE: usize = 9;
 /// 缺省不用 `,` `.`：组句中敲逗号句号应该把首选上屏再补一个全角标点（`nihao,zaima` 一气打完），
 /// 拿它们翻页就得先按空格再敲标点。选 `-` `=` 时组句中的 `-` 是翻页，不再进英文直输段（#43）。
 pub const PAGE_KEY_OPTIONS: [&str; 3] = ["[]", ",.", "-="];
+
+/// 内置主题的 id。`system` / `light` / `dark` 是外观的写法，不能当主题 id（旧配置里 `theme` 写的是它们）。
+pub const DEFAULT_THEME: &str = "qingjian";
 
 /// 缺省翻页键对，与 [`PAGE_KEY_OPTIONS`] 第一项一致。
 pub const DEFAULT_PAGE_KEYS: (char, char) = ('[', ']');
@@ -31,8 +36,13 @@ pub struct GeneralConfig {
     /// 翻页键对，两个字符：前一个上一页、后一个下一页。
     pub page_keys: String,
 
-    /// 候选窗口外观。
-    pub theme: ThemeMode,
+    /// 候选窗口外观，读用 [`Self::appearance`]。文件里没写时为 `None`（字段级缺省），好认出旧写法：
+    /// 2026-09-18 之前外观写在 `theme` 里（`theme = "dark"`）。
+    #[serde(default)]
+    pub appearance: Option<Appearance>,
+
+    /// 候选窗口主题 id（主题目录名），读用 [`Self::theme_id`]。旧写法里这一项是外观，见上。
+    pub theme: String,
 
     /// 候选窗口竖排 / 横排。
     pub layout: LayoutMode,
@@ -45,6 +55,15 @@ pub struct GeneralConfig {
 
     /// 候选窗口字体的字族名；空为系统字体。只对青简渲染器生效，没装这个字体时回到系统字体。
     pub font: String,
+
+    /// 候选字字号（点），盖过主题的；0 用主题的。不限范围，不是正数的当 0。只对青简渲染器生效。
+    pub candidate_font_size: FontSize,
+
+    /// 译文字号（点），同上。
+    pub annotation_font_size: FontSize,
+
+    /// 候选窗口的过渡与循环动画。关掉与系统「减弱动态效果」一样：高亮直接跳过去，循环动画停在第一帧。
+    pub animations: bool,
 
     /// 组句中的拼音显示在行内、候选窗口还是两处都显示。
     pub preedit: PreeditMode,
@@ -122,11 +141,15 @@ impl Default for GeneralConfig {
             learning_language: "en".to_owned(),
             page_size: MAX_PAGE_SIZE,
             page_keys: PAGE_KEY_OPTIONS[0].to_owned(),
-            theme: ThemeMode::default(),
+            appearance: Some(Appearance::default()),
+            theme: DEFAULT_THEME.to_owned(),
             layout: LayoutMode::default(),
             horizontal_grid: false,
             renderer: CandidateRenderer::default(),
             font: String::new(),
+            candidate_font_size: FontSize::default(),
+            annotation_font_size: FontSize::default(),
+            animations: true,
             preedit: PreeditMode::default(),
             english_candidates: true,
             traditional: false,
@@ -152,6 +175,23 @@ impl Default for GeneralConfig {
 }
 
 impl GeneralConfig {
+    /// 候选窗口外观。`appearance` 没写时看旧写法（`theme` 写的是 system / light / dark），都没有就跟随系统。
+    pub fn appearance(&self) -> Appearance {
+        self.appearance
+            .or_else(|| Appearance::from_key(self.theme.trim()))
+            .unwrap_or_default()
+    }
+
+    /// 候选窗口主题 id。没写、空串或旧写法（外观词）都是内置主题。
+    pub fn theme_id(&self) -> &str {
+        let id = self.theme.trim();
+        if id.is_empty() || Appearance::from_key(id).is_some() {
+            DEFAULT_THEME
+        } else {
+            id
+        }
+    }
+
     /// 拼音侧方案。`scheme` 没写时用旧键（`shuangpin` / `zhuyin`）推，都没有就是全拼。
     pub fn scheme(&self) -> Scheme {
         let key = self.scheme.trim();

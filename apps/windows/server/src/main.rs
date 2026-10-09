@@ -214,7 +214,7 @@ fn main() {
         page_size = router_config.page_size,
         page_keys = %format!("{}{}", router_config.page_keys.0, router_config.page_keys.1),
         layout = router_config.layout.key(),
-        theme = router_config.theme.key(),
+        appearance = router_config.appearance.key(),
         scheme = %if config.general.scheme_label().is_empty() { "全拼".to_owned() } else { config.general.scheme_label() },
         fuzzy = config.fuzzy.any(),
         cloud = config.predict.enabled,
