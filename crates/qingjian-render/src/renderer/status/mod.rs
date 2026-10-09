@@ -15,9 +15,9 @@ use crate::error::RenderError;
 use crate::frame::Mode;
 use crate::scene::{Effect, Icon, Scene, Visual};
 use crate::text::TextStyle;
-use crate::theme::Theme;
 use crate::theme::file::ColorSpec;
 use crate::theme::file::node::EffectSpec;
+use crate::theme::{TextSizes, Theme};
 
 /// 一次渲染里按倍数换算好的状态条参数。
 struct Metrics<'a> {
@@ -63,6 +63,7 @@ impl Metrics<'_> {
 
 impl Renderer {
     /// 画状态条，返回位图与各格右边界（供点击命中）。`mode` 给节点树画法的主题显示中 / 英等状态。
+    /// 设置里改了候选字号时整条按同一比例放大缩小。
     /// 固定排法：每格宽 = 内容宽 + 两侧内边距，高 = 行高 + 内边距。
     pub fn render_status(
         &mut self,
@@ -71,6 +72,9 @@ impl Renderer {
         theme: &Theme,
         scale: f32,
     ) -> Result<RenderedStatus, RenderError> {
+        // 整条按候选字的比例缩放：去掉设置里的字号再整体乘倍数，图标、边距、点击边界跟文字一起变，与用哪个文字样式无关
+        let scale = scale * theme.candidate_scale();
+        let theme = &theme.with_text_sizes(TextSizes::default());
         self.text.use_families(theme.families());
         let spec = &theme.file().status;
         if let Some(root) = &spec.root {

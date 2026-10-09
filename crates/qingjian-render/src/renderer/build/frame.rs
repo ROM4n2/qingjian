@@ -58,7 +58,7 @@ impl Builder<'_> {
                     // 行高至少是主题写的（随设置里的候选字号缩放），内容更高时撑开，不会压到下一行
                     grid_auto_rows: vec![minmax(
                         MinTrackSizingFunction::length(
-                            table.row_height * self.theme.row_scale() * self.scale,
+                            table.row_height * self.theme.candidate_scale() * self.scale,
                         ),
                         MaxTrackSizingFunction::auto(),
                     )],

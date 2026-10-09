@@ -228,8 +228,8 @@ impl Theme {
         self.animations
     }
 
-    /// 表格行高的缩放比，跟候选字走。
-    pub(crate) fn row_scale(&self) -> f32 {
+    /// 设置里的候选字号相对主题的比例：表格行高与状态条整体跟着它缩放。
+    pub(crate) fn candidate_scale(&self) -> f32 {
         self.sizes.ratio("candidate", |name| self.theme_size(name))
     }
 
@@ -471,7 +471,7 @@ mod tests {
         );
         assert_eq!(sized.font("index").size, index.size * ratio);
         assert_eq!(sized.font("annotation"), annotation);
-        assert_eq!(sized.row_scale(), ratio);
+        assert_eq!(sized.candidate_scale(), ratio);
         // 换外观不丢设置里的字号
         assert_eq!(sized.with_dark(true).font("candidate").size, 26.0);
         // 不是正数当没填

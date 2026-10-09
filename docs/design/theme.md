@@ -66,6 +66,7 @@
 - **设置里的字号**：`[general] candidate_font_size` / `annotation_font_size`（0 用主题的，不限范围）由壳经 `Theme::with_text_sizes` 盖到主题上：
   `candidate` 与 `annotation` 换成设置的字号，行高同比例；`index`、`preedit` 与表格 `row_height` 按候选字的比例缩放（`theme/text_sizes.rs`）。
   表格行高是下限（`minmax(row_height, auto)`），内容更高时撑开。
+  状态条不逐个样式改字号：`render_status` 去掉设置的字号，把整条的倍数乘上候选字的比例，文字、图标、边距、点击边界一起缩放。
 - **状态条**：`status.root` 是一棵与候选窗口同写法的节点树，`repeat` 绑定 `cells` 展开格子（Windows 现在是模式、标点、齿轮三格）。
   格子里的条件 `emphasized`（当前模式、生效的全角标点）、`gear`、`first`、`last`，文字绑定 `text`；整条能用 `mode.*`（`Renderer::render_status` 收一份 `Mode`，Windows 的 `StatusView` 带着，与候选窗口同一个 `Router::input_mode`）。
   点击按格：每格第一个产出的节点的右边界（根坐标），没画出来的格同前一格，最后一格延到内容右边；格子之间的装饰算前一格（`renderer/status/tree.rs`）。
