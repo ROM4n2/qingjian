@@ -41,6 +41,7 @@ fn general_and_shortcut_sections_parse() {
     assert_eq!(config.general.learning_language, "en");
     assert!(config.general.english_candidates);
     assert!(config.general.emoji);
+    assert!(config.general.english_in_chinese);
     assert!(!config.general.traditional);
     assert_eq!(config.general.shuangpin(), None);
     assert_eq!(config.general.log_level, LogLevel::Info);
