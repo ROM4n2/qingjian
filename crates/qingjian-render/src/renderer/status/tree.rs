@@ -30,6 +30,8 @@ impl Renderer {
             scale,
             text: &mut self.text,
             cell_nodes: Vec::new(),
+            candidate_nodes: Vec::new(),
+            sense_nodes: Vec::new(),
         };
         let root = builder.status(spec, &frame, cells)?;
         let cell_nodes = std::mem::take(&mut builder.cell_nodes);

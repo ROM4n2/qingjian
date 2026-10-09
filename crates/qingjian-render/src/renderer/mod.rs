@@ -5,6 +5,7 @@
 
 mod animate;
 mod build;
+mod hit;
 mod partial;
 mod rendered;
 mod retained;
@@ -26,6 +27,7 @@ use crate::theme::{FontSpec, Theme};
 use build::Builder;
 use retained::Retained;
 
+pub use hit::{HitRegion, HitTarget};
 pub use rendered::Rendered;
 pub use status::{RenderedStatus, StatusCell};
 
@@ -110,9 +112,13 @@ impl Renderer {
             scale,
             text: &mut self.text,
             cell_nodes: Vec::new(),
+            candidate_nodes: Vec::new(),
+            sense_nodes: Vec::new(),
         };
         let root = builder.window(frame, layout)?;
+        let (candidate_nodes, sense_nodes) = (builder.candidate_nodes, builder.sense_nodes);
         let (content_width, content_height) = scene.layout(root, &mut self.text)?;
+        let hits = hit_regions(&scene, root, &candidate_nodes, &sense_nodes)?;
         let keyed = scene.keyed(root)?;
         let transitions = self.transitions(&keyed, layout, scale, now);
         let animated = scene.animated(root)?;
@@ -166,6 +172,7 @@ impl Renderer {
             transitions,
             animated,
             partial: None,
+            hits,
         };
         if self.clock.is_none() {
             self.clock = Some(now);
@@ -197,6 +204,7 @@ impl Renderer {
             content_height: content_height as u32,
             scale,
             next_frame: None,
+            hits: Vec::new(),
         })
     }
 
@@ -213,4 +221,35 @@ impl Renderer {
         let style = TextStyle::new(font, font.size, Color::rgb(0, 0, 0), theme.text_gamma());
         self.text.trace_families(text, &style)
     }
+}
+
+/// 各候选与各条译词的点击区域（内容区像素）：同一个候选 / 同一条译词的节点取外接矩形，译词排在前面先命中。
+fn hit_regions(
+    scene: &Scene,
+    root: taffy::NodeId,
+    candidates: &[(usize, taffy::NodeId)],
+    senses: &[(usize, usize, taffy::NodeId)],
+) -> Result<Vec<HitRegion>, RenderError> {
+    let mut regions: Vec<HitRegion> = Vec::new();
+    let mut add = |target: HitTarget, node: taffy::NodeId| -> Result<(), RenderError> {
+        let rect = scene.rect_in(node, root)?;
+        match regions.iter_mut().find(|region| region.target == target) {
+            Some(region) => *region = region.union(rect),
+            None => regions.push(HitRegion {
+                x: rect.0,
+                y: rect.1,
+                width: rect.2,
+                height: rect.3,
+                target,
+            }),
+        }
+        Ok(())
+    };
+    for &(candidate, sense, node) in senses {
+        add(HitTarget::Translation { candidate, sense }, node)?;
+    }
+    for &(candidate, node) in candidates {
+        add(HitTarget::Candidate(candidate), node)?;
+    }
+    Ok(regions)
 }

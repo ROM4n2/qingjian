@@ -184,6 +184,7 @@ impl Builder<'_> {
                         if !span {
                             aligned.push(node);
                         }
+                        self.candidate_nodes.push((i, node));
                         cells.push(node);
                     }
                 }

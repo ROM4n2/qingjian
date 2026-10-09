@@ -37,6 +37,12 @@ pub(super) struct Builder<'a> {
 
     /// 状态条各格的盒子，按格的顺序；条件不成立没画出来的格为 `None`。
     pub(super) cell_nodes: Vec<Option<NodeId>>,
+
+    /// 候选窗口里各候选产出的节点（第几个候选，节点）：点击区域取它们的外接矩形。
+    pub(super) candidate_nodes: Vec<(usize, NodeId)>,
+
+    /// 各候选译文里每条译词的片段节点（第几个候选，第几条，节点）。
+    pub(super) sense_nodes: Vec<(usize, usize, NodeId)>,
 }
 
 impl Builder<'_> {
@@ -117,7 +123,10 @@ impl Builder<'_> {
                 };
                 for (i, row) in rows.iter().enumerate() {
                     let row_ctx = ctx.with_row(row, i, rows.len());
+                    let before = out.len();
                     self.node(component, row_ctx, &layout, out)?;
+                    self.candidate_nodes
+                        .extend(out[before..].iter().map(|&node| (i, node)));
                 }
                 Ok(())
             }

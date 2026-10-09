@@ -81,8 +81,14 @@ impl Builder<'_> {
                 // 挑完是空的也留着节点（与没有译文时一样）：主题写了高度就照样占住这一行，几列对得齐
                 let segments = pick_segments(segments, tones.as_deref(), *senses);
                 let stroke = self.stroke(stroke.as_ref(), ctx);
+                // 点译文上屏的是哪个候选的译词：候选那一列的是它自己，横排底下那行是高亮的那个
+                let candidate = match bind.as_str() {
+                    "annotation" => ctx.row.map(|row| row.index),
+                    "highlighted.annotation" => ctx.frame.highlighted,
+                    _ => None,
+                };
                 let mut children = Vec::with_capacity(segments.len());
-                for (segment, tone) in segments {
+                for ((segment, tone), sense) in segments {
                     let color = match tone {
                         // 码是词本身的属性，与译文同一个淡色
                         Tone::Gloss | Tone::Code => gloss,
@@ -97,7 +103,13 @@ impl Builder<'_> {
                             .text_style(font, self.color(color, ctx))
                             .stroked(stroke),
                     };
-                    children.push(self.scene.node(Style::default(), visual, &[])?);
+                    let child = self.scene.node(Style::default(), visual, &[])?;
+                    if let Some(candidate) = candidate
+                        && !matches!(tone, Tone::Separator | Tone::Code)
+                    {
+                        self.sense_nodes.push((candidate, sense, child));
+                    }
+                    children.push(child);
                 }
                 self.scene.node(
                     layout_style::flex(style, Direction::Row),
@@ -194,22 +206,23 @@ impl Builder<'_> {
     }
 }
 
-/// 按 `senses`（前几个义项，按分隔数）与 `tones`（只要哪几种片段）挑出要画的片段。
+/// 按 `senses`（前几个义项，按分隔数）与 `tones`（只要哪几种片段）挑出要画的片段，各带它属于第几个义项（前面有几个分隔）。
 fn pick_segments<'a>(
     segments: &'a [(String, Tone)],
     tones: Option<&[ToneFilter]>,
     senses: Option<usize>,
-) -> Vec<&'a (String, Tone)> {
+) -> Vec<(&'a (String, Tone), usize)> {
     let mut seen = 0;
     segments
         .iter()
-        .take_while(|(_, tone)| {
-            if *tone == Tone::Separator {
+        .map(|segment| {
+            if segment.1 == Tone::Separator {
                 seen += 1;
             }
-            senses.is_none_or(|senses| seen < senses)
+            (segment, seen)
         })
-        .filter(|(_, tone)| tones.is_none_or(|tones| tones.iter().any(|t| t.matches(*tone))))
+        .take_while(|(_, seen)| senses.is_none_or(|senses| *seen < senses))
+        .filter(|((_, tone), _)| tones.is_none_or(|tones| tones.iter().any(|t| t.matches(*tone))))
         .collect()
 }
 
@@ -219,8 +232,8 @@ mod tests {
     use crate::frame::Tone;
     use crate::theme::file::node::ToneFilter;
 
-    fn texts(picked: Vec<&(String, Tone)>) -> Vec<&str> {
-        picked.iter().map(|(text, _)| text.as_str()).collect()
+    fn texts(picked: Vec<(&(String, Tone), usize)>) -> Vec<&str> {
+        picked.iter().map(|((text, _), _)| text.as_str()).collect()
     }
 
     #[test]
