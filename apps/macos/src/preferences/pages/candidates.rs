@@ -9,11 +9,11 @@ use qingjian_render::ThemeLibrary;
 
 use crate::candidates::available_families;
 use crate::preferences::controls::{
-    checkbox, note, row_checkbox, row_control, row_popup, select, set_checked, set_items,
+    button, checkbox, note, row_checkbox, row_control, row_popup, select, set_checked, set_items,
     text_field,
 };
 use crate::preferences::font_picker::FontPicker;
-use crate::preferences::layout::Layout;
+use crate::preferences::layout::{CONTROL_X, Layout, ROW_HEIGHT};
 use crate::preferences::setting::Setting;
 use crate::preferences::target::PreferencesTarget;
 
@@ -120,8 +120,11 @@ impl CandidatesPage {
         note(
             layout,
             mtm,
-            "单位是点，按回车生效；空着用主题的字号。行高跟着候选字号缩放。只对青简渲染器生效。",
+            "单位是点，按回车生效；清空或填 0 回到主题的字号。行高跟着候选字号缩放。只对青简渲染器生效。",
         );
+        let reset = button(mtm, "恢复主题字号", Setting::ResetFontSizes, target);
+        layout.place(&reset, CONTROL_X, 140.0, ROW_HEIGHT + 4.0);
+        layout.next_row(ROW_HEIGHT + 4.0);
         let animations = checkbox(mtm, "过渡动画", Setting::Animations, target);
         row_checkbox(layout, &animations);
         note(
@@ -192,8 +195,17 @@ impl CandidatesPage {
                 .position(|r| *r == general.renderer),
         );
         self.font.sync(&general.font);
-        set_size(&self.candidate_size, general.candidate_font_size);
-        set_size(&self.annotation_size, general.annotation_font_size);
+        let theme = themes.resolve(general.theme_id(), false);
+        set_size(
+            &self.candidate_size,
+            general.candidate_font_size,
+            theme.theme_size("candidate"),
+        );
+        set_size(
+            &self.annotation_size,
+            general.annotation_font_size,
+            theme.theme_size("annotation"),
+        );
         set_checked(&self.animations, general.animations);
         select(
             &self.preedit,
@@ -202,7 +214,7 @@ impl CandidatesPage {
     }
 }
 
-/// 一行字号文本框，空着时提示「主题默认」。
+/// 一行字号文本框。
 fn size_field(
     layout: &mut Layout,
     mtm: MainThreadMarker,
@@ -211,14 +223,16 @@ fn size_field(
     target: &PreferencesTarget,
 ) -> Retained<NSTextField> {
     let field = text_field(mtm, setting, target);
-    field.setPlaceholderString(Some(&NSString::from_str("主题默认")));
     row_control(layout, mtm, title, &field);
     field
 }
 
-/// 没填为空，整数不带小数点。
-fn set_size(field: &NSTextField, size: FontSize) {
-    let text = size.get().map_or_else(String::new, |size| size.to_string());
+/// 设过的字号，没设过显示主题的（用户知道从哪个数开始调）；整数不带小数点。
+fn set_size(field: &NSTextField, size: FontSize, theme: Option<f32>) {
+    let text = size
+        .get()
+        .or(theme)
+        .map_or_else(String::new, |size| size.to_string());
     field.setStringValue(&NSString::from_str(&text));
 }
 

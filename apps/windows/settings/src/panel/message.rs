@@ -40,6 +40,7 @@ pub(crate) enum Message {
     CandidateFontSize(Option<f64>),
     AnnotationFontSize(Option<f64>),
     Animations(bool),
+    ResetFontSizes,
     StatusBar(bool),
 
     // 云服务页

@@ -16,6 +16,14 @@ impl FontSize {
     pub fn from_input(size: Option<f64>) -> Self {
         Self(size.map_or(0.0, |size| size as f32))
     }
+
+    /// 字号框改成 `input` 后该写进配置的值；不用写时为 `None`。
+    /// 框里没设过时显示的是主题的字号 `theme`，原样交回来（失焦、初次显示也会发值）不算改，免得把主题字号钉进配置。
+    pub fn edited(self, input: Option<f64>, theme: Option<f32>) -> Option<Self> {
+        let next = Self::from_input(input);
+        let untouched = self.get().is_none() && next.get().is_some() && next.get() == theme;
+        (next != self && !untouched).then_some(next)
+    }
 }
 
 impl From<FontSize> for toml_edit::Value {

@@ -134,6 +134,9 @@ pub enum Setting {
     /// `[general] animations`，勾选框。
     Animations,
 
+    /// 两个字号都回到主题的。
+    ResetFontSizes,
+
     /// `[general] shift_letter`，勾选框：中文模式下 Shift+字母进组句（勾上是 compose，否则 passthrough）。
     ShiftLetter,
 
@@ -235,6 +238,7 @@ impl Setting {
             Self::CandidateFontSize => 58,
             Self::AnnotationFontSize => 59,
             Self::Animations => 60,
+            Self::ResetFontSizes => 61,
             Self::TranslationKeys => 15,
             Self::TranslationSecondKeys => 16,
             Self::TranslateSelectionKeys => 17,
@@ -305,6 +309,7 @@ impl Setting {
             58 => Self::CandidateFontSize,
             59 => Self::AnnotationFontSize,
             60 => Self::Animations,
+            61 => Self::ResetFontSizes,
             15 => Self::TranslationKeys,
             16 => Self::TranslationSecondKeys,
             17 => Self::TranslateSelectionKeys,
@@ -409,6 +414,7 @@ mod tests {
             Setting::CandidateFontSize,
             Setting::AnnotationFontSize,
             Setting::Animations,
+            Setting::ResetFontSizes,
             Setting::ClearInputLog,
             Setting::TestCloud,
             Setting::OpenWebsite,

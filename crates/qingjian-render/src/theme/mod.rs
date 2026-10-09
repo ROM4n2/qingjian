@@ -233,8 +233,8 @@ impl Theme {
         self.sizes.ratio("candidate", |name| self.theme_size(name))
     }
 
-    /// 主题自己写的字号（不算设置里的）。
-    fn theme_size(&self, name: &str) -> Option<f32> {
+    /// 主题自己写的字号（不算设置里的）：设置界面拿它当字号框的初始值。
+    pub fn theme_size(&self, name: &str) -> Option<f32> {
         self.families.style(name).map(|spec| spec.size)
     }
 

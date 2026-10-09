@@ -138,9 +138,13 @@ impl Component for Settings {
                 self.font_query = None;
                 self.save("general", "font", family);
             }
-            Message::CandidateFontSize(size) => self.save_font_size("candidate_font_size", size),
-            Message::AnnotationFontSize(size) => self.save_font_size("annotation_font_size", size),
+            Message::CandidateFontSize(size) => self.save_font_size("candidate", size),
+            Message::AnnotationFontSize(size) => self.save_font_size("annotation", size),
             Message::Animations(on) => self.save("general", "animations", on),
+            Message::ResetFontSizes => {
+                self.save("general", "candidate_font_size", 0);
+                self.save("general", "annotation_font_size", 0);
+            }
             Message::StatusBar(on) => self.save("status_bar", "enabled", on),
 
             // 云服务页

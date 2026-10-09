@@ -215,18 +215,15 @@ impl Host {
                 }
             }
             (Setting::CandidateFontSize, SettingValue::Text(text)) => {
-                self.set_font_size(
-                    "candidate_font_size",
-                    &text,
-                    config.general.candidate_font_size,
-                );
+                self.set_font_size("candidate", &text, config.general.candidate_font_size);
             }
             (Setting::AnnotationFontSize, SettingValue::Text(text)) => {
-                self.set_font_size(
-                    "annotation_font_size",
-                    &text,
-                    config.general.annotation_font_size,
-                );
+                self.set_font_size("annotation", &text, config.general.annotation_font_size);
+            }
+            (Setting::ResetFontSizes, _) => {
+                self.settings.set_value("general", "candidate_font_size", 0);
+                self.settings
+                    .set_value("general", "annotation_font_size", 0);
             }
             (Setting::Animations, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "animations", on);
@@ -532,19 +529,22 @@ impl Host {
         self.apply_config(false);
     }
 
-    /// 字号文本框：空为用主题的，不限范围；填的不是数就不写（随后的同步把框里改回原值）。
-    fn set_font_size(&mut self, key: &str, text: &str, current: FontSize) {
+    /// 字号文本框（`style` 是 `candidate` / `annotation`）：框里没设过时显示主题的字号，清空或填 0 回到主题的，不限范围；
+    /// 填的不是数就不写（随后的同步把框里改回原值）。
+    fn set_font_size(&mut self, style: &str, text: &str, current: FontSize) {
         let text = text.trim();
-        let size = if text.is_empty() {
+        let input = if text.is_empty() {
             None
         } else if let Ok(size) = text.parse::<f64>() {
             Some(size)
         } else {
             return;
         };
-        let size = FontSize::from_input(size);
-        if size != current {
-            self.settings.set_value("general", key, size);
+        let theme_id = self.settings.config().general.theme_id().to_owned();
+        let theme_size = self.themes.resolve(&theme_id, false).theme_size(style);
+        if let Some(size) = current.edited(input, theme_size) {
+            self.settings
+                .set_value("general", &format!("{style}_font_size"), size);
         }
     }
 }

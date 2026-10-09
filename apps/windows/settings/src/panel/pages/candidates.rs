@@ -20,10 +20,10 @@ fn mode_combo<T: PartialEq + Copy>(
         .on_selection_changed(callback)
 }
 
-/// 字号框：不限范围，没填显示为空。
-fn size_box(size: FontSize, callback: Callback<Option<f64>>) -> NumberBox {
+/// 字号框：不限范围；没设过显示主题的字号（用户知道从哪个数开始调）。
+fn size_box(size: FontSize, theme: Option<f32>, callback: Callback<Option<f64>>) -> NumberBox {
     NumberBox::new()
-        .value(size.get().map_or(f64::NAN, f64::from))
+        .value(size.get().or(theme).map_or(f64::NAN, f64::from))
         .on_value_changed(callback)
 }
 
@@ -42,6 +42,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         .collect();
     // 内置主题加用户主题目录里的，每次画这一页都重列（新放进去的主题回到这页就能看到）
     let themes = ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
+    let theme = themes.resolve(g.theme_id(), false);
     let rows = [
         field(
             "外观",
@@ -100,19 +101,28 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         ),
         field(
             "候选字号",
-            "单位是点，清空用主题的字号；行高跟着缩放。只对青简渲染器生效。",
+            "单位是点，清空或填 0 回到主题的字号；行高跟着缩放。只对青简渲染器生效。",
             size_box(
                 g.candidate_font_size,
+                theme.theme_size("candidate"),
                 context.callback(Message::CandidateFontSize),
             ),
         ),
         field(
             "译文字号",
-            "单位是点，清空用主题的字号。只对青简渲染器生效。",
+            "单位是点，清空或填 0 回到主题的字号。只对青简渲染器生效。",
             size_box(
                 g.annotation_font_size,
+                theme.theme_size("annotation"),
                 context.callback(Message::AnnotationFontSize),
             ),
+        ),
+        field(
+            "",
+            "",
+            Button::new()
+                .on_click(context.message(Message::ResetFontSizes))
+                .content("恢复主题字号"),
         ),
         field(
             "过渡动画",

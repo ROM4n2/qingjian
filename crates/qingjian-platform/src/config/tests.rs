@@ -219,3 +219,23 @@ fn font_sizes_and_animations_parse_and_default() {
     assert!(default.general.animations);
     assert_eq!(FontSize(-3.0).get(), None);
 }
+
+#[test]
+fn font_size_edits_ignore_echoed_theme_size() {
+    let unset = FontSize::default();
+    // 框里显示主题的 17，原样交回不写
+    assert_eq!(unset.edited(Some(17.0), Some(17.0)), None);
+    assert_eq!(unset.edited(Some(20.0), Some(17.0)), Some(FontSize(20.0)));
+    // 设过 20：清空或填 0 回到主题的
+    assert_eq!(FontSize(20.0).edited(None, Some(17.0)), Some(FontSize(0.0)));
+    assert_eq!(
+        FontSize(20.0).edited(Some(0.0), Some(17.0)),
+        Some(FontSize(0.0))
+    );
+    // 设过 20 再填主题的 17：照写（用户明确要 17）
+    assert_eq!(
+        FontSize(20.0).edited(Some(17.0), Some(17.0)),
+        Some(FontSize(17.0))
+    );
+    assert_eq!(unset.edited(None, Some(17.0)), None);
+}
