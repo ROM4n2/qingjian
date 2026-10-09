@@ -4,16 +4,16 @@
 
   "variables": {
     "text": { "light": "#000000d8", "dark": "#ffffffd8" },
-    "gloss": { "light": "#0000007f", "dark": "#ffffff8c" },
-    "faint": { "light": "#00000042", "dark": "#ffffff3f" },
+    "gloss": { "light": "#000000a6", "dark": "#ffffffb3" },
+    "faint": { "light": "#00000073", "dark": "#ffffff73" },
     "fresh": { "light": "#ff8d28", "dark": "#ff9230" },
     "cloud": { "light": "#00c3d0", "dark": "#00d2e0" },
     "surface": { "light": "#ffffff", "dark": "#1e1e1e" },
     "accent": { "light": "#b0ce7d7f", "dark": "#244c24" },
 
     "hl_text": { "light": "#000000d8", "dark": "#ffffffd8" },
-    "hl_gloss": { "light": "#0000007f", "dark": "#ffffff8c" },
-    "hl_faint": { "light": "#00000042", "dark": "#ffffff3f" },
+    "hl_gloss": { "light": "#000000a6", "dark": "#ffffffb3" },
+    "hl_faint": { "light": "#00000073", "dark": "#ffffff73" },
     "hl_fresh": { "light": "#ff8d28", "dark": "#ff9230" },
     "hl_cloud": { "light": "#00c3d0", "dark": "#00d2e0" }
   },
