@@ -1,10 +1,8 @@
-//! 一种字体用法：字号、行高（点）与字重。字族不在这里定，由字体库按平台给界面字体。
+//! 一种字体用法：字号、行高（点）、字重、斜体与字族。字族是主题字族表里的一条回退链，渲染器按装了哪些字体挑出实际用的。
 
-use serde::Deserialize;
+use super::{FamilyId, FontWeight};
 
-use super::FontWeight;
-
-#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FontSpec {
     /// 字号。
     pub size: f32,
@@ -12,17 +10,23 @@ pub struct FontSpec {
     /// 行高：一行文字占的高度，字形在其中垂直居中。
     pub line_height: f32,
 
-    /// 字重，不写为常规。
-    #[serde(default)]
     pub weight: FontWeight,
+
+    pub italic: bool,
+
+    /// 字族回退链在主题字族表里的序号。
+    pub(crate) family: FamilyId,
 }
 
 impl FontSpec {
+    /// 缺省字族、常规字重的正体。
     pub const fn new(size: f32, line_height: f32) -> Self {
         Self {
             size,
             line_height,
             weight: FontWeight::REGULAR,
+            italic: false,
+            family: FamilyId(0),
         }
     }
 
@@ -31,7 +35,7 @@ impl FontSpec {
         Self {
             size: self.size * scale,
             line_height: self.line_height * scale,
-            weight: self.weight,
+            ..self
         }
     }
 }

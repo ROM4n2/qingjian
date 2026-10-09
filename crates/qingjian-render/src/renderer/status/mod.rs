@@ -67,6 +67,7 @@ impl Renderer {
         theme: &Theme,
         scale: f32,
     ) -> Result<RenderedStatus, RenderError> {
+        self.text.use_families(theme.families());
         let spec = &theme.file().status;
         let m = Metrics {
             theme,

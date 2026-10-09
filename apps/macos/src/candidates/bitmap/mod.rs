@@ -86,8 +86,10 @@ impl BitmapPainter {
         })
     }
 
-    /// 换主题（浅色那一份），用最近一帧当场重画。
+    /// 换主题（浅色那一份）：加载它要的字体，用最近一帧当场重画。
     pub fn set_theme(&mut self, theme: Theme) {
+        self.renderer
+            .load_theme_fonts(&theme, font_files::family_files);
         self.theme = theme;
         self.repaint();
     }

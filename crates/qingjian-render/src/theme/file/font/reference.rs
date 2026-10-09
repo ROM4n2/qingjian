@@ -1,8 +1,10 @@
 //! 节点里的 `font`：`text.styles` 里的样式名，或在某个样式上改几项：
-//! `{ "base": "candidate", "size": 18, "weight": "semibold" }`。只改字号不写行高时，行高按字号等比缩放。
+//! `{ "base": "candidate", "size": 18, "weight": "semibold", "style": "italic" }`。只改字号不写行高时，行高按字号等比缩放。
+//! 字族不能在这里改：换字族要定义一个命名样式。
 
 use serde::Deserialize;
 
+use super::FontStyle;
 use crate::theme::{FontSpec, FontWeight};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -19,6 +21,8 @@ pub(crate) enum FontRef {
         line_height: Option<f32>,
 
         weight: Option<FontWeight>,
+
+        style: Option<FontStyle>,
     },
 }
 
@@ -37,6 +41,7 @@ impl FontRef {
             size,
             line_height,
             weight,
+            style,
             ..
         } = self
         else {
@@ -51,6 +56,8 @@ impl FontRef {
                 size
             }),
             weight: weight.unwrap_or(base.weight),
+            italic: style.map_or(base.italic, |style| style == FontStyle::Italic),
+            family: base.family,
         }
     }
 }

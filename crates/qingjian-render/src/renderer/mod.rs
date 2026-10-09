@@ -10,6 +10,7 @@ mod rendered;
 mod retained;
 mod status;
 
+use std::path::PathBuf;
 use std::time::Instant;
 
 use crate::canvas::Canvas;
@@ -60,6 +61,21 @@ impl Renderer {
         }
     }
 
+    /// 加载主题要的字体：随主题带的文件，加上样式里写到、字体库里还没有的系统字族（`family_files` 由壳按平台的字体登记查文件）。
+    /// 换主题时调；同一个文件只加载一次。字体没装的样式按回退链往后找，最后用界面字体。
+    pub fn load_theme_fonts(
+        &mut self,
+        theme: &Theme,
+        mut family_files: impl FnMut(&str) -> Vec<PathBuf>,
+    ) {
+        self.text.load_fonts(theme.font_files());
+        for family in theme.font_families() {
+            if !self.text.has_family(&family) {
+                self.text.load_fonts(&family_files(&family));
+            }
+        }
+    }
+
     /// 画一帧。`scale` 是点 → 像素的倍数（Retina 为 2）；位图按画出范围开（投影、伸出的装饰），根节点的盒子是内容区。
     /// 主题里带过渡的节点与上一帧配对，位置变了就从旧位置出发，[`Rendered::next_frame`] 告诉壳多久后要下一帧。
     pub fn render(
@@ -81,6 +97,7 @@ impl Renderer {
         scale: f32,
         now: Instant,
     ) -> Result<Rendered, RenderError> {
+        self.text.use_families(theme.families());
         let mut scene = Scene::new();
         let mut builder = Builder {
             scene: &mut scene,
@@ -185,6 +202,7 @@ impl Renderer {
 
     /// 每个字形用到的字族名（按候选词的字号），验证回退链用。
     pub fn trace_families(&mut self, text: &str, theme: &Theme) -> Vec<String> {
+        self.text.use_families(theme.families());
         let font = theme.font(CANDIDATE_FONT);
         let style = TextStyle::new(font, font.size, Color::rgb(0, 0, 0), theme.text_gamma());
         self.text.trace_families(text, &style)

@@ -3,7 +3,7 @@
 
 use serde_json::{Map, Value};
 
-use super::ThemeError;
+use super::{ThemeError, jsonc};
 
 /// 继承链最多几层，挡住互相继承。
 const MAX_DEPTH: usize = 4;
@@ -13,7 +13,7 @@ pub(super) fn resolve(
     json: &str,
     base: &dyn Fn(&str) -> Option<&'static str>,
 ) -> Result<Value, ThemeError> {
-    resolve_value(serde_json::from_str(json)?, base, 0)
+    resolve_value(serde_json::from_str(&jsonc::strip(json))?, base, 0)
 }
 
 fn resolve_value(
@@ -34,7 +34,11 @@ fn resolve_value(
         return Err(ThemeError::TooDeep { id });
     }
     let source = base(&id).ok_or_else(|| ThemeError::UnknownBase { id: id.clone() })?;
-    let mut merged = resolve_value(serde_json::from_str(source)?, base, depth + 1)?;
+    let mut merged = resolve_value(
+        serde_json::from_str(&jsonc::strip(source))?,
+        base,
+        depth + 1,
+    )?;
     merge(&mut merged, value);
     Ok(merged)
 }

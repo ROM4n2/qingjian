@@ -3,13 +3,17 @@
 mod size;
 mod style;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use cosmic_text::fontdb::ID;
-use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, SwashCache, SwashContent};
+use cosmic_text::fontdb::{Family, ID};
+use cosmic_text::{Attrs, Buffer, FontSystem, Metrics, Shaping, Style, SwashCache, SwashContent};
 
 use crate::canvas::Canvas;
 use crate::fonts::{FontLibrary, Trak, UI_FAMILY};
+use crate::theme::FontFamilies;
+use crate::theme::file::FamilyList;
 
 pub(crate) use size::TextSize;
 pub(crate) use style::TextStyle;
@@ -29,6 +33,15 @@ pub(crate) struct TextPainter {
 
     /// 覆盖率 gamma 查找表，按 gamma 值缓存。
     gamma_tables: HashMap<u32, Box<[u8; 256]>>,
+
+    /// 当前主题的字族表；换了主题或加载了新字体就重新挑。
+    families: Option<Arc<FontFamilies>>,
+
+    /// 字族表每条回退链挑中的字族名（字体库里的写法），`None` 用界面字体。
+    resolved: Vec<Option<String>>,
+
+    /// 主题要求加载过的字体文件（加载失败的也记，不反复试）。
+    loaded: HashSet<PathBuf>,
 }
 
 impl TextPainter {
@@ -41,7 +54,67 @@ impl TextPainter {
             buffer,
             tracking: HashMap::new(),
             gamma_tables: HashMap::new(),
+            families: None,
+            resolved: Vec::new(),
+            loaded: HashSet::new(),
         }
+    }
+
+    /// 字体库里有没有这个字族（不分大小写）。
+    pub(crate) fn has_family(&self, name: &str) -> bool {
+        self.family_name(name).is_some()
+    }
+
+    /// 字体库里这个字族的写法。
+    fn family_name(&self, name: &str) -> Option<String> {
+        self.font_system.db().faces().find_map(|face| {
+            face.families
+                .iter()
+                .find(|(family, _)| family.eq_ignore_ascii_case(name))
+                .map(|(family, _)| family.clone())
+        })
+    }
+
+    /// 加载字体文件；每个文件只试一次。加载了新文件就重新挑字族。
+    pub(crate) fn load_fonts(&mut self, paths: &[PathBuf]) {
+        let mut added = false;
+        for path in paths {
+            if !self.loaded.insert(path.clone()) {
+                continue;
+            }
+            added |= load_font(&mut self.font_system, path);
+        }
+        if added {
+            self.families = None;
+        }
+    }
+
+    /// 换成这个主题的字族表：每条回退链挑第一个字体库里有的字族，同一张表不重挑。
+    pub(crate) fn use_families(&mut self, families: &Arc<FontFamilies>) {
+        if self
+            .families
+            .as_ref()
+            .is_some_and(|current| Arc::ptr_eq(current, families))
+        {
+            return;
+        }
+        self.resolved = families
+            .chains()
+            .iter()
+            .map(|chain| {
+                for name in &chain.0 {
+                    if FamilyList::is_system(name) {
+                        return None;
+                    }
+                    if let Some(found) = self.family_name(name) {
+                        return Some(found);
+                    }
+                }
+                tracing::debug!(chain = ?chain.0, "回退链里的字体都没装，用界面字体");
+                None
+            })
+            .collect();
+        self.families = Some(Arc::clone(families));
     }
 
     /// 光学字号（点）：SF 这类带 `opsz` 轴的字体在小字号用文本视觉尺寸，CoreText 对系统字体自动做，这里要显式给。
@@ -212,15 +285,38 @@ impl TextPainter {
     }
 
     fn shape(&mut self, text: &str, style: &TextStyle) {
+        let family = match self.resolved.get(usize::from(style.family.0)) {
+            Some(Some(name)) => Family::Name(name),
+            _ => UI_FAMILY,
+        };
         let attrs = Attrs::new()
-            .family(UI_FAMILY)
+            .family(family)
             .weight(cosmic_text::Weight(style.weight.0))
+            .style(if style.italic {
+                Style::Italic
+            } else {
+                Style::Normal
+            })
             .color(style.color.to_cosmic());
         self.buffer
             .set_metrics(Metrics::new(style.size, style.line_height));
         self.buffer.set_size(None, None);
         self.buffer.set_text(text, &attrs, Shaping::Advanced, None);
         self.buffer.shape_until_scroll(&mut self.font_system, false);
+    }
+}
+
+/// 文件能解析就加载进字体库；返回是否加载了。
+fn load_font(font_system: &mut FontSystem, path: &Path) -> bool {
+    match font_system.db_mut().load_font_file(path) {
+        Ok(()) => {
+            tracing::debug!(path = %path.display(), "加载主题字体");
+            true
+        }
+        Err(error) => {
+            tracing::warn!(path = %path.display(), %error, "主题字体读不进来");
+            false
+        }
     }
 }
 

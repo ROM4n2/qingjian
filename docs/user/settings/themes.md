@@ -1,7 +1,7 @@
 ---
 title: 主题
 order: 3
-description: 三个内置主题（青简绿、系统蓝、微信绿）的选择方法，以及自制主题的存放位置、写法（颜色、渐变与图片、阴影、字号与粗细、文字描边、伸出窗口的装饰、过渡动画、循环动画）与生效方式。
+description: 三个内置主题（青简绿、系统蓝、微信绿）的选择方法，以及自制主题的存放位置、写法（颜色、渐变与图片、阴影、字号与粗细、字体与斜体、文字描边、伸出窗口的装饰、过渡动画、循环动画）与生效方式。
 ---
 
 主题决定候选窗口的颜色；macOS 与 Windows 上同一个主题显示效果一致。主题只对青简渲染器生效（「偏好设置 → 候选窗口 → 渲染引擎」选「青简渲染器」）。
@@ -40,6 +40,7 @@ themes/
 }
 ```
 
+- `theme.json` 里可以写注释（`//` 到行尾，或 `/* … */`），对象和列表的最后一项后面多一个逗号也没关系。
 - `extends` 写底子主题：`qingjian`（青简绿）、`system-blue`（系统蓝）或 `wechat`（微信绿）。没写的部分都沿用底子主题。
 - `meta.id` 必须与文件夹名相同，且不能与内置主题重名，也不能是 `system`、`light`、`dark`；`meta.name` 是主题列表里显示的名字。
 - 颜色写作 `#rrggbb` 或带不透明度的 `#rrggbbaa`；写成 `{ "light": …, "dark": … }` 时浅色与深色外观各用一个。
@@ -103,6 +104,34 @@ themes/
 ```
 
 粗细写 `light`（细）、`regular`（常规）、`medium`（中等）、`semibold`（半粗）、`bold`（粗），或 100–900 的数字。系统字体没有某一档粗细时，用最接近的一档。
+
+## 字体与斜体
+
+每种文字可以用不同的字体，写 `family`；斜体写 `"style": "italic"`。写在 `text` 下的 `family` 是没单独写字体的文字都用的：
+
+```json
+"text": {
+  "family": ["PingFang SC", "system"],
+  "styles": {
+    "candidate": { "size": 18, "line_height": 22, "family": ["Songti SC", "STSong", "system"] },
+    "annotation": { "size": 12, "line_height": 15, "family": "Georgia", "style": "italic" }
+  }
+}
+```
+
+- `family` 写一个字体名，或按顺序写几个：用第一个装了的。`system` 表示「偏好设置 → 候选窗口 → 字体」里选的字体（没选就是系统字体）；一个都没装时也用它。
+- 字体名写字族名，即系统字体列表里显示的英文名，如 `Songti SC`、`Microsoft YaHei`、`Georgia`。macOS 与 Windows 的字体不同，两边都要好看时把两边的名字都写上。
+- 字体里没有的字（比如英文字体遇到汉字）自动用系统字体补上。
+- 字体没有斜体时，把正体倾斜显示；汉字的斜体也是这样来的。
+
+字体也可以随主题带：放进主题文件夹，在 `theme.json` 顶层列出来，`family` 写字体本身的字族名：
+
+```json
+"fonts": [{ "file": "fonts/LXGWWenKai-Regular.ttf" }],
+"text": { "styles": { "candidate": { "size": 18, "line_height": 22, "family": "LXGW WenKai" } } }
+```
+
+支持 TTF、OTF、TTC，单个文件不超过 32 MB。只带许可允许再分发的字体（如 OFL 许可的霞鹜文楷），系统自带的字体只写名字、不要拷进主题。
 
 ## 文字描边
 

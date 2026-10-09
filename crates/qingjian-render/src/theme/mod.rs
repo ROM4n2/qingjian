@@ -1,4 +1,5 @@
-//! 主题：一份 `theme.json`（图层树 + 组件 + 颜色变量 + 文字样式）加当前外观（浅色 / 深色）。格式见 `docs/design/theme.md`。
+//! 主题：一份 `theme.json`（图层树 + 组件 + 颜色变量 + 文字样式）加当前外观（浅色 / 深色）。格式见 `docs/design/theme.md`；
+//! 文件可以写注释与尾逗号（见 `jsonc.rs`）。
 //!
 //! 内置主题随 crate 编进来（`themes/<id>/theme.json`），第一次用到时解析一次；用户主题用 [`Theme::from_json`]。
 //! 主题可以 `"extends": "<内置主题 id>"`，只写要改的部分（见 `extends.rs`）。
@@ -8,12 +9,12 @@ mod assets;
 mod error;
 mod extends;
 pub(crate) mod file;
-mod font_spec;
-mod font_weight;
+mod font;
+mod jsonc;
 mod library;
 mod validate;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use tiny_skia::Pixmap;
@@ -21,8 +22,8 @@ use tiny_skia::Pixmap;
 use crate::color::Color;
 
 pub use error::ThemeError;
-pub use font_spec::FontSpec;
-pub use font_weight::FontWeight;
+pub(crate) use font::{FamilyId, FontFamilies};
+pub use font::{FontSpec, FontWeight};
 pub use library::ThemeLibrary;
 
 use assets::Assets;
@@ -49,8 +50,11 @@ pub struct Theme {
     /// 用深色那一套值。
     dark: bool,
 
-    /// 图片素材（主题目录里的），同一主题的浅色 / 深色共用。
+    /// 图片与字体素材（主题目录里的），同一主题的浅色 / 深色共用。
     assets: Arc<Assets>,
+
+    /// 字族表与命名样式，同一主题的浅色 / 深色共用。
+    families: Arc<FontFamilies>,
 }
 
 impl Theme {
@@ -93,6 +97,7 @@ impl Theme {
             tracing::warn!(id = file.meta.id, "主题引用有误：{problem}");
         }
         let theme = Self {
+            families: Arc::new(FontFamilies::new(&file.text)),
             file: Arc::new(file),
             dark,
             assets: Arc::default(),
@@ -100,7 +105,7 @@ impl Theme {
         Ok(theme.with_dark(dark))
     }
 
-    /// 读主题目录：`dir/theme.json` 加它用到的图片（路径相对 `dir`）。
+    /// 读主题目录：`dir/theme.json` 加它用到的图片与字体（路径相对 `dir`）。
     pub fn from_dir(dir: &Path, dark: bool) -> Result<Self, ThemeError> {
         let json = std::fs::read_to_string(dir.join("theme.json"))?;
         let mut theme = Self::from_json(&json, dark)?;
@@ -114,6 +119,7 @@ impl Theme {
             file: Arc::clone(&self.file),
             dark: self.locked_dark().unwrap_or(dark),
             assets: Arc::clone(&self.assets),
+            families: Arc::clone(&self.families),
         }
     }
 
@@ -134,6 +140,16 @@ impl Theme {
     /// SPDX 许可证标识。
     pub fn license(&self) -> &str {
         &self.file.meta.license
+    }
+
+    /// 样式里写到的系统字族名（不含 `system`）。壳按名字查出字体文件，交给 [`crate::Renderer::load_theme_fonts`]。
+    pub fn font_families(&self) -> Vec<String> {
+        self.families.names()
+    }
+
+    /// 随主题带的字体文件（已检查在主题目录里）。
+    pub fn font_files(&self) -> &[PathBuf] {
+        self.assets.fonts()
     }
 
     fn default_builtin() -> &'static Theme {
@@ -171,12 +187,12 @@ impl Theme {
 
     /// 命名文字样式（点）。
     pub(crate) fn font(&self, name: &str) -> FontSpec {
-        self.file
-            .text
-            .styles
-            .get(name)
-            .copied()
-            .unwrap_or(FALLBACK_FONT)
+        self.families.style(name).unwrap_or(FALLBACK_FONT)
+    }
+
+    /// 字族表，渲染器按 [`FamilyId`] 查回退链；两份 `Theme` 共用同一张表时指针相同。
+    pub(crate) fn families(&self) -> &Arc<FontFamilies> {
+        &self.families
     }
 
     /// 节点里的 `font`：样式名，或在样式上改字号 / 字重。
@@ -240,6 +256,27 @@ mod tests {
         assert_eq!(
             Theme::dark().color(&ColorRef::Variable("accent".to_owned())),
             Color::rgb(36, 76, 36)
+        );
+    }
+
+    #[test]
+    fn theme_file_accepts_comments_trailing_commas_and_schema_key() {
+        let theme = Theme::from_json(
+            r##"{
+                "$schema": "https://qingjian.app/schema/theme-1.json",
+                "extends": "qingjian", // 以青简绿为底
+                "schema": 1,
+                "meta": { "id": "jsonc", "name": "注释", },
+                /* 只改高亮色 */
+                "variables": { "accent": "#ffb7d5", },
+            }"##,
+            false,
+        )
+        .unwrap();
+        assert_eq!(theme.id(), "jsonc");
+        assert_eq!(
+            theme.color(&ColorRef::Variable("accent".to_owned())),
+            Color::rgb(0xff, 0xb7, 0xd5)
         );
     }
 }

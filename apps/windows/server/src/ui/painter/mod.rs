@@ -71,6 +71,9 @@ impl Painter {
                     let themes =
                         ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
                     painter.theme = themes.resolve(&settings.theme, false);
+                    painter
+                        .renderer
+                        .load_theme_fonts(&painter.theme, system_fonts::family_files);
                 }
             }
             CandidateRenderer::System => {

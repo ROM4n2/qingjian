@@ -4,7 +4,7 @@ mod adaptive;
 mod color_ref;
 mod color_spec;
 mod color_value;
-mod font_ref;
+mod font;
 mod meta;
 pub(crate) mod node;
 mod status;
@@ -19,7 +19,7 @@ pub(crate) use adaptive::Adaptive;
 pub(crate) use color_ref::ColorRef;
 pub(crate) use color_spec::ColorSpec;
 pub(crate) use color_value::ColorValue;
-pub(crate) use font_ref::FontRef;
+pub(crate) use font::{BundledFont, FamilyList, FontRef, FontStyle};
 pub(crate) use meta::{LockedAppearance, Meta};
 pub(crate) use status::StatusSpec;
 pub(crate) use text::TextSettings;
@@ -42,6 +42,10 @@ pub(crate) struct ThemeFile {
     pub(crate) variables: HashMap<String, Adaptive<ColorValue>>,
 
     pub(crate) text: TextSettings,
+
+    /// 随主题带的字体文件。
+    #[serde(default)]
+    pub(crate) fonts: Vec<BundledFont>,
 
     /// 可复用的节点（组件），`use` / `repeat` 按名字引用。
     #[serde(default)]

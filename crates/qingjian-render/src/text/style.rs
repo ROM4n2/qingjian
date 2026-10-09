@@ -1,7 +1,7 @@
-//! 一段文字怎么画：字号、行高（像素）、字重、颜色、描边、删除线。
+//! 一段文字怎么画：字号、行高（像素）、字重、斜体、字族、颜色、描边、删除线。
 
 use crate::color::Color;
-use crate::theme::{FontSpec, FontWeight};
+use crate::theme::{FamilyId, FontSpec, FontWeight};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct TextStyle {
@@ -15,6 +15,12 @@ pub(crate) struct TextStyle {
     pub line_height: f32,
 
     pub weight: FontWeight,
+
+    /// 斜体；字体没有斜体面时倾斜正体代替。
+    pub italic: bool,
+
+    /// 字族回退链的序号，查当前主题的字族表。
+    pub family: FamilyId,
 
     pub color: Color,
 
@@ -39,6 +45,8 @@ impl TextStyle {
             points,
             line_height: font.line_height,
             weight: font.weight,
+            italic: font.italic,
+            family: font.family,
             color,
             stroke: None,
             strike: false,
