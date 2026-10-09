@@ -6,8 +6,8 @@ use std::rc::Rc;
 
 use qingjian_platform::{CandidateRenderer, LayoutMode};
 use qingjian_render::{
-    FontLibrary, Frame, Layout, Mode, Rendered, RenderedStatus, Renderer, StatusCell, Theme,
-    ThemeLibrary, UiFont, system_fonts,
+    FontLibrary, Frame, Layout, Mode, Rendered, RenderedStatus, Renderer, StatusCell, TextSizes,
+    Theme, ThemeLibrary, UiFont, system_fonts,
 };
 
 use crate::dispatch::RenderSettings;
@@ -70,7 +70,14 @@ impl Painter {
                 if let Some(painter) = painter.as_mut() {
                     let themes =
                         ThemeLibrary::load(qingjian_platform::dirs::themes_dir().as_deref());
-                    painter.theme = themes.resolve(&settings.theme, false);
+                    let (candidate, annotation) = settings.font_sizes;
+                    painter.theme = themes
+                        .resolve(&settings.theme, false)
+                        .with_text_sizes(TextSizes {
+                            candidate: candidate.get(),
+                            annotation: annotation.get(),
+                        })
+                        .with_animations(settings.animations);
                     painter
                         .renderer
                         .load_theme_fonts(&painter.theme, system_fonts::family_files);

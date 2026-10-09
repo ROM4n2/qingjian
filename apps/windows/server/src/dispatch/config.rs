@@ -1,7 +1,7 @@
 use qingjian_platform::protocol::KeyModifiers;
 use qingjian_platform::{
-    Appearance, AppsConfig, CandidateRenderer, Config, KeyCombo, LayoutMode, PreeditMode, Scheme,
-    SwitchKeys,
+    Appearance, AppsConfig, CandidateRenderer, Config, FontSize, KeyCombo, LayoutMode, PreeditMode,
+    Scheme, SwitchKeys,
 };
 
 use super::RenderSettings;
@@ -33,6 +33,12 @@ pub struct RouterConfig {
 
     /// 候选窗口主题 id（`[general] theme`）；只对青简渲染器生效。
     pub theme: String,
+
+    /// 候选字、译文字号（`[general] candidate_font_size` / `annotation_font_size`）。
+    pub font_sizes: (FontSize, FontSize),
+
+    /// 过渡动画（`[general] animations`）。
+    pub animations: bool,
 
     /// 用户主题目录的戳，热加载轮询时更新；不来自配置文件，重读配置时沿用。
     pub themes_stamp: u64,
@@ -108,6 +114,8 @@ impl RouterConfig {
             renderer: self.renderer,
             font: self.font.clone(),
             theme: self.theme.clone(),
+            font_sizes: self.font_sizes,
+            animations: self.animations,
             themes_stamp: self.themes_stamp,
         }
     }
@@ -124,6 +132,11 @@ impl From<&Config> for RouterConfig {
             renderer: config.general.renderer,
             font: config.general.font.trim().to_owned(),
             theme: config.general.theme_id().to_owned(),
+            font_sizes: (
+                config.general.candidate_font_size,
+                config.general.annotation_font_size,
+            ),
+            animations: config.general.animations,
             themes_stamp: 0,
             preedit: config.general.preedit,
             page_keys: config.general.page_keys(),

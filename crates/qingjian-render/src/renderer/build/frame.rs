@@ -3,10 +3,10 @@
 //! 表格各列取各行最宽，最后补一列 `1fr` 吃掉剩余宽度，这样 `span: row` 的节点（高亮条）能横跨整个表格宽；
 //! 列间距由各格的外边距给（grid 的 gap 会让补的那一列也多出一个间距）。
 
-use taffy::prelude::{FromFr, FromLength, TaffyAuto, TaffyGridLine};
+use taffy::prelude::{FromFr, TaffyAuto, TaffyGridLine, minmax};
 use taffy::{
     AlignContent, AlignItems, Display, GridPlacement, GridTemplateComponent, JustifyContent, Line,
-    NodeId, Style, TrackSizingFunction,
+    MaxTrackSizingFunction, MinTrackSizingFunction, NodeId, Style,
 };
 
 use super::layout_style;
@@ -55,8 +55,12 @@ impl Builder<'_> {
                 let style = Style {
                     display: Display::Grid,
                     grid_template_columns: template,
-                    grid_auto_rows: vec![TrackSizingFunction::from_length(
-                        table.row_height * self.scale,
+                    // 行高至少是主题写的（随设置里的候选字号缩放），内容更高时撑开，不会压到下一行
+                    grid_auto_rows: vec![minmax(
+                        MinTrackSizingFunction::length(
+                            table.row_height * self.theme.row_scale() * self.scale,
+                        ),
+                        MaxTrackSizingFunction::auto(),
                     )],
                     justify_content: Some(JustifyContent::START),
                     align_content: Some(AlignContent::START),

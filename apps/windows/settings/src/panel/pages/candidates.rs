@@ -1,6 +1,6 @@
-//! 「候选窗口」页：外观、主题、排布、渲染引擎、字体、拼音显示位置、悬浮状态条。
+//! 「候选窗口」页：外观、主题、排布、渲染引擎、字体与字号、过渡动画、拼音显示位置、悬浮状态条。
 
-use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode, PreeditMode};
+use qingjian_platform::{Appearance, CandidateRenderer, FontSize, LayoutMode, PreeditMode};
 use qingjian_render::ThemeLibrary;
 use windows_reactor::*;
 
@@ -18,6 +18,13 @@ fn mode_combo<T: PartialEq + Copy>(
         .items_source(all.iter().map(|mode| label(*mode)))
         .selected_index(all.iter().position(|mode| *mode == current).unwrap_or(0))
         .on_selection_changed(callback)
+}
+
+/// 字号框：不限范围，没填显示为空。
+fn size_box(size: FontSize, callback: Callback<Option<f64>>) -> NumberBox {
+    NumberBox::new()
+        .value(size.get().map_or(f64::NAN, f64::from))
+        .on_value_changed(callback)
 }
 
 pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> View {
@@ -48,7 +55,7 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
         ),
         field(
             "主题",
-            "只对青简渲染器生效；每个主题都有浅色与深色两套，按上面的外观切换。",
+            "只对青简渲染器生效；樱花只有浅色，其余主题按上面的外观切换浅色与深色。",
             ComboBox::new()
                 .items_source(themes.themes().iter().map(|theme| theme.name().to_owned()))
                 .selected_index(
@@ -90,6 +97,29 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .items_source(suggestions)
                 .on_text_changed(context.callback(Message::FontQuery))
                 .on_suggestion_chosen(context.callback(Message::Font)),
+        ),
+        field(
+            "候选字号",
+            "单位是点，清空用主题的字号；行高跟着缩放。只对青简渲染器生效。",
+            size_box(
+                g.candidate_font_size,
+                context.callback(Message::CandidateFontSize),
+            ),
+        ),
+        field(
+            "译文字号",
+            "单位是点，清空用主题的字号。只对青简渲染器生效。",
+            size_box(
+                g.annotation_font_size,
+                context.callback(Message::AnnotationFontSize),
+            ),
+        ),
+        field(
+            "过渡动画",
+            "高亮换候选时滑过去、主题里的循环动画。关掉后直接跳到位；系统关了「动画效果」时也不播。",
+            ToggleSwitch::new()
+                .is_on(g.animations)
+                .on_toggled(context.callback(Message::Animations)),
         ),
         field(
             "拼音显示",

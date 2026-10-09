@@ -1,7 +1,7 @@
 //! 候选窗口的输出端。
 
-use qingjian_platform::CandidateRenderer;
 use qingjian_platform::protocol::{Frame, ScreenRect};
+use qingjian_platform::{CandidateRenderer, FontSize};
 use qingjian_render::Mode;
 
 /// 候选窗口 / 状态条的画法。
@@ -15,6 +15,12 @@ pub struct RenderSettings {
 
     /// 主题 id（`[general] theme`，已按旧写法兼容解析）。
     pub theme: String,
+
+    /// 候选字、译文字号（`[general] candidate_font_size` / `annotation_font_size`），盖过主题。
+    pub font_sizes: (FontSize, FontSize),
+
+    /// 过渡动画（`[general] animations`）。
+    pub animations: bool,
 
     /// 用户主题目录的戳（`ThemeLibrary::stamp`）：主题文件改了它就变，UI 线程据此重读主题。
     pub themes_stamp: u64,

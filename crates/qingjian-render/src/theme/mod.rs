@@ -13,6 +13,7 @@ mod font;
 mod jsonc;
 mod library;
 mod svg_image;
+mod text_sizes;
 mod validate;
 
 use std::path::{Path, PathBuf};
@@ -26,6 +27,7 @@ pub use error::ThemeError;
 pub(crate) use font::{FamilyId, FontFamilies};
 pub use font::{FontSpec, FontWeight};
 pub use library::ThemeLibrary;
+pub use text_sizes::TextSizes;
 
 use assets::Assets;
 use file::{ColorRef, FontRef, LockedAppearance, SCHEMA, ThemeFile};
@@ -126,6 +128,12 @@ pub struct Theme {
 
     /// 字族表与命名样式，同一主题的浅色 / 深色共用。
     families: Arc<FontFamilies>,
+
+    /// 设置里的字号，盖过主题的。
+    sizes: TextSizes,
+
+    /// 设置里关了过渡动画时为 `false`：过渡直接跳到终点，循环动画停在第一帧。
+    animations: bool,
 }
 
 impl Theme {
@@ -170,6 +178,8 @@ impl Theme {
         }
         let theme = Self {
             families: Arc::new(FontFamilies::new(&file.text)),
+            sizes: TextSizes::default(),
+            animations: true,
             file: Arc::new(file),
             dark,
             assets: Arc::default(),
@@ -193,7 +203,39 @@ impl Theme {
             dark: self.locked_dark().unwrap_or(dark),
             assets: Arc::clone(&self.assets),
             families: Arc::clone(&self.families),
+            sizes: self.sizes,
+            animations: self.animations,
         }
+    }
+
+    /// 同一主题换上设置里的字号。
+    pub fn with_text_sizes(&self, sizes: TextSizes) -> Self {
+        Self {
+            sizes,
+            ..self.clone()
+        }
+    }
+
+    /// 同一主题换上设置里的动画开关。
+    pub fn with_animations(&self, animations: bool) -> Self {
+        Self {
+            animations,
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn animations(&self) -> bool {
+        self.animations
+    }
+
+    /// 表格行高的缩放比，跟候选字走。
+    pub(crate) fn row_scale(&self) -> f32 {
+        self.sizes.ratio("candidate", |name| self.theme_size(name))
+    }
+
+    /// 主题自己写的字号（不算设置里的）。
+    fn theme_size(&self, name: &str) -> Option<f32> {
+        self.families.style(name).map(|spec| spec.size)
     }
 
     /// 主题 id。
@@ -265,7 +307,8 @@ impl Theme {
 
     /// 命名文字样式（点）。
     pub(crate) fn font(&self, name: &str) -> FontSpec {
-        self.families.style(name).unwrap_or(FALLBACK_FONT)
+        let spec = self.families.style(name).unwrap_or(FALLBACK_FONT);
+        text_sizes::scaled(spec, self.sizes.ratio(name, |base| self.theme_size(base)))
     }
 
     /// 字族表，渲染器按 [`FamilyId`] 查回退链；两份 `Theme` 共用同一张表时指针相同。
@@ -409,5 +452,29 @@ mod tests {
             Color::rgb(255, 0, 0)
         );
         assert_eq!(theme.font("candidate"), Theme::light().font("candidate"));
+    }
+
+    #[test]
+    fn text_sizes_scale_styles_and_rows() {
+        let theme = Theme::light();
+        let (candidate, index, annotation) = (
+            theme.font("candidate"),
+            theme.font("index"),
+            theme.font("annotation"),
+        );
+        let ratio = 26.0 / candidate.size;
+        let sized = theme.with_text_sizes(TextSizes::new(26.0, 0.0));
+        assert_eq!(sized.font("candidate").size, 26.0);
+        assert_eq!(
+            sized.font("candidate").line_height,
+            candidate.line_height * ratio
+        );
+        assert_eq!(sized.font("index").size, index.size * ratio);
+        assert_eq!(sized.font("annotation"), annotation);
+        assert_eq!(sized.row_scale(), ratio);
+        // 换外观不丢设置里的字号
+        assert_eq!(sized.with_dark(true).font("candidate").size, 26.0);
+        // 不是正数当没填
+        assert_eq!(TextSizes::new(-1.0, f32::NAN), TextSizes::default());
     }
 }

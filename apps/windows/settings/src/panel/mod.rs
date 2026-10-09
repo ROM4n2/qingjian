@@ -12,7 +12,7 @@ mod recorder;
 
 use std::path::{Path, PathBuf};
 
-use qingjian_platform::Config;
+use qingjian_platform::{Config, FontSize};
 use windows_reactor::*;
 
 use self::cloud_status::CloudStatus;
@@ -97,6 +97,18 @@ impl Settings {
             return;
         }
         self.reload();
+    }
+
+    /// 字号框：清空为用主题的，不限范围；没变就不写。
+    fn save_font_size(&mut self, key: &str, size: Option<f64>) {
+        let size = FontSize::from_input(size.filter(|size| !size.is_nan()));
+        let current = match key {
+            "candidate_font_size" => self.config.general.candidate_font_size,
+            _ => self.config.general.annotation_font_size,
+        };
+        if size != current {
+            self.save("general", key, size);
+        }
     }
 
     /// 落盘一个字符串数组再重读。

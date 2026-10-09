@@ -204,3 +204,18 @@ fn missing_file_is_default() {
     let _ = std::fs::remove_file(&path);
     assert_eq!(Config::load(&path).unwrap(), Config::default());
 }
+
+#[test]
+fn font_sizes_and_animations_parse_and_default() {
+    let config: Config = toml::from_str(
+        "[general]\ncandidate_font_size = 20\nannotation_font_size = 13.5\nanimations = false\n",
+    )
+    .unwrap();
+    assert_eq!(config.general.candidate_font_size.get(), Some(20.0));
+    assert_eq!(config.general.annotation_font_size.get(), Some(13.5));
+    assert!(!config.general.animations);
+    let default = Config::default();
+    assert_eq!(default.general.candidate_font_size.get(), None);
+    assert!(default.general.animations);
+    assert_eq!(FontSize(-3.0).get(), None);
+}

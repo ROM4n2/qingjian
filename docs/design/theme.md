@@ -63,6 +63,9 @@
 - **输入状态**（`Frame::mode`）：渲染器只给事实（三个布尔与方案名），显示什么字由主题用 `when` 分支写，渲染器里没有「中 / 英」这类文案。
   mac 壳组装候选帧时填（中英看 Caps Lock，与菜单栏一致；简繁、标点、方案看配置；英文模式标点算半角）；
   Windows 由 Router 现算（与状态条同一来源），经 `CandidateSink::show` 交给 UI 线程，不进 Server ↔ DLL 协议。方案名 `qingjian_platform::scheme_name`：同状态条的 `scheme_label`，单开全拼时也写「全拼」。
+- **设置里的字号**：`[general] candidate_font_size` / `annotation_font_size`（0 用主题的，不限范围）由壳经 `Theme::with_text_sizes` 盖到主题上：
+  `candidate` 与 `annotation` 换成设置的字号，行高同比例；`index`、`preedit` 与表格 `row_height` 按候选字的比例缩放（`theme/text_sizes.rs`）。
+  表格行高是下限（`minmax(row_height, auto)`），内容更高时撑开。
 - **状态条**：`status.root` 是一棵与候选窗口同写法的节点树，`repeat` 绑定 `cells` 展开格子（Windows 现在是模式、标点、齿轮三格）。
   格子里的条件 `emphasized`（当前模式、生效的全角标点）、`gear`、`first`、`last`，文字绑定 `text`；整条能用 `mode.*`（`Renderer::render_status` 收一份 `Mode`，Windows 的 `StatusView` 带着，与候选窗口同一个 `Router::input_mode`）。
   点击按格：每格第一个产出的节点的右边界（根坐标），没画出来的格同前一格，最后一格延到内容右边；格子之间的装饰算前一格（`renderer/status/tree.rs`）。
@@ -110,7 +113,7 @@
   开头、结尾没写时按缺省值补（同 CSS 缺 0% / 100%）；`loop: false` 播一轮停在最后。变换作用于整棵子树、不影响布局（同 CSS `transform`）。时钟从窗口出现算起，打字过程中不重置。
 - **运行方式**：`Renderer` 留住上一帧的场景树与布局；`Rendered::next_frame` 告诉壳多久后要下一帧（没有动画为 `None`），壳到点调 `tick`，只按插值重画、不重建树、不重排版。
   新数据到了，新内容立刻画出，只有带过渡的节点从旧位置出发，按键到候选出现的延迟不变。画出范围按动画能到的最远处算（过渡取起止的并，循环取最大平移、旋转后的外接圆），动画中途位图不变大小。
-  过渡 60 帧、循环动画上限 30 帧；窗口隐藏时停下，没有动画时不开定时器。系统开了「减少动态效果」时过渡直接跳到终点、循环动画停在第一帧。
+  过渡 60 帧、循环动画上限 30 帧；窗口隐藏时停下，没有动画时不开定时器。系统开了「减少动态效果」或设置里关了 `animations`（`Theme::with_animations`）时过渡直接跳到终点、循环动画停在第一帧。
   壳：mac 用主线程 `NSTimer`，Windows 在 UI 线程 `SetTimer`。
 - **局部重画**：循环动画用脏矩形（`renderer/partial.rs`）：动画节点把树序切成几段，不动的各段画进图层缓存，每帧只在动画节点上一帧与这一帧占的区域里按原先后叠「段、动画节点、段……」，
   与整张重画只差半透明叠加的取整（测得最多 3 / 255）。动画节点的上级有半透明容器、拿子节点当阴影形状的容器或别的动画节点，或同时有过渡在播时，退回整张重画。

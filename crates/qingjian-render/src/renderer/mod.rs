@@ -45,6 +45,9 @@ pub struct Renderer {
     /// 系统开了「减少动态效果」：不播过渡，循环动画停在开头。
     reduce_motion: bool,
 
+    /// 最近一帧的主题关了动画（设置里的开关），效果同上。
+    animations_off: bool,
+
     /// 循环动画的时钟起点：窗口出现后的第一帧；打字过程中不重置，窗口收起（`forget`）归零。
     clock: Option<Instant>,
 }
@@ -57,6 +60,7 @@ impl Renderer {
             text,
             last: None,
             reduce_motion: false,
+            animations_off: false,
             clock: None,
         }
     }
@@ -98,6 +102,7 @@ impl Renderer {
         now: Instant,
     ) -> Result<Rendered, RenderError> {
         self.text.use_families(theme.families());
+        self.animations_off = !theme.animations();
         let mut scene = Scene::new();
         let mut builder = Builder {
             scene: &mut scene,

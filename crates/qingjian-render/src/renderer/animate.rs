@@ -15,6 +15,11 @@ impl Renderer {
         self.reduce_motion = reduce;
     }
 
+    /// 不播动画：系统减少动态效果，或设置里关了。
+    pub(super) fn still(&self) -> bool {
+        self.reduce_motion || self.animations_off
+    }
+
     /// 忘掉上一帧（窗口隐藏时调）：下次显示不从旧位置过渡，循环动画从头播。
     pub fn forget(&mut self) {
         self.last = None;
@@ -52,7 +57,7 @@ impl Renderer {
         scale: f32,
         now: Instant,
     ) -> Vec<Transition> {
-        if self.reduce_motion {
+        if self.still() {
             return Vec::new();
         }
         let Some(last) = self
@@ -107,7 +112,7 @@ impl Renderer {
             .map_or(Duration::ZERO, |clock| now.saturating_duration_since(clock));
         for (node, keyframes) in &retained.animated {
             // 减少动态效果：停在开头那一帧
-            let at = if self.reduce_motion {
+            let at = if self.still() {
                 Duration::ZERO
             } else {
                 elapsed
@@ -137,7 +142,7 @@ impl Renderer {
 
     /// 还有循环动画要接着播（减少动态效果时不播）。
     pub(super) fn loops_running(&self, retained: &Retained, now: Instant) -> bool {
-        if self.reduce_motion {
+        if self.still() {
             return false;
         }
         let elapsed = self

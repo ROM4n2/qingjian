@@ -3,6 +3,7 @@ mod apps;
 mod aux_code;
 mod candidate_renderer;
 mod dictionaries;
+mod font_size;
 mod general;
 mod key_combo;
 mod layout_mode;
@@ -34,6 +35,7 @@ pub use apps::{
 pub use aux_code::AuxCodeConfig;
 pub use candidate_renderer::CandidateRenderer;
 pub use dictionaries::{DEFAULT_DOMAINS, DictionariesConfig};
+pub use font_size::FontSize;
 pub use general::{
     DEFAULT_PAGE_KEYS, DEFAULT_THEME, GeneralConfig, LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE,
     PAGE_KEY_OPTIONS,
@@ -216,6 +218,11 @@ horizontal_grid = false
 renderer = "qingjian"
 # 候选窗口字体（字族名，如 "LXGW WenKai"）；空为系统字体。只对青简渲染器生效，没装这个字体时自动回到系统字体
 font = ""
+# 候选字、译文的字号（点），盖过主题；0 用主题的。只对青简渲染器生效
+candidate_font_size = 0
+annotation_font_size = 0
+# 候选窗口的过渡动画（高亮滑动、主题里的循环动画）；false 时直接跳到位，与系统「减弱动态效果」一样
+animations = true
 # 组句中的拼音显示在哪：both 行内和候选窗口 / inline 只在行内 / window 只在候选窗口（应用里不放 marked text）
 preedit = "both"
 # 英文模式（Caps Lock 亮着）是否给英文候选：Tab 或方向键选词，空格、回车、标点仍原样上屏敲的字母；false 就是纯直通

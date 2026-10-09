@@ -36,6 +36,10 @@ pub(crate) enum Message {
     FontQuery(String),
     /// 从提示里选了一个字族。
     Font(String),
+    /// 字号框改了；清空为 `None`（用主题的）。
+    CandidateFontSize(Option<f64>),
+    AnnotationFontSize(Option<f64>),
+    Animations(bool),
     StatusBar(bool),
 
     // 云服务页

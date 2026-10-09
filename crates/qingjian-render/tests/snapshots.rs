@@ -12,7 +12,9 @@ use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use qingjian_render::{FontLibrary, Frame, Layout, Mode, Pixmap, Rendered, Renderer, Theme};
+use qingjian_render::{
+    FontLibrary, Frame, Layout, Mode, Pixmap, Rendered, Renderer, TextSizes, Theme,
+};
 
 const UPDATE_ENV: &str = "QINGJIAN_UPDATE_SNAPSHOTS";
 
@@ -145,6 +147,15 @@ fn render_all(mut renderer: Renderer) -> Vec<Shot> {
         1.0,
     );
     shots.push(shot("nihao-vertical-light-1x".to_owned(), rendered, None));
+    // 设置里放大字号：行高跟着撑开，候选与译文不叠在一起
+    let large = Theme::light().with_text_sizes(TextSizes::new(24.0, 16.0));
+    for (scene, frame, layout) in [
+        ("nihao-vertical", scenes::nihao(), Layout::Vertical),
+        ("cloud-horizontal", scenes::cloud(), Layout::Horizontal),
+    ] {
+        let rendered = still(&mut renderer, &frame, layout, &large, 2.0);
+        shots.push(shot(format!("large-text-{scene}-light"), rendered, None));
+    }
     shots
 }
 
@@ -167,6 +178,16 @@ fn transition_mid(renderer: &mut Renderer) -> Shot {
     let mut to = scenes::nihao();
     to.highlighted = Some(3);
     let start = Instant::now();
+    // 设置里关了动画：换行直接画终点，不要后续帧
+    let off = theme.with_animations(false);
+    renderer.forget();
+    renderer
+        .render_at(&from, Layout::Vertical, &off, 2.0, start)
+        .unwrap();
+    let jumped = renderer
+        .render_at(&to, Layout::Vertical, &off, 2.0, start)
+        .unwrap();
+    assert!(jumped.next_frame.is_none(), "关了动画不该过渡");
     renderer.forget();
     renderer
         .render_at(&from, Layout::Vertical, &theme, 2.0, start)

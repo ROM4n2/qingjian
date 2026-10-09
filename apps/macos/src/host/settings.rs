@@ -3,7 +3,7 @@
 use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 use crate::preferences::DEFAULT_FONT_LABEL;
-use qingjian_platform::ShiftLetter;
+use qingjian_platform::{FontSize, ShiftLetter};
 
 impl Host {
     /// 写短语前读取文件；外部规则有变化时同步列表并请用户重新确认。
@@ -213,6 +213,23 @@ impl Host {
                 if let Some(layout) = LayoutMode::ALL.get(index) {
                     self.settings.set_value("general", "layout", layout.key());
                 }
+            }
+            (Setting::CandidateFontSize, SettingValue::Text(text)) => {
+                self.set_font_size(
+                    "candidate_font_size",
+                    &text,
+                    config.general.candidate_font_size,
+                );
+            }
+            (Setting::AnnotationFontSize, SettingValue::Text(text)) => {
+                self.set_font_size(
+                    "annotation_font_size",
+                    &text,
+                    config.general.annotation_font_size,
+                );
+            }
+            (Setting::Animations, SettingValue::Bool(on)) => {
+                self.settings.set_bool("general", "animations", on);
             }
             (Setting::HorizontalGrid, SettingValue::Bool(on)) => {
                 self.settings.set_bool("general", "horizontal_grid", on);
@@ -513,5 +530,21 @@ impl Host {
             (setting, value) => tracing::warn!(?setting, ?value, "设置项与控件值不匹配"),
         }
         self.apply_config(false);
+    }
+
+    /// 字号文本框：空为用主题的，不限范围；填的不是数就不写（随后的同步把框里改回原值）。
+    fn set_font_size(&mut self, key: &str, text: &str, current: FontSize) {
+        let text = text.trim();
+        let size = if text.is_empty() {
+            None
+        } else if let Ok(size) = text.parse::<f64>() {
+            Some(size)
+        } else {
+            return;
+        };
+        let size = FontSize::from_input(size);
+        if size != current {
+            self.settings.set_value("general", key, size);
+        }
     }
 }

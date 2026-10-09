@@ -1,14 +1,16 @@
-//! 「候选窗口」页：外观、排布、渲染引擎、字体（可搜索的列表）、拼音显示位置。
+//! 「候选窗口」页：外观、主题、排布、渲染引擎、字体（可搜索的列表）与字号、过渡动画、拼音显示位置。
 
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSButton, NSPopUpButton};
-use qingjian_platform::{Appearance, CandidateRenderer, Config, LayoutMode, PreeditMode};
+use objc2_app_kit::{NSButton, NSPopUpButton, NSTextField};
+use objc2_foundation::NSString;
+use qingjian_platform::{Appearance, CandidateRenderer, Config, FontSize, LayoutMode, PreeditMode};
 use qingjian_render::ThemeLibrary;
 
 use crate::candidates::available_families;
 use crate::preferences::controls::{
-    checkbox, note, row_checkbox, row_popup, select, set_checked, set_items,
+    checkbox, note, row_checkbox, row_control, row_popup, select, set_checked, set_items,
+    text_field,
 };
 use crate::preferences::font_picker::FontPicker;
 use crate::preferences::layout::Layout;
@@ -33,6 +35,15 @@ pub struct CandidatesPage {
 
     /// 候选窗字体：搜索框 + 列表。
     font: FontPicker,
+
+    /// 候选字字号，空为用主题的。
+    candidate_size: Retained<NSTextField>,
+
+    /// 译文字号，空为用主题的。
+    annotation_size: Retained<NSTextField>,
+
+    /// 过渡动画。
+    animations: Retained<NSButton>,
 
     /// 拼音显示位置。
     preedit: Retained<NSPopUpButton>,
@@ -63,7 +74,7 @@ impl CandidatesPage {
         note(
             layout,
             mtm,
-            "主题只对青简渲染器生效；每个主题都有浅色与深色两套，按上面的外观切换。",
+            "主题只对青简渲染器生效；樱花只有浅色，其余主题按上面的外观切换浅色与深色。",
         );
         let layout_titles: Vec<String> = LayoutMode::ALL
             .iter()
@@ -102,6 +113,22 @@ impl CandidatesPage {
             mtm,
             "只对青简渲染器生效；没装的字体自动回到系统字体。",
         );
+        let candidate_size =
+            size_field(layout, mtm, "候选字号", Setting::CandidateFontSize, target);
+        let annotation_size =
+            size_field(layout, mtm, "译文字号", Setting::AnnotationFontSize, target);
+        note(
+            layout,
+            mtm,
+            "单位是点，按回车生效；空着用主题的字号。行高跟着候选字号缩放。只对青简渲染器生效。",
+        );
+        let animations = checkbox(mtm, "过渡动画", Setting::Animations, target);
+        row_checkbox(layout, &animations);
+        note(
+            layout,
+            mtm,
+            "高亮换候选时滑过去、主题里的循环动画。关掉后直接跳到位；系统打开了「减弱动态效果」时也不播。",
+        );
         let preedit_titles: Vec<String> = PreeditMode::ALL
             .iter()
             .map(|p| p.label().to_owned())
@@ -126,6 +153,9 @@ impl CandidatesPage {
             horizontal_grid,
             renderer,
             font,
+            candidate_size,
+            annotation_size,
+            animations,
             preedit,
         }
     }
@@ -162,11 +192,34 @@ impl CandidatesPage {
                 .position(|r| *r == general.renderer),
         );
         self.font.sync(&general.font);
+        set_size(&self.candidate_size, general.candidate_font_size);
+        set_size(&self.annotation_size, general.annotation_font_size);
+        set_checked(&self.animations, general.animations);
         select(
             &self.preedit,
             PreeditMode::ALL.iter().position(|p| *p == general.preedit),
         );
     }
+}
+
+/// 一行字号文本框，空着时提示「主题默认」。
+fn size_field(
+    layout: &mut Layout,
+    mtm: MainThreadMarker,
+    title: &str,
+    setting: Setting,
+    target: &PreferencesTarget,
+) -> Retained<NSTextField> {
+    let field = text_field(mtm, setting, target);
+    field.setPlaceholderString(Some(&NSString::from_str("主题默认")));
+    row_control(layout, mtm, title, &field);
+    field
+}
+
+/// 没填为空，整数不带小数点。
+fn set_size(field: &NSTextField, size: FontSize) {
+    let text = size.get().map_or_else(String::new, |size| size.to_string());
+    field.setStringValue(&NSString::from_str(&text));
 }
 
 /// 主题库：内置主题加用户主题目录里的。

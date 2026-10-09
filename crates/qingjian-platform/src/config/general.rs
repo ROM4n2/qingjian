@@ -2,7 +2,9 @@ use qingjian_core::ShuangpinScheme;
 use serde::{Deserialize, Serialize};
 
 use super::scheme::{Scheme, scheme_label};
-use super::{Appearance, CandidateRenderer, LayoutMode, LogLevel, PreeditMode, ShiftLetter};
+use super::{
+    Appearance, CandidateRenderer, FontSize, LayoutMode, LogLevel, PreeditMode, ShiftLetter,
+};
 
 /// 每页最多几个候选：数字键只有 1–9。
 pub const MAX_PAGE_SIZE: usize = 9;
@@ -53,6 +55,15 @@ pub struct GeneralConfig {
 
     /// 候选窗口字体的字族名；空为系统字体。只对青简渲染器生效，没装这个字体时回到系统字体。
     pub font: String,
+
+    /// 候选字字号（点），盖过主题的；0 用主题的。不限范围，不是正数的当 0。只对青简渲染器生效。
+    pub candidate_font_size: FontSize,
+
+    /// 译文字号（点），同上。
+    pub annotation_font_size: FontSize,
+
+    /// 候选窗口的过渡与循环动画。关掉与系统「减弱动态效果」一样：高亮直接跳过去，循环动画停在第一帧。
+    pub animations: bool,
 
     /// 组句中的拼音显示在行内、候选窗口还是两处都显示。
     pub preedit: PreeditMode,
@@ -136,6 +147,9 @@ impl Default for GeneralConfig {
             horizontal_grid: false,
             renderer: CandidateRenderer::default(),
             font: String::new(),
+            candidate_font_size: FontSize::default(),
+            annotation_font_size: FontSize::default(),
+            animations: true,
             preedit: PreeditMode::default(),
             english_candidates: true,
             traditional: false,
