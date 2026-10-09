@@ -12,7 +12,7 @@ use qingjian_platform::{Appearance, CandidateRenderer, LayoutMode};
 
 use super::frame::Frame;
 use super::theme::Theme;
-use super::view::CandidateView;
+use super::view::{CandidateView, ClickHandler};
 
 /// `kCGPopUpMenuWindowLevel`：浮在普通窗口和浮动面板之上，与系统输入法候选框同级。
 const POPUP_MENU_LEVEL: NSWindowLevel = 101;
@@ -97,6 +97,7 @@ impl CandidateWindow {
         let panel = build_panel(self.mtm, &self.view);
         panel.setAppearance(self.appearance.as_deref());
         panel.setHasShadow(!self.view.uses_bitmap());
+        panel.setIgnoresMouseEvents(!self.view.uses_bitmap());
         panel.setFrame_display(frame, true);
         panel.orderFrontRegardless();
         self.panel = panel;
@@ -126,10 +127,17 @@ impl CandidateWindow {
         self.view.set_layout(layout);
     }
 
-    /// 青简渲染器 / 系统绘制。下一帧生效。青简渲染器的阴影由主题画进位图，系统阴影关掉。
+    /// 青简渲染器 / 系统绘制。下一帧生效。青简渲染器的阴影由主题画进位图，系统阴影关掉；
+    /// 只有它给点击区域，所以也只有它收鼠标（系统绘制时点击穿过去）。
     pub fn set_renderer(&self, renderer: CandidateRenderer) {
         self.view.set_renderer(renderer);
         self.panel.setHasShadow(!self.view.uses_bitmap());
+        self.panel.setIgnoresMouseEvents(!self.view.uses_bitmap());
+    }
+
+    /// 点中候选或译词时调谁。
+    pub fn set_click_handler(&self, handler: ClickHandler) {
+        self.view.set_click_handler(handler);
     }
 
     /// 在用青简渲染器（而不是系统绘制）。
@@ -188,7 +196,8 @@ impl CandidateWindow {
     }
 }
 
-/// 建一块面板并把内容视图装进去：无边框、不抢焦点、透明背景带系统阴影（用青简渲染器时再关）、不吃鼠标。
+/// 建一块面板并把内容视图装进去：无边框、不抢焦点、透明背景带系统阴影（用青简渲染器时再关）、
+/// 先不吃鼠标（用青简渲染器时再开，见 [`CandidateWindow::set_renderer`]）。
 fn build_panel(mtm: MainThreadMarker, view: &CandidateView) -> Retained<NSPanel> {
     let panel = NSPanel::initWithContentRect_styleMask_backing_defer(
         mtm.alloc::<NSPanel>(),

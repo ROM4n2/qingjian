@@ -3,6 +3,7 @@
 //! 有两条画法：缺省交给 `qingjian-render` 出位图再贴（[`BitmapPainter`]），配置 `[general] renderer = "system"`
 //! 走下面用 AppKit 逐项绘制的旧路径（过渡期的退路，渲染器稳定一个版本后删）。
 
+mod click;
 mod matrix;
 
 use std::cell::{Cell, RefCell};
@@ -12,7 +13,7 @@ use objc2::runtime::AnyObject;
 use objc2::{DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send};
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua,
-    NSAttributedStringNSStringDrawing, NSBezierPath, NSColor, NSFont, NSFontAttributeName,
+    NSAttributedStringNSStringDrawing, NSBezierPath, NSColor, NSEvent, NSFont, NSFontAttributeName,
     NSForegroundColorAttributeName, NSStrikethroughStyleAttributeName, NSView,
 };
 use objc2_foundation::{
@@ -29,6 +30,8 @@ use super::preedit::Preedit;
 use super::preedit::PreeditStyle;
 use super::row::{Row, Tone};
 use super::theme::Theme;
+
+pub use click::ClickHandler;
 
 /// 视图状态。
 pub struct Ivars {
@@ -55,6 +58,9 @@ pub struct Ivars {
 
     /// 动画定时器：位图渲染器说有动画在播时跳。
     animation: RefCell<AnimationTimer>,
+
+    /// 点中候选或译词时交给谁（host 注册）。
+    on_click: RefCell<Option<ClickHandler>>,
 }
 
 /// preedit 光标的宽度。
@@ -109,6 +115,17 @@ define_class!(
             true
         }
 
+        /// 面板不激活，第一下点击就要算数（否则先被当成「激活窗口」吃掉）。
+        #[unsafe(method(acceptsFirstMouse:))]
+        fn accepts_first_mouse(&self, _event: Option<&NSEvent>) -> bool {
+            true
+        }
+
+        #[unsafe(method(mouseDown:))]
+        fn mouse_down(&self, event: &NSEvent) {
+            self.clicked(event);
+        }
+
         #[unsafe(method(drawRect:))]
         fn draw_rect(&self, _dirty: NSRect) {
             if let Some(bitmap) = &mut *self.ivars().bitmap.borrow_mut() {
@@ -132,6 +149,7 @@ impl CandidateView {
             font: RefCell::new(String::new()),
             render_theme: RefCell::new(qingjian_render::Theme::light()),
             animation: RefCell::new(AnimationTimer::default()),
+            on_click: RefCell::new(None),
         });
         unsafe { msg_send![super(this), initWithFrame: NSRect::ZERO] }
     }
