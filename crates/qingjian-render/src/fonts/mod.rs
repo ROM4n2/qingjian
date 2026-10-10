@@ -263,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn glyf_cff_可栅格化_hvgl_不可() {
+    fn glyf_and_cff_are_rasterizable_hvgl_is_not() {
         assert!(rasterizable(&sfnt(0x0001_0000, &[b"glyf", b"head"])));
         assert!(rasterizable(&sfnt(
             u32::from_be_bytes(*b"OTTO"),
@@ -277,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn ttc_任一面可栅格化即通过_全部不可则跳过() {
+    fn ttc_passes_when_any_face_is_rasterizable() {
         let broken = sfnt(0x0001_0000, &[b"hvgl", b"head"]);
         let good = sfnt(0x0001_0000, &[b"glyf", b"head"]);
         let header_len = 12 + 4 * 2;
