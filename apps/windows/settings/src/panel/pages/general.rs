@@ -51,7 +51,7 @@ fn shift_letter_combo(current: ShiftLetter, callback: Callback<Option<usize>>) -
 
 pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> View {
     let g = &settings.config.general;
-    let english_off = !settings.config.apps.english_candidates_off.is_empty();
+    let english_only_in_apps = !settings.config.apps.english_candidates_everywhere();
     let rows = [
         field(
             "学习语言",
@@ -142,12 +142,12 @@ pub(crate) fn view(settings: &Settings, context: &mut ViewContext<Settings>) -> 
                 .on_toggled(context.callback(Message::EnglishCandidates)),
         ),
         field(
-            "但在终端和代码编辑器里不给",
-            "终端、Windows Terminal、VS Code、Cursor、JetBrains 等，那里的候选窗口会挡住应用自己的补全；名单可在配置文件里改。",
+            "只在浏览器、聊天和文档类应用里给",
+            "Chrome、Edge、微信、QQ、Word、记事本等；别的应用（终端、代码编辑器、Photoshop 这类靠单键快捷键的软件）里字母原样交给应用。名单可在配置文件里改。",
             ToggleSwitch::new()
-                .is_on(english_off)
+                .is_on(english_only_in_apps)
                 .is_enabled(g.english_candidates)
-                .on_toggled(context.callback(Message::EnglishOffInApps)),
+                .on_toggled(context.callback(Message::EnglishOnlyInApps)),
         ),
         field(
             "输入拼音时也给英文词和补全",
