@@ -146,8 +146,8 @@ pub struct GenerateArgs {
     #[arg(long, default_value = "data/generated/gloss-llm.jsonl")]
     pub out: PathBuf,
 
-    /// 本次生成哪些学习语言，逗号分隔（en / ja / vi）；只补越南语时传 `--languages vi`
-    #[arg(long, value_delimiter = ',', default_value = "en,ja,vi")]
+    /// 本次生成哪些学习语言，逗号分隔（en / ja / vi）；缺省只生成英日，越南语要显式传 `--languages vi`
+    #[arg(long, value_delimiter = ',', default_value = "en,ja")]
     pub languages: Vec<String>,
 
     /// 每个请求带几个词

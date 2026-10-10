@@ -10,7 +10,7 @@
 
 ## 英语 / 日语 / 越南语（`glossary-en.tsv` / `glossary-ja.tsv` / `glossary-vi.tsv`）
 
-由 `tools/gloss-gen` 用 LLM（DeepSeek）离线批量生成，不含任何第三方词典内容。
+由 `tools/gloss-gen` 用 LLM 离线批量生成（英语 / 日语用 DeepSeek，越南语用 gpt-5.5），不含任何第三方词典内容。`generate` 缺省只生成英语与日语，越南语要加 `--languages vi`。
 
 - `data/generated/gloss-llm.jsonl`：模型原始输出，一行一个词（词性、英文译词、日文译词与假名、越南文译词），可续跑：
   `cargo run --release -p qingjian-gloss-gen -- generate --words assets/lexicon/dict.tsv --min-count 1 --max-chars 8`
