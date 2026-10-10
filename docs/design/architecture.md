@@ -455,6 +455,8 @@ CC-CEDICT 表（`dict-convert cedict`）保留为备用来源，覆盖面广但�
   `[apps] english_candidates_off` 按应用关闭：应用标识在 Windows 上是宿主进程的 exe 文件名（DLL 加载在应用进程里，`GetModuleFileNameW(NULL)`
   取到就随 `OpenSession { app }` 报一次，Server 每会话记下，收键时按当前会话查），缺省名单分平台（`AppsConfig` 的三份常量与配置模板的 `[apps]` 一节按目标平台三选一：Windows 是 exe 文件名、macOS 是 bundle identifier、Linux 是 Fcitx5 认到的应用名，X11 下是 WM_CLASS、Wayland 下是 app_id），
   经典控制台的窗口属于 `conhost.exe`、Windows Terminal 是 `WindowsTerminal.exe`；
+  Server 把按会话应用算好的「给不给英文候选」随 `InputSettings` 下发，不给时英文模式与 Caps 下没在组句的字母 DLL 在 `OnTestKeyDown` 就不吃、原样交给应用
+  （吃了再由输入法插入的话，Photoshop 画布这类没有文本框的地方收不到 W / H / V 单键快捷键），Photoshop 因此也在 Windows 缺省名单里；
   `[shortcut]` 的修饰键 + 数字（译词上屏 / 删候选，`dispatch/key/shortcut.rs`）：配置里的 `Modifiers` 按 option→Alt、control→Ctrl、command→Win
   落到 `KeyModifiers`，Router 按键码认数字、去掉 Caps 位后与配置比；DLL 见 Ctrl / Alt / Win 仍一律放行，只有组句中的修饰键 + 数字送 Server 判，
   没配到的 Router 回 Passthrough。删候选的那句反馈（「已删除…」/「没什么可删」）随下一帧的 `Frame::notice` 下发，自绘候选窗画在拼音行下方、

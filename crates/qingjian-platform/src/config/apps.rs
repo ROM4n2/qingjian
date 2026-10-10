@@ -21,8 +21,10 @@ pub const DEFAULT_ENGLISH_CANDIDATES_OFF_MACOS: &[&str] = &[
 
 /// 缺省不给英文候选的应用（Windows，按宿主进程的 exe 文件名）。输入法 DLL 加载在拥有窗口的那个进程里：
 /// 经典控制台的窗口属于 `conhost.exe`（cmd / PowerShell 自己没有窗口），Windows Terminal 是 `WindowsTerminal.exe`。
-/// JetBrains 各 IDE 的 exe 名没有共同前缀，只能逐个列。
+/// JetBrains 各 IDE 的 exe 名没有共同前缀，只能逐个列。Photoshop 画布上的单键快捷键（W / H / V）要原样交给应用，
+/// 英文候选会把字母收进组句。
 pub const DEFAULT_ENGLISH_CANDIDATES_OFF_WINDOWS: &[&str] = &[
+    "Photoshop.exe",
     "conhost.exe",
     "WindowsTerminal.exe",
     "alacritty.exe",
