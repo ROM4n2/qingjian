@@ -400,7 +400,7 @@ mod tests {
 
     #[test]
     fn translate_prompt_lists_every_supported_language() {
-        // 与 Language 枚举保持同步：新增学习语言时提示词必须一起加（es/vi/de 曾长期漏列，模型只能靠代码猜）。
+        // 与 Language 枚举保持同步：新增学习语言时提示词必须一起加。
         for (code, name) in [
             ("zh", "中文"),
             ("en", "英语"),
