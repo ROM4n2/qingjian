@@ -44,6 +44,9 @@ pub(crate) struct RenderData {
     /// 候选上是否显示辅码（随帧下发的 `[general] aux_code_show`）。
     pub(super) show_code: bool,
 
+    /// 译词旁是否显示词性标注（随帧下发的 `[general] translation_pos`）。
+    pub(super) show_pos: bool,
+
     /// 输入状态，给主题显示中 / 英、简 / 繁等。
     pub(super) mode: Mode,
 }
@@ -62,6 +65,7 @@ impl RenderData {
             layout: LayoutMode::default(),
             appearance: Appearance::default(),
             show_code: false,
+            show_pos: true,
             mode: Mode::default(),
         }
     }
@@ -71,6 +75,7 @@ impl RenderData {
         self.layout = frame.layout;
         self.appearance = frame.appearance;
         self.show_code = frame.aux_code_show;
+        self.show_pos = frame.translation_pos;
         self.preedit = window_preedit(frame);
         self.cursor = frame.cursor;
         self.rows = frame
@@ -78,7 +83,7 @@ impl RenderData {
             .items
             .iter()
             .enumerate()
-            .map(|(i, candidate)| row::from_candidate(i, candidate, self.show_code))
+            .map(|(i, candidate)| row::from_candidate(i, candidate, self.show_code, self.show_pos))
             .collect();
         self.highlight = frame.highlight;
         self.footer =

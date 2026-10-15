@@ -211,7 +211,8 @@ P2C 自由生成实验：`--eval-text <集> --eval-generate data/models/hanzhang
 （`[aux_code] disabled` 是黑名单，`[general] aux_code_key` 缺省 `;` 且校验后退回缺省、`aux_code_show` 是显示码开关）；
 `protocol` 模块是 Windows Server ↔ TSF DLL 的 IPC 协议类型
 （`ClientMessage` / `ServerMessage` / `Frame` / `PreeditSegment`，全 serde，两端共用，见 `docs/design/architecture.md`「Windows：TSF」；
-协议版本见 `PROTOCOL_VERSION`，`PreeditKind::AuxCode` 对应 Core 的 `MarkedKind::AuxCode`，`Frame.aux_code_show` 随帧下发显示码开关）。
+协议版本见 `PROTOCOL_VERSION`，`PreeditKind::AuxCode` 对应 Core 的 `MarkedKind::AuxCode`，`Frame.aux_code_show` 随帧下发显示码开关，
+`Frame.translation_pos` 随帧下发「译词是否带词性标注」（`[general] translation_pos`，缺省开；serde 缺省值是 true，旧 Server 不下发该字段时旧 DLL 保持显示，加这种纯字段不 bump 协议版本））。
 
 ## crates/qingjian-render
 

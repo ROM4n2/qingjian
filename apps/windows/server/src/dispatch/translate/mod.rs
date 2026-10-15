@@ -110,6 +110,8 @@ impl Router {
             layout: self.config.layout,
             appearance: self.config.appearance,
             aux_code_show: self.config.aux_code_show,
+            // 这条候选是「翻译选中文字」的译文本身，没有词性注记；值不影响渲染
+            translation_pos: self.config.translation_pos,
             sentence: None,
             notice: None,
             symbol_panel: false,
