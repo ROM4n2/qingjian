@@ -63,7 +63,9 @@ impl Component for Settings {
             }
             Message::ShuangpinRawPreedit(on) => self.save("general", "shuangpin_raw_preedit", on),
             Message::Wubi(on) => self.save("general", "wubi", if on { "wubi86" } else { "" }),
-            Message::Traditional(on) => self.save("general", "traditional", on),
+            Message::Traditional(Some(i)) if i < general::TRADITIONAL.len() => {
+                self.save("general", "traditional_variant", general::TRADITIONAL[i].1);
+            }
             Message::Emoji(Some(count)) if count <= usize::from(EmojiCount::MAX) => {
                 self.save("general", "emoji", count as i64);
             }
@@ -177,14 +179,18 @@ impl Component for Settings {
                 self.save("predict", "slots", slots);
             }
             Message::CloudSentence(on) => self.save("predict", "sentence", on),
+            Message::CloudSentenceTranslation(on) => {
+                self.save("predict", "sentence_translation", on)
+            }
             Message::TestConnection => {
                 if matches!(self.cloud_status, CloudStatus::Testing) {
                     return;
                 }
                 self.cloud_status = CloudStatus::Testing;
                 let config = self.config.predict.clone();
+                let usage_path = self.data_dir().join(qingjian_predict::API_USAGE_FILE);
                 context.spawn_background(move |cancel| {
-                    Message::CloudTestDone(cloud::run_test(&config, &cancel))
+                    Message::CloudTestDone(cloud::run_test(&config, usage_path, &cancel))
                 });
             }
             Message::CloudTestDone(result) => {

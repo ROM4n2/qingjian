@@ -14,6 +14,7 @@ mod model;
 mod modifiers;
 mod optional_key_combo;
 mod page_keys;
+mod phrases;
 mod preedit_mode;
 mod scheme;
 mod shift_letter;
@@ -69,8 +70,8 @@ pub struct Config {
     /// 常规：学习语言、每页候选数、翻页键、外观。
     pub general: GeneralConfig,
 
-    /// 自定义短语；保存和读取均检查位置冲突。
-    #[serde(deserialize_with = "deserialize_phrases")]
+    /// 自定义短语；保存和读取均检查位置冲突。读的时候写错的条目只跳过它自己（见 [`phrases`]）。
+    #[serde(deserialize_with = "phrases::deserialize")]
     pub custom_phrases: Vec<qingjian_core::CustomPhrase>,
 
     /// 快捷键：前缀模式键（表达式 / 问字）与上屏译词的修饰键组合。
@@ -99,14 +100,6 @@ pub struct Config {
 
     /// 检查更新。
     pub update: UpdateConfig,
-}
-
-fn deserialize_phrases<'de, D: serde::Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<qingjian_core::CustomPhrase>, D::Error> {
-    let phrases = Vec::<qingjian_core::CustomPhrase>::deserialize(deserializer)?;
-    qingjian_core::custom_phrase::validate_phrases(&phrases).map_err(serde::de::Error::custom)?;
-    Ok(phrases)
 }
 
 /// 模板的 `[apps]` 一节（Linux）：应用按 fcitx5 认到的名字（X11 是 WM_CLASS，Wayland 是 app_id）。
@@ -241,8 +234,9 @@ preedit = "both"
 # 英文模式（Caps Lock 亮着）是否给英文候选：Tab 或方向键选词，空格、回车、标点仍原样上屏敲的字母；false 就是纯直通
 english_candidates = true
 
-# 繁体输出模式。开启后上屏繁体，不影响词库和个人词频的简体记录。
-traditional = false
+# 繁体输出：off 简体 / taiwan 台湾字形 / hongkong 香港字形 / standard 通用字形；三档都只换字形不换用语（软件 → 軟件）
+# 候选窗口里看到的就是转换后的字；词库与学习数据始终是简体，改回 off 之前学到的词照样在。旧版的 traditional = true 按台湾字形读
+traditional_variant = "off"
 # 中文模式下整段输入是英文词时（hello / key）是否让中文候选排第一、英文词第二；缺省 false：拼音不像话的输入英文词排第一
 chinese_first = false
 # 中文模式下整段是英文词或英文词的开头时给英文候选与补全（hello、compa → company）；false 时中文模式只出中文，英文模式不受影响
@@ -383,6 +377,8 @@ lookahead = 32
 slots = 2
 # 组句中除了词候选还要不要整句补全（preedit 右侧，Tab 接受）
 sentence = true
+# 本地整句候选右侧是否显示服务返回的译文；仅发送该候选文本，不发送光标前后上下文
+sentence_translation = false
 
 [status_bar]
 # 桌面上常驻、可拖动的悬浮状态条（Windows）：「中 / 英」格点一下切换模式（开着双拼时还显示方案名）、「，。」格切全角 / 半角标点、齿轮打开设置。
@@ -414,11 +410,25 @@ impl Config {
             Err(e) => return Err(e.to_string()),
         };
         let mut document: DocumentMut = source.parse::<DocumentMut>().map_err(|e| e.to_string())?;
-        let old = document
+        let existing = document
             .get("custom_phrases")
             .and_then(toml_edit::Item::as_array_of_tables)
             .cloned()
             .unwrap_or_default();
+        // 读配置时跳过的条目界面上看不到，保存时原样留在文件里，等用户自己改
+        let checked = phrases::check(existing.iter().map(|table| {
+            toml::from_str::<qingjian_core::CustomPhrase>(&table.to_string())
+                .map_err(|e| e.message().to_owned())
+        }));
+        let mut old = toml_edit::ArrayOfTables::new();
+        let mut skipped = Vec::new();
+        for (table, item) in existing.iter().zip(&checked) {
+            if item.is_ok() {
+                old.push(table.clone());
+            } else {
+                skipped.push(table.clone());
+            }
+        }
         let mut used = std::collections::BTreeSet::new();
         // 先按输入码和位置匹配，重排或删除时注释跟随原规则。
         let mut matches: Vec<_> = phrases
@@ -470,6 +480,9 @@ impl Config {
             // 序列化按文档位置排序；统一锚点后，同组条目使用本次列表顺序。
             t.set_position(old.iter().filter_map(toml_edit::Table::position).min());
             tables.push(t);
+        }
+        for table in skipped {
+            tables.push(table);
         }
         document["custom_phrases"] = toml_edit::Item::ArrayOfTables(tables);
         write_file(path, &document.to_string()).map_err(|e| e.to_string())

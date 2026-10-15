@@ -12,7 +12,7 @@ pub(crate) enum Message {
     Scheme(Option<usize>),
     ShuangpinRawPreedit(bool),
     Wubi(bool),
-    Traditional(bool),
+    Traditional(Option<usize>),
     Emoji(Option<usize>),
     Kaomoji(Option<usize>),
     Symbols(Option<usize>),
@@ -61,6 +61,7 @@ pub(crate) enum Message {
     CloudBaseUrl(String),
     CloudSlots(Option<f64>),
     CloudSentence(bool),
+    CloudSentenceTranslation(bool),
     TestConnection,
     CloudTestDone(Result<String, String>),
 
