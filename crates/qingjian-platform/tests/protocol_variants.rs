@@ -221,24 +221,26 @@ fn an_old_dll_without_the_protocol_field_still_opens_a_session() {
 }
 
 #[test]
-fn an_old_server_frame_without_translation_pos_keeps_the_labels() {
-    // `Frame.translation_pos` 的 serde 缺省值刻意是 true 而不是普通的 false：
-    // 升级后没重启的应用里还是旧 DLL，旧 Server 不下发这个字段，那时必须保持升级前
-    // 「显示词性标注」的行为，不能因为缺字段就让候选注记少一截。
-    // 用默认帧的 JSON 模拟旧 Server 的序列化产物：删掉这个字段再解
+fn a_frame_without_the_translation_pos_field_still_parses() {
+    // 新增的随帧开关与 aux_code_show 同款：旧端不带这个字段的帧必须照常解出来，
+    // 缺省走普通 bool 缺省（与 Frame::default 一致）；显式给值时以值为准。
+    // 帧的渲染消费者只有 Server 自己的候选窗（DLL 不读该字段），所以缺省值不承担
+    // 「跨版本保持显示」的职责，只要不破坏旧帧解析即可。
     let mut json = serde_json::to_value(Frame::default()).expect("序列化默认帧");
     json.as_object_mut()
         .expect("帧是 JSON 对象")
         .remove("translation_pos");
     let frame: Frame = serde_json::from_value(json).expect("缺 translation_pos 的旧帧也该读得出来");
-    assert!(frame.translation_pos, "旧帧缺字段时应按显示词性解释");
+    assert_eq!(frame.translation_pos, Frame::default().translation_pos);
 
-    let mut off = serde_json::to_value(Frame::default()).expect("序列化默认帧");
-    off.as_object_mut()
-        .expect("帧是 JSON 对象")
-        .insert("translation_pos".to_owned(), serde_json::json!(false));
-    let frame: Frame = serde_json::from_value(off).expect("显式 false 也该读得出来");
-    assert!(!frame.translation_pos);
+    for value in [true, false] {
+        let mut json = serde_json::to_value(Frame::default()).expect("序列化默认帧");
+        json.as_object_mut()
+            .expect("帧是 JSON 对象")
+            .insert("translation_pos".to_owned(), serde_json::json!(value));
+        let frame: Frame = serde_json::from_value(json).expect("带字段的帧也该读得出来");
+        assert_eq!(frame.translation_pos, value);
+    }
 }
 
 #[test]

@@ -51,8 +51,9 @@ pub struct Frame {
     pub aux_code_show: bool,
 
     /// 译词旁是否显示词性标注（`[general] translation_pos`）：关掉时注记里不出 v. / n. / adj. 段，译词保留。
-    /// 缺省为显示：旧 Server 不下发这一字段时（升级后未重启的应用里还是旧 DLL），保持升级前的行为。
-    #[serde(default = "default_true")]
+    /// 与 `aux_code_show` 一样，显示开关由 Server 按配置随帧下发；帧的渲染消费者只有 Server 自己的候选窗，
+    /// DLL 不读这个字段。纯加 `#[serde(default)]` 字段不 bump 协议版本（会整条解帧失败的枚举变体才必须 bump）。
+    #[serde(default)]
     pub translation_pos: bool,
 
     /// 整句补全（云联想给的整段拼音的整句结果）：画在 preedit 行右侧，按 Tab 上屏。无则 `None`。
@@ -67,11 +68,6 @@ pub struct Frame {
     /// 面板由 Server 自绘，这一帧的候选不画。
     #[serde(default)]
     pub symbol_panel: bool,
-}
-
-/// serde 缺省值函数：需要保持「旧端不下发字段 = 升级前行为」的布尔开关用它（见 [`Frame::translation_pos`]）。
-fn default_true() -> bool {
-    true
 }
 
 impl Frame {
