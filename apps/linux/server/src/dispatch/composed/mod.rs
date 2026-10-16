@@ -137,6 +137,8 @@ impl Router {
                 page: 0,
                 page_count: 1,
                 layout: self.config.layout,
+                columns: 0,
+                column_ems: Vec::new(),
                 appearance: self.config.appearance,
                 aux_code_show: false,
                 // fcitx5 默认面板不渲染词性，Linux 暂无这个开关的接线；保持缺省显示
@@ -179,6 +181,8 @@ impl Router {
                     page,
                     page_count: layout.pages().max(1),
                     layout: self.config.layout,
+                    columns: 0,
+                    column_ems: Vec::new(),
                     appearance: self.config.appearance,
                     aux_code_show: false,
                     // 同上：Linux 侧还没接 translation_pos 开关
