@@ -484,12 +484,24 @@ impl Engine {
         {
             return Some(words);
         }
-        let conversion = match (self.decode(scope), self.active_correction(scope)) {
-            (Some(decoded), _) => {
-                self.convert_sentence(&decoded.segmentation()?.patterns(), true)?
+        // 混输：候选的文本可能来自任意一条读法的整句转换，逐条对上就取那条的词序列
+        let readings = self.decode_readings(scope);
+        if !readings.is_empty() {
+            for decoded in &readings {
+                let Some(segmentation) = decoded.segmentation() else {
+                    continue;
+                };
+                if let Some(conversion) = self.convert_sentence(&segmentation.patterns(), true)
+                    && conversion.text == candidate.text
+                {
+                    return Some(conversion.words);
+                }
             }
-            (None, Some(c)) => self.convert_sentence(&c.segmentation.patterns(), false)?,
-            (None, None) => {
+            return None;
+        }
+        let conversion = match self.active_correction(scope) {
+            Some(c) => self.convert_sentence(&c.segmentation.patterns(), false)?,
+            None => {
                 let (segmentations, _) = segment_longest_prefix(scope).ok()?;
                 self.convert_sentence(&segmentations.first()?.patterns(), true)?
             }
@@ -529,12 +541,26 @@ impl Engine {
                 candidate.syllables.concat(),
             );
         }
-        if let Some(decoded) = self.decode(keys) {
-            let pinyin_len = self.align(decoded.pinyin(), &candidate.syllables).consumed;
-            return (
-                decoded.keys_for(pinyin_len),
-                choice_key(decoded.pinyin(), pinyin_len),
-            );
+        // 混输时候选可能来自全拼或交替读法：挑对得上最多音节的那条读法换算键数与学习键
+        let readings = self.decode_readings(keys);
+        if !readings.is_empty() {
+            let mut best: Option<(usize, String)> = None;
+            for decoded in &readings {
+                let pinyin_len = self.align(decoded.pinyin(), &candidate.syllables).consumed;
+                if pinyin_len == 0 {
+                    continue;
+                }
+                let consumed = decoded.keys_for(pinyin_len);
+                if best
+                    .as_ref()
+                    .is_none_or(|(keys_used, _)| consumed > *keys_used)
+                {
+                    best = Some((consumed, choice_key(decoded.pinyin(), pinyin_len)));
+                }
+            }
+            if let Some(best) = best {
+                return best;
+            }
         }
         let consumed = match self.active_correction(keys) {
             Some(c) => c

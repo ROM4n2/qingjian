@@ -12,9 +12,11 @@ impl Engine {
         rest: String,
         start: Instant,
     ) -> Result<Query, ParseError> {
-        // 双拼先解成全拼（音节间已用 `'` 连好，切分没有歧义），之后与全拼同路；解不动的键当尾巴
-        let decoded = self.decode(keys);
-        let scope: &str = decoded.as_ref().map_or(keys, |d| d.pinyin());
+        // 双拼先解成全拼（音节间已用 `'` 连好，切分没有歧义），之后与全拼同路；解不动的键当尾巴。
+        // 开了混输时一段键有多条读法，主读法管显示与尾巴，其余读法只多给切分
+        let readings = self.decode_readings(keys);
+        let decoded = readings.first();
+        let scope: &str = decoded.map_or(keys, |d| d.pinyin());
         // 末尾是英文词（`woxiangxuehaorust`）：拼音候选与整句只按头段算，尾段整个跟在整句后面。
         // 整段也能读成拼音时（`database`、`…rust` 当简拼）两种读法比分，英文赢了才按头段算，
         // 输了整段按拼音读、英文读法排在拼音整句后面
@@ -26,18 +28,37 @@ impl Engine {
         let head_wins = english_tail
             .as_ref()
             .is_some_and(|t| !t.competes || self.mixed_beats_plain(keys, t));
-        let parsed = match (&decoded, &english_tail) {
-            (Some(d), _) => d
-                .segmentation()
-                .map(|s| (vec![s], d.tail()))
-                .ok_or(ParseError::NoSegmentation),
-            (None, Some(tail)) if head_wins => {
-                parser::segment(&keys[..tail.head_len]).map(|s| (s, ""))
+        let parsed = match (decoded, &english_tail) {
+            (Some(d), _) => {
+                // 混输：每条读法各给一条切分（解不动的尾巴留在主读法上）
+                let mut segs: Vec<Segmentation> = Vec::new();
+                let mut sources: Vec<usize> = Vec::new();
+                for (index, reading) in readings.iter().enumerate() {
+                    if let Some(seg) = reading.segmentation()
+                        && !segs
+                            .iter()
+                            .any(|existing| existing.syllables == seg.syllables)
+                    {
+                        segs.push(seg);
+                        sources.push(index);
+                    }
+                }
+                if segs.is_empty() {
+                    Err(ParseError::NoSegmentation)
+                } else {
+                    Ok((segs, d.tail(), sources))
+                }
             }
-            _ => segment_longest_prefix(keys),
+            (None, Some(tail)) if head_wins => {
+                parser::segment(&keys[..tail.head_len]).map(|s| (s, "", vec![]))
+            }
+            _ => segment_longest_prefix(keys).map(|(s, tail)| {
+                let sources = vec![0; s.len()];
+                (s, tail, sources)
+            }),
         };
         // 连第一个字母都切不动（`impor`）：拼音这边没戏，但英文词 / 补全、快捷候选还可以有
-        let (segmentations, tail) = match parsed {
+        let (segmentations, tail, sources) = match parsed {
             Ok(parsed) => parsed,
             Err(error) => {
                 let mut items = Vec::new();
@@ -78,10 +99,30 @@ impl Engine {
         } else {
             None
         };
-        let (segmentations, tail): (Vec<Segmentation>, &str) = match &correction {
-            Some(c) => (vec![c.segmentation.clone()], ""),
-            None => (segmentations, tail),
-        };
+        let (mut segmentations, tail, sources): (Vec<Segmentation>, &str, Vec<usize>) =
+            match &correction {
+                Some(c) => (vec![c.segmentation.clone()], "", vec![0]),
+                None => (segmentations, tail, sources),
+            };
+        // 混输时同一段键有多条读法，切分覆盖的字母数在不同读法之间不可比（双拼展开比全拼长），
+        // 一律换算成敲了多少键来比；选择次数也按敲的键查（读音键仍由 Learner 泛化到全拼）
+        let mixed_readings = readings.len() > 1;
+        // 混输：几条读法都能把整串解完时，整句候选按各读法自己的路径分挑一条，
+        // 不固定让双拼读法排前面（纯全拼打「我的名字叫张三」时双拼读法也能解完，但分低）
+        if mixed_readings && segmentations.len() > 1 {
+            let mut best = 0;
+            let mut best_score = f64::NEG_INFINITY;
+            for (index, segmentation) in segmentations.iter().enumerate() {
+                if let Some(conversion) =
+                    self.convert_sentence(&segmentation.patterns(), correction.is_none())
+                    && conversion.score > best_score
+                {
+                    best_score = conversion.score;
+                    best = index;
+                }
+            }
+            segmentations.swap(0, best);
+        }
         let parse = start.elapsed();
         // 注音每个音节敲的声调：词库不带调，查词照旧，只在排序里把对不上的字词往后放。纠错换了切分时不比
         let tones = match (&decoded, &correction) {
@@ -93,7 +134,15 @@ impl Engine {
         let mut scored = Vec::new();
         // 不同切分共享很多前缀（`zh g d o…` 的各种切法前几段一样），同一次查询里同一个模式只查一遍
         let mut memo: HashMap<String, Vec<Match<'_>>> = HashMap::new();
-        for segmentation in &segmentations {
+        for (index, segmentation) in segmentations.iter().enumerate() {
+            let reading = sources
+                .get(index)
+                .and_then(|source| readings.get(*source))
+                .filter(|_| mixed_readings);
+            let covered_keys = |letters: usize| match reading {
+                Some(reading) => reading.keys_for(letters),
+                None => letters,
+            };
             let mut patterns = segmentation.patterns();
             let count = patterns.len();
             let last = &segmentation.syllables[count - 1];
@@ -115,7 +164,7 @@ impl Engine {
                 scored.push(Scored {
                     hit,
                     full_last,
-                    coverage: segmentation.letters(),
+                    coverage: covered_keys(segmentation.letters()),
                     abbreviated,
                     weight: self.learner.weight(hit.text),
                     penalty: expanded.penalty(hit.syllables()),
@@ -140,7 +189,7 @@ impl Engine {
                             ..hit
                         },
                         full_last: true,
-                        coverage: prefix_letters,
+                        coverage: covered_keys(prefix_letters),
                         abbreviated,
                         weight: self.learner.weight(hit.text),
                         penalty: expanded.penalty(hit.syllables()),
@@ -156,7 +205,11 @@ impl Engine {
         // 同输入串（候选覆盖的那段字母）下选过的优先；上下文是上一个上屏的词（句首为 None）：
         // `ba` 在「做了」后面出 吧、句首出 把
         let log_total = (self.total_frequency() as f64).max(1.0).ln();
-        let letters = choice_key(scope, scope.len());
+        let letters = if mixed_readings {
+            choice_key(keys, keys.len())
+        } else {
+            choice_key(scope, scope.len())
+        };
         ranking::rank(&mut scored, MAX_CANDIDATES, |item| {
             let hit = &item.hit;
             // 纠错生效时覆盖的是纠正后的字母，换算回原串再查「这个输入串下选过什么」

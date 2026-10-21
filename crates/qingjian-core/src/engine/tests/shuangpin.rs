@@ -94,6 +94,101 @@ fn shuangpin_commit_consumes_keys_per_syllable() {
     assert!(engine.composition().is_empty());
 }
 
+/// 开了「双拼兼容全拼」：双拼方案下全拼也认，还能在同一段输入里混用（#374）。
+fn mixed_engine() -> Engine {
+    let mut engine = xiaohe();
+    engine.set_shuangpin_full_pinyin(true);
+    engine
+}
+
+fn mixed_texts(engine: &mut Engine, input: &str) -> Vec<String> {
+    engine.set_input(input);
+    engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .map(|c| c.text)
+        .collect()
+}
+
+#[test]
+fn full_pinyin_option_accepts_full_pinyin_under_a_shuangpin_scheme() {
+    // 关着时 `kaifa` 只有双拼一种读法（ka|chen|a…），出不来 开发
+    let mut engine = xiaohe();
+    engine.set_input("kaifa");
+    let plain: Vec<String> = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .map(|c| c.text)
+        .collect();
+    assert!(!plain.contains(&"开发".to_owned()));
+    // 开着时整段按全拼读，`kaifa` 就是 开发
+    let mut engine = mixed_engine();
+    assert_eq!(mixed_texts(&mut engine, "kaifa")[0], "开发");
+    // 纯双拼照旧
+    assert_eq!(mixed_texts(&mut engine, "kdfa")[0], "开发");
+}
+
+#[test]
+fn full_pinyin_option_mixes_both_ways_in_one_input() {
+    // 前半全拼 kai、后半双拼 fh（= fang）：只有混输能解
+    let mut engine = xiaohe();
+    engine.set_input("kaifh");
+    let plain: Vec<String> = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .map(|c| c.text)
+        .collect();
+    assert!(!plain.contains(&"开放".to_owned()));
+    let mut engine = mixed_engine();
+    assert_eq!(mixed_texts(&mut engine, "kaifh")[0], "开放");
+}
+
+#[test]
+fn full_pinyin_option_keeps_both_readings_of_xian() {
+    // 小鹤下 xi'an 是双拼的定局；开着混输时全拼的 xian（先）也进来
+    let mut engine = xiaohe();
+    engine.set_input("xian");
+    assert!(
+        engine
+            .query()
+            .unwrap()
+            .candidates
+            .items
+            .iter()
+            .all(|c| c.text != "先")
+    );
+    let mut engine = mixed_engine();
+    let all = mixed_texts(&mut engine, "xian");
+    assert!(all.contains(&"先".to_owned()));
+    assert!(all.contains(&"西安".to_owned()));
+}
+
+#[test]
+fn full_pinyin_option_commits_consuming_the_typed_keys() {
+    let mut engine = mixed_engine();
+    engine.set_input("kaifa");
+    let kaifa = engine.query().unwrap().candidates.items[0].clone();
+    assert_eq!(kaifa.text, "开发");
+    engine.commit(&kaifa);
+    assert!(engine.composition().is_empty());
+    // 学习键是全拼，与双拼打法共用一份
+    assert!(engine.recent_commits.last().unwrap().same_input("kaifa"));
+    // 混输下打双拼也照旧吃掉两键一音节
+    engine.set_input("kdfa");
+    let kaifa = engine.query().unwrap().candidates.items[0].clone();
+    engine.commit(&kaifa);
+    assert!(engine.composition().is_empty());
+}
+
 #[test]
 fn shuangpin_records_choices_by_full_pinyin() {
     let mut engine = xiaohe();

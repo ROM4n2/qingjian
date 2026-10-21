@@ -54,6 +54,15 @@ pub fn input(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, RenderErr
             general.shuangpin_raw_preedit,
             false,
         )?);
+        rows.push(toggle_info(
+            ui,
+            page,
+            "同时用全拼",
+            Some("开着时打全拼也出候选，同一段输入里两种打法可以混用；关着只认选定的双拼方案"),
+            ("general", "shuangpin_full_pinyin"),
+            general.shuangpin_full_pinyin,
+            false,
+        )?);
     }
     rows.push(toggle_info(
         ui,

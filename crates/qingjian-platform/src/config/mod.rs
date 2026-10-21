@@ -313,6 +313,8 @@ aux_code_keep_empty = true
 scheme = ""
 # 双拼方案下 preedit 显示原始按键（如 ljse）还是展开成全拼（lan'se）；缺省 false（展开成全拼）
 shuangpin_raw_preedit = false
+# 双拼方案下同时接受全拼：开着时打拼音也用全拼，同一段输入里两种打法可以混用（一边双拼一边全拼的人共用一份配置）
+shuangpin_full_pinyin = false
 # 一段拼音分几次选完时，先选的词留在输入框里、整段选完才一起上屏，退格先撤回最后一次选择；false 为选了就上屏
 hold_selections = true
 # 形码方案：留空或 off 为关，wubi86 为五笔（86 版），也可以写用户数据目录 schemes/ 下自己放的方案目录名。

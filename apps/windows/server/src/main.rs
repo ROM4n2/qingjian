@@ -238,6 +238,7 @@ fn main() {
     engine.set_shift_letter_compose(config.general.shift_letter.compose());
     engine.set_auto_space(config.general.auto_space);
     engine.set_shuangpin_raw_preedit(config.general.shuangpin_raw_preedit);
+    engine.set_shuangpin_full_pinyin(config.general.shuangpin_full_pinyin);
     engine.set_hold_selections(config.general.hold_selections);
     engine.set_context_memory(config.model.context_memory_seconds);
     engine.log_session(env!("CARGO_PKG_VERSION"), "windows");
