@@ -90,7 +90,8 @@ mac 存在 `Session::spelling`（`Host::follow_highlight`）、Windows / Linux �
 - 自定义短语按权重排（`weight`，1–999，缺省 10，可以重复）：`insert_custom_phrases` 把这个码的短语按权重从高到低（同权重保持列表顺序）
   放在最前，依次标 `Custom(1)`、`Custom(2)`…，`CandidateLayout` 照这个名次固定格子。同码同文本不能重复（`validate_phrases`）。
   0.3 之前的配置写的是 `position`（1–9），读时换成 `11 − position`，设置里保存时 `position` 那一行原地改成 `weight`（`config/phrases.rs::position_to_weight`）。
-  英文模式下也照样插（#763）：以前这里有 `english_mode` 早退，英文短语如 `dont` → `don't` 在 Caps Lock 亮着时不出。
+  英文模式下也插（#763）：以前这里有 `english_mode` 早退，英文短语如 `dont` → `don't` 在 Caps Lock 亮着时不出；
+  但只插内容不含汉字的短语（`sentence::is_han` 判），中文短语（含中文模式右键「置顶」按拼音加的那条）在英文模式按空格会直接上屏中文，维护者评审时指出过（`uu` → 文本、`he` → 和）。
 - `custom_phrase::merge_replacements` 把平台给的「输入码 → 短语」表（macOS 系统文本替换）并进配置里的自定义短语：每条用缺省权重接在后面，
   输入码不是小写字母、已有同码同文本的跳过；Core 不管数据从哪来。
 - 拼写纠错（`correction`）：整段一处编辑的变体里相邻换位允许末尾音节没敲完（`loose_segmentation`，`mignt` → `ming t…`；

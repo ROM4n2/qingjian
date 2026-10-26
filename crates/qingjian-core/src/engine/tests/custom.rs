@@ -181,8 +181,39 @@ fn custom_exact_codes_override_mode_prefixes_but_not_longer_input() {
     e.set_input("uu");
     assert!(!e.question_mode());
     e.set_english_mode(true);
-    // 英文模式也照出这个短语（#763），且排在英文候选前
-    assert_eq!(e.query().unwrap().candidates.items[0].text, "文本");
+    // 英文模式不出含汉字的短语（#763）：按空格上屏中文会顶掉英文候选的语义
+    assert!(
+        e.query()
+            .unwrap()
+            .candidates
+            .items
+            .iter()
+            .all(|c| c.text != "文本")
+    );
+}
+
+#[test]
+fn english_mode_hides_phrases_with_chinese_text() {
+    // #763：中文短语（含在中文模式里右键「置顶」按拼音加的那条）不在英文模式出现，
+    // 否则英文模式敲 `he` 按空格上屏的就是「和」
+    let mut e = engine();
+    e.set_custom_phrases(vec![
+        phrase("he", 10, "和"),
+        phrase("uu", 10, "文本"),
+        phrase("dont", 10, "don't"),
+    ])
+    .unwrap();
+    e.set_english_mode(true);
+    for (code, hidden) in [("he", "和"), ("uu", "文本")] {
+        e.set_input(code);
+        let items = e.query().unwrap().candidates.items;
+        assert!(
+            items.iter().all(|c| c.text != hidden),
+            "{code} 不该出「{hidden}」：{items:?}"
+        );
+    }
+    e.set_input("dont");
+    assert_eq!(e.query().unwrap().candidates.items[0].text, "don't");
 }
 
 #[test]

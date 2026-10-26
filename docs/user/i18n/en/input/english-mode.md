@@ -60,7 +60,7 @@ Letters are lowercase by default; hold `Shift` for capitals.
 
 English words you've committed as typed with `Enter` (like `gist` or `python`) are remembered and come first next time. English candidates you've picked are remembered too.
 
-[Custom phrases](../personalize/phrases.md) work in English mode too: once the whole input code is typed, the phrase comes before the English word candidates — set `dont` to `don't` and `Space` in English mode commits `don't`.
+[Custom phrases](../personalize/phrases.md) work in English mode too: once the whole input code is typed, the phrase comes before the English word candidates — set `dont` to `don't` and `Space` in English mode commits `don't`. Phrases with Chinese content don't appear in English mode, including ones added by right-clicking 置顶 (Pin to top) with a pinyin code.
 
 ### Which apps show candidates
 
