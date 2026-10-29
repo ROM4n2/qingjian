@@ -33,7 +33,7 @@ import app.qingjian.inputmethod.theme.Palette
  */
 class InputPanel(
     private val context: Context,
-    private val settings: Settings,
+    val settings: Settings,
     barListener: CandidateBarView.Listener,
     stripSource: StripSource,
     keyboardListener: KeyboardView.Listener,

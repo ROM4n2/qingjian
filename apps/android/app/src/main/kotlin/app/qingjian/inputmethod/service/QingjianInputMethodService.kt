@@ -29,6 +29,7 @@ import app.qingjian.inputmethod.core.store.PhraseItem
 import app.qingjian.inputmethod.core.store.PhraseRules
 import app.qingjian.inputmethod.core.store.Shuangpin
 import app.qingjian.inputmethod.keyboard.KeyboardView
+import app.qingjian.inputmethod.keyboard.ShiftState
 import app.qingjian.inputmethod.keyboard.layout.Key
 import app.qingjian.inputmethod.keyboard.layout.KeyboardLayout
 import app.qingjian.inputmethod.panel.PanelActions
@@ -227,10 +228,10 @@ class QingjianInputMethodService :
     // 编辑条开着时打的字进编辑条
     override val connection: InputConnection? get() = editor?.connection ?: currentInputConnection
 
-    override var shifted: Boolean
-        get() = panel?.keyboard?.shifted == true
+    override var shift: ShiftState
+        get() = panel?.keyboard?.shift ?: ShiftState.OFF
         set(value) {
-            panel?.keyboard?.shifted = value
+            panel?.keyboard?.shift = value
         }
 
     override fun sendKey(keyCode: Int) = editor?.onKey(keyCode) ?: sendDownUpKeyEvents(keyCode)
@@ -256,7 +257,9 @@ class QingjianInputMethodService :
     override fun clearComposition() = composer.onKey(Key.Clear)
 
     override fun showKeyboard() {
-        val keyboard = panel?.keyboard ?: return
+        val panel = panel ?: return
+        val keyboard = panel.keyboard
+        val settings = panel.settings
         keyboard.chinese = composer.chinese
         keyboard.languageLabel = composer.language.key
         keyboard.languageHint = composer.partner.key
@@ -275,7 +278,12 @@ class QingjianInputMethodService :
             editor?.lettersOnly == true -> keyboard.setRows(KeyboardLayout.qwerty(chinese = false))
             composer.nineKey -> keyboard.setRows(KeyboardLayout.nineKey(fullWidth), side = true)
             composer.zhuyin -> keyboard.setRows(KeyboardLayout.zhuyin(fullWidth))
-            composer.shuangpin -> keyboard.setRows(KeyboardLayout.shuangpin(Shuangpin.keycaps(composer.shuangpinScheme), fullWidth))
+            composer.shuangpin -> keyboard.setRows(
+                KeyboardLayout.shuangpin(
+                    Shuangpin.keycaps(composer.shuangpinScheme), composer.shuangpinScheme, fullWidth,
+                    hints = settings.shuangpinHints,
+                ),
+            )
             else -> keyboard.setRows(KeyboardLayout.qwerty(composer.chinese, composer.japanese, fullWidth))
         }
         showSideItems(emptyList())

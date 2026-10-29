@@ -29,10 +29,14 @@ data class Settings(
     val voiceHoldSpace: Boolean,
     /** 全键盘拼音与英文键盘上手指划过字母连成一串（缺省关）。 */
     val swipeInput: Boolean,
+    /** 在键上往上一划上屏键上角标的数字或符号（缺省开），不用长按出气泡。 */
+    val flickSymbols: Boolean,
     /** 双拼方案（Core 的方案名，同 PC 的 `[general] shuangpin`），键盘选「双拼」时用。 */
     val shuangpinScheme: String,
     /** 双拼的 preedit 显示敲的键，不展开成全拼（同 PC 的 `shuangpin_raw_preedit`）。 */
     val shuangpinRawPreedit: Boolean,
+    /** 双拼键上印声韵母（缺省开）；关了键面同拼音全键盘。 */
+    val shuangpinHints: Boolean,
     /** 五笔与拼音混输（同 PC 五笔、拼音两边都开）。 */
     val wubiMixed: Boolean,
     /** 记剪贴板历史（复制的文字、图片存在本机）。 */
@@ -73,8 +77,10 @@ data class Settings(
         const val KEY_KEEP_CHINESE = "keep_chinese"
         const val KEY_VOICE_HOLD_SPACE = "voice_hold_space"
         const val KEY_SWIPE_INPUT = "swipe_input"
+        const val KEY_FLICK_SYMBOLS = "flick_symbols"
         const val KEY_SHUANGPIN = "shuangpin_scheme"
         const val KEY_SHUANGPIN_RAW = "shuangpin_raw_preedit"
+        const val KEY_SHUANGPIN_HINTS = "shuangpin_hints"
         const val KEY_WUBI_MIXED = "wubi_mixed"
         const val KEY_RECORD_CLIPBOARD = "record_clipboard"
         const val KEY_CLIPBOARD_LIMIT = "clipboard_limit"
@@ -133,8 +139,10 @@ data class Settings(
                 keepChinese = prefs.getBoolean(KEY_KEEP_CHINESE, true),
                 voiceHoldSpace = prefs.getBoolean(KEY_VOICE_HOLD_SPACE, true),
                 swipeInput = prefs.getBoolean(KEY_SWIPE_INPUT, false),
+                flickSymbols = prefs.getBoolean(KEY_FLICK_SYMBOLS, true),
                 shuangpinScheme = prefs.getString(KEY_SHUANGPIN, null) ?: DEFAULT_SHUANGPIN,
                 shuangpinRawPreedit = prefs.getBoolean(KEY_SHUANGPIN_RAW, false),
+                shuangpinHints = prefs.getBoolean(KEY_SHUANGPIN_HINTS, true),
                 wubiMixed = prefs.getBoolean(KEY_WUBI_MIXED, false),
                 recordClipboard = prefs.getBoolean(KEY_RECORD_CLIPBOARD, true),
                 clipboardLimit = prefs.getInt(KEY_CLIPBOARD_LIMIT, SettingChoices.defaultClipboardLimit).coerceAtLeast(1),

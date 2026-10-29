@@ -42,7 +42,7 @@ description: 选择全拼、九套双拼或大千注音；九条模糊音的开�
 各方案的不同之处：
 
 - **零声母**：小鹤 / 自然码写 `aa` `ai` `ah`（a、ai、ang）一族；微软 / 搜狗写 `o` + 韵母键（`oa` `ol` `oh`）；智能ABC 也写 `o` + 韵母键，但韵母键按它自己的表（ei 是 `oq` 不是 `oz`），且不认双写元音（`aa` 是 zha、`ee` 是 che）；紫光同样只写 `o` + 韵母键（`oa` `or` `oj`），不认双写元音与双写韵母；小浪写 `aa` `ai` `ah` `ao`、`uu`（e）、`ui`（ei）、`un`（en/eng）、`ur`（er）、`oo`（o）、`ou`（ou）。
-- **`;` 键**：微软 / 搜狗 / 紫光的 `;` 为 ing：打拼音时末尾有落单的声母，`;` 当拼音用（`x;` → xing）；其他情况下仍为标点。
+- **`;` 键**：微软 / 搜狗 / 紫光的 `;` 为 ing：打拼音时末尾有落单的声母，`;` 当拼音用（`x;` → xing）；其他情况下仍为标点。Android 的微软双拼键盘把 `;` 放在左下角原来 Shift 的位置（往上一划是 Shift），见 [Android：键盘与打字](../platforms/android.md#键盘)。
 - **ü**：微软 / 搜狗的 ü 键为 `y`：`ny` / `ly` 输入女 / 绿，`jy` / `qy` / `xy` / `yy` 解为 ju / qu / xu / yu，原来的 `ju` / `qu` / `xu` / `yu` 也可继续使用。其他方案也接受各自 ü 键与 j / q / x / y 的组合，但同键已有的读法优先（微软 `jv` 仍为 jue，小浪 `jv` 仍为 jing）。
 - **智能ABC**：翘舌声母以 `a` 为 zh、`e` 为 ch、`v` 为 sh（`ai` → zhi、`ei` → chi、`vi` → shi）。
 - **小浪**：翘舌声母以 `e` 为 zh、`i` 为 ch、`v` 为 sh；`x` 为 ü（`lx` → lv，`nx` → nv，`jx` → ju）；`v` 兼作韵母 uai 与 ing；键位表没列出的韵母按原拼键输入。`en` 与 `eng` 同码（`un`），按 en 处理；`dia` / `dai` 同码按 dai，`lia` / `lai` 同码按 lai，`nen` / `niang` 同码按 niang。

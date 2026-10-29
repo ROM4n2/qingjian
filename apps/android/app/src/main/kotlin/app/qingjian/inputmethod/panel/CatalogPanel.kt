@@ -165,7 +165,7 @@ class CatalogPanel(
         val slot = side.height() / 3
         ink.text(canvas, "返回", 16f, palette.text, cx, side.top + slot * 0.5f)
         keyPaint.color = palette.text
-        KeyIcons.draw(canvas, Key.Backspace, cx, side.top + slot * 1.5f, ink.dp(24f), keyPaint, false)
+        KeyIcons.draw(canvas, Key.Backspace, cx, side.top + slot * 1.5f, ink.dp(24f), keyPaint)
         ink.icon(
             canvas, if (locked) Icon.LOCK else Icon.UNLOCK, cx, side.top + slot * 2.5f, 24f,
             if (locked) palette.brand else palette.text,
@@ -185,7 +185,7 @@ class CatalogPanel(
             ink.icon(canvas, Icon.KEYBOARD, cx, bottom.centerY(), 24f, palette.text)
         } else {
             keyPaint.color = palette.text
-            KeyIcons.draw(canvas, Key.Backspace, cx, bottom.centerY(), ink.dp(24f), keyPaint, false)
+            KeyIcons.draw(canvas, Key.Backspace, cx, bottom.centerY(), ink.dp(24f), keyPaint)
         }
     }
 

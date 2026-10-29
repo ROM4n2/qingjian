@@ -13,7 +13,7 @@ import app.qingjian.inputmethod.settings.Settings
 import kotlin.concurrent.thread
 import org.json.JSONObject
 
-/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、按键反馈、长按空格说话与滑行输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
+/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、按键反馈、长按空格说话、滑行与上滑输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
 class KeyboardSettingsActivity : PageActivity() {
     override val title = R.string.page_keyboard
 
@@ -78,6 +78,10 @@ class KeyboardSettingsActivity : PageActivity() {
                 ui.divider(),
                 ui.toggle(R.string.swipe_input_title, R.string.swipe_input_note, settings.swipeInput) {
                     prefs.edit().putBoolean(Settings.KEY_SWIPE_INPUT, it).apply()
+                },
+                ui.divider(),
+                ui.toggle(R.string.flick_symbols_title, R.string.flick_symbols_note, settings.flickSymbols) {
+                    prefs.edit().putBoolean(Settings.KEY_FLICK_SYMBOLS, it).apply()
                 },
             ),
             ui.sectionTitle(R.string.section_clipboard),
@@ -304,6 +308,10 @@ class KeyboardSettingsActivity : PageActivity() {
                     ui.divider(),
                     ui.toggle(R.string.shuangpin_raw_title, R.string.shuangpin_raw_note, settings.shuangpinRawPreedit) {
                         prefs.edit().putBoolean(Settings.KEY_SHUANGPIN_RAW, it).apply()
+                    },
+                    ui.divider(),
+                    ui.toggle(R.string.shuangpin_hints_title, R.string.shuangpin_hints_note, settings.shuangpinHints) {
+                        prefs.edit().putBoolean(Settings.KEY_SHUANGPIN_HINTS, it).apply()
                     },
                 ),
             )
