@@ -128,6 +128,75 @@ fn editing_the_first_translation_keeps_the_second_sense_and_metadata() {
 }
 
 #[test]
+fn generated_translation_keeps_optional_part_of_speech_and_existing_senses() {
+    let original = Translation::new(
+        Language::English,
+        vec![
+            Sense {
+                part_of_speech: Some(PartOfSpeech::Adjective),
+                text: "first".to_owned(),
+                reading: Some("reading".to_owned()),
+                fresh: true,
+            },
+            Sense {
+                part_of_speech: Some(PartOfSpeech::Noun),
+                text: "second".to_owned(),
+                reading: None,
+                fresh: false,
+            },
+        ],
+    );
+    let mut translator = LearningTranslator::default();
+    translator.learn("开发", original);
+    let mut e = engine().with_translator(Box::new(translator));
+    e.set_input("kaifa");
+    let candidate = e
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .find(|candidate| candidate.text == "开发")
+        .unwrap();
+
+    assert!(e.set_generated_candidate_translation(&candidate, "int.\txin chào nhé"));
+    let translation = e.candidate_translation("开发").unwrap();
+    assert_eq!(translation.senses().len(), 2);
+    assert_eq!(translation.senses()[0].text, "xin chào nhé");
+    assert_eq!(
+        translation.senses()[0].part_of_speech,
+        Some(PartOfSpeech::Interjection)
+    );
+    assert_eq!(translation.senses()[0].reading.as_deref(), Some("reading"));
+    assert!(!translation.senses()[0].fresh);
+    assert_eq!(translation.senses()[1].text, "second");
+    assert_eq!(
+        translation.senses()[1].part_of_speech,
+        Some(PartOfSpeech::Noun)
+    );
+
+    assert!(e.set_generated_candidate_translation(&candidate, "chào bạn"));
+    let translation = e.candidate_translation("开发").unwrap();
+    assert_eq!(translation.senses()[0].text, "chào bạn");
+    assert_eq!(
+        translation.senses()[0].part_of_speech,
+        Some(PartOfSpeech::Interjection)
+    );
+    assert_eq!(translation.senses()[0].reading.as_deref(), Some("reading"));
+    assert_eq!(translation.senses()[1].text, "second");
+
+    assert!(e.set_generated_candidate_translation(&candidate, "other\txin chào"));
+    let translation = e.candidate_translation("开发").unwrap();
+    assert_eq!(translation.senses()[0].text, "xin chào");
+    assert_eq!(
+        translation.senses()[0].part_of_speech,
+        Some(PartOfSpeech::Interjection)
+    );
+    assert_eq!(translation.senses()[1].text, "second");
+    assert!(!e.set_generated_candidate_translation(&candidate, "  "));
+}
+
+#[test]
 fn model_translation_targets_the_current_learning_language() {
     let submitted = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
     let predictor = EchoPredictor {

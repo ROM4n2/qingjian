@@ -41,6 +41,52 @@ impl Engine {
         self.set_translation(&word, text)
     }
 
+    /// 保存模型生成的候选译文；模型给了可识别词性就一并保存，没给时仍保留译词。
+    pub fn set_generated_candidate_translation(
+        &mut self,
+        candidate: &Candidate,
+        generated: &str,
+    ) -> bool {
+        let Some((word, language)) = self.translation_target(candidate) else {
+            return false;
+        };
+        let generated = generated.trim();
+        let (part_of_speech, text) = match generated.split_once('\t') {
+            Some((part_of_speech, text)) => match part_of_speech.trim().parse() {
+                Ok(part_of_speech) => (Some(part_of_speech), text.trim()),
+                Err(_) => (None, text.trim()),
+            },
+            None => (None, generated),
+        };
+        if text.is_empty() {
+            return false;
+        }
+        let mut senses = self
+            .translator
+            .translate(&word)
+            .map(|translation| translation.senses().to_vec())
+            .unwrap_or_default();
+        match senses.first_mut() {
+            Some(sense) => {
+                sense.text = text.to_owned();
+                if part_of_speech.is_some() {
+                    sense.part_of_speech = part_of_speech;
+                }
+                sense.fresh = false;
+            }
+            None => senses.push(Sense {
+                part_of_speech,
+                text: text.to_owned(),
+                reading: None,
+                fresh: false,
+            }),
+        }
+        self.translator
+            .learn(&word, Translation::new(language, senses));
+        self.translator.flush();
+        true
+    }
+
     /// 按已经还原成存储字形的词覆盖个人译文。弹出编辑框前先保存 `word`，即使 IMK 在弹窗期间重建会话也能写入。
     pub fn set_translation(&mut self, word: &str, text: &str) -> bool {
         let text = text.trim();
