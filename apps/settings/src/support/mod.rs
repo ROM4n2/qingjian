@@ -32,6 +32,8 @@ pub enum Feature {
     HorizontalGrid,
     /// 横排时翻页键也展开成多行。
     GridPageKeys,
+    /// 组句时上屏候选与上屏字母的键可以换。
+    CommitKeys,
     ExtraPageKeys,
     HighlightKeys,
     TogglePunctuation,
@@ -58,7 +60,7 @@ pub enum Feature {
 
 impl Feature {
     #[cfg(test)]
-    pub const ALL: [Self; 25] = [
+    pub const ALL: [Self; 26] = [
         Self::AuxCode,
         Self::Schemes,
         Self::SwitchKeys,
@@ -71,6 +73,7 @@ impl Feature {
         Self::StatusBar,
         Self::HorizontalGrid,
         Self::GridPageKeys,
+        Self::CommitKeys,
         Self::ExtraPageKeys,
         Self::HighlightKeys,
         Self::TogglePunctuation,
@@ -120,6 +123,8 @@ impl Feature {
             Self::StatusBar => [No, Yes, No],
             Self::HorizontalGrid => [Yes, Yes, Todo],
             Self::GridPageKeys => [Yes, Yes, Todo],
+            // macOS 的空格走 insertText、回车走 insertNewline:，要另接
+            Self::CommitKeys => [Todo, Yes, Yes],
             Self::ExtraPageKeys => [Yes, Yes, Todo],
             Self::HighlightKeys => [Yes, Yes, Todo],
             Self::TogglePunctuation => [Yes, Yes, Todo],
@@ -156,6 +161,7 @@ impl Feature {
             Self::StatusBar => "悬浮状态条",
             Self::HorizontalGrid => "横排时 ↑ / ↓ 展开成多行",
             Self::GridPageKeys => "横排时翻页键展开成多行",
+            Self::CommitKeys => "上屏键自定义",
             Self::ExtraPageKeys => "额外翻页键",
             Self::HighlightKeys => "高亮移动键",
             Self::TogglePunctuation => "Ctrl + . 切换全半角标点",
@@ -187,6 +193,10 @@ impl Feature {
             Self::RememberModePerApp => &[(PageId::Language, "按应用记住中英模式")],
             Self::AutoSpace => &[(PageId::Language, "中文与英文、数字之间自动加空格")],
             Self::ExtraPageKeys => &[(PageId::Shortcuts, "额外翻页键")],
+            Self::CommitKeys => &[
+                (PageId::Shortcuts, "上屏高亮候选"),
+                (PageId::Shortcuts, "上屏敲的字母"),
+            ],
             Self::HighlightKeys => &[(PageId::Shortcuts, "高亮移动键")],
             Self::TogglePunctuation => &[(PageId::Shortcuts, "Ctrl + . 切换全半角标点")],
             Self::ToggleTraditional => &[(PageId::Shortcuts, "Ctrl + Shift + F 切换简繁输出")],

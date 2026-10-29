@@ -166,6 +166,18 @@ const LINKS: &[(PageId, &str, &str, &str)] = &[
     ),
     (
         PageId::Shortcuts,
+        "上屏高亮候选",
+        "personalize/keys-settings",
+        "上屏键（Windows、Linux）",
+    ),
+    (
+        PageId::Shortcuts,
+        "上屏敲的字母",
+        "personalize/keys-settings",
+        "上屏键（Windows、Linux）",
+    ),
+    (
+        PageId::Shortcuts,
         "高亮移动键",
         "personalize/keys-settings",
         "高亮移动键（macOS、Windows）",

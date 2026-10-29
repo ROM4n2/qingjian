@@ -2,6 +2,7 @@ use qingjian_core::ModeKeys;
 use serde::{Deserialize, Serialize};
 
 use super::PageKeys;
+use super::commit_key::{CommitKey, CommitKeys};
 use super::highlight_keys::HighlightKeys;
 use super::key_combo::KeyCombo;
 use super::modifiers::Modifiers;
@@ -44,6 +45,12 @@ pub struct ShortcutConfig {
     /// 缺省不开：只要青简是当前输入法，这个组合在所有应用里都会被拿走，编辑器的「在文件中查找」也用它。
     #[serde(with = "super::optional_key_combo")]
     pub toggle_traditional: Option<KeyCombo>,
+
+    /// 组句时上屏高亮候选的键（Windows、Linux 用），缺省不带 Shift 的空格。详见 [`CommitKey`]。
+    pub commit_candidate: CommitKey,
+
+    /// 组句时原样上屏敲的字母的键（Windows、Linux 用），缺省不带 Shift 的回车。
+    pub commit_raw: CommitKey,
 }
 
 impl Default for ShortcutConfig {
@@ -75,11 +82,25 @@ impl Default for ShortcutConfig {
             translate_selection,
             predict: KeyCombo::PREDICT_DEFAULT,
             toggle_traditional: None,
+            commit_candidate: CommitKey::SPACE,
+            commit_raw: CommitKey::ENTER,
         }
     }
 }
 
 impl ShortcutConfig {
+    /// 两个上屏键；配成同一个键时退回缺省，不做一半（读手改的配置用，设置程序录的时候就不让撞）。
+    pub fn commit_keys(&self) -> CommitKeys {
+        if self.commit_candidate == self.commit_raw {
+            CommitKeys::default()
+        } else {
+            CommitKeys {
+                candidate: self.commit_candidate,
+                raw: self.commit_raw,
+            }
+        }
+    }
+
     /// 两组译词修饰键；两组相同或有一组为空时整个退回缺省，不做一半。
     pub fn translation_keys(&self) -> (Modifiers, Modifiers) {
         if self.translation == self.translation_second

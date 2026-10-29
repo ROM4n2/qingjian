@@ -43,6 +43,14 @@ impl Settings {
         if Feature::ToggleTraditional.here() {
             self.write("shortcut", "toggle_traditional", "");
         }
+        if Feature::CommitKeys.here() {
+            self.write(
+                "shortcut",
+                "commit_candidate",
+                defaults.commit_candidate.key_string(),
+            );
+            self.write("shortcut", "commit_raw", defaults.commit_raw.key_string());
+        }
         self.recording = None;
     }
 }

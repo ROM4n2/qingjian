@@ -1,4 +1,4 @@
-//! 「快捷键」页：翻页与模式（翻页键，平台接了的额外翻页键、高亮移动键、标点切换键，表达式、问字、? 进问字），候选上的组合键（译词上屏、删除、翻译选中文字），
+//! 「快捷键」页：翻页与模式（翻页键，平台接了的额外翻页键、高亮移动键、标点切换键，表达式、问字、? 进问字），候选上的键（平台接了的上屏键、译词上屏、删除、翻译选中文字），
 //! 恢复默认，页底列组句中固定的键。
 
 use bamboo_slip::taffy::{FlexDirection, LengthPercentage, NodeId, Rect, Style};
@@ -18,6 +18,9 @@ use crate::view::parts::controls::{choice, toggle_info};
 
 /// 组句中固定、不能改的键。
 const FIXED: &str = "组句时：空格上屏首选，1–9 选词，回车上屏拼音，Esc 清空，Tab 采用整句。";
+
+/// 同上，上屏键能改的平台。
+const FIXED_WITHOUT_COMMIT: &str = "组句时：1–9 选词，Esc 清空，Tab 采用整句。";
 
 pub fn shortcuts(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, RenderError> {
     let theme = &page.theme;
@@ -68,7 +71,24 @@ pub fn shortcuts(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Rende
     out.push(section_title(ui, theme, "翻页与模式")?);
     out.push(group(ui, theme, &rows)?);
 
-    let mut rows = vec![
+    let mut rows = Vec::new();
+    if Feature::CommitKeys.here() {
+        rows.push(recorder(
+            ui,
+            page,
+            Shortcut::CommitCandidate,
+            "打拼音时按它上屏高亮的候选",
+            false,
+        )?);
+        rows.push(recorder(
+            ui,
+            page,
+            Shortcut::CommitRaw,
+            "打拼音时按它把敲的字母原样上屏",
+            false,
+        )?);
+    }
+    rows.extend([
         recorder(
             ui,
             page,
@@ -90,7 +110,7 @@ pub fn shortcuts(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Rende
             "选中文字再按它翻译，回车替换",
             false,
         )?,
-    ];
+    ]);
     if Feature::CloudRequestControls.here() {
         rows.push(recorder(
             ui,
@@ -106,7 +126,12 @@ pub fn shortcuts(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Rende
     let reset =
         Button::new("恢复默认").build(ui, theme, "reset-shortcuts", Message::ResetShortcuts)?;
     let reset = SettingRow::new("快捷键").control(reset).build(ui, theme)?;
-    let fixed = paragraph(ui, theme, FIXED, None)?;
+    let fixed = if Feature::CommitKeys.here() {
+        FIXED_WITHOUT_COMMIT
+    } else {
+        FIXED
+    };
+    let fixed = paragraph(ui, theme, fixed, None)?;
     // 与分组标题一样往里缩一点
     let inset = LengthPercentage::length(page.px(4.0));
     let fixed = ui.scene().node(

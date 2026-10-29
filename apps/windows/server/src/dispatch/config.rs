@@ -1,8 +1,8 @@
 use qingjian_core::TraditionalVariant;
 use qingjian_platform::protocol::KeyModifiers;
 use qingjian_platform::{
-    Appearance, AppsConfig, CandidateRenderer, Config, FontSize, HighlightKeys, KeyCombo,
-    KeyHintMode, LayoutMode, NumpadDigit, PageKeys, PreeditMode, Scheme, SwitchKeys,
+    Appearance, AppsConfig, CandidateRenderer, CommitKeys, Config, FontSize, HighlightKeys,
+    KeyCombo, KeyHintMode, LayoutMode, NumpadDigit, PageKeys, PreeditMode, Scheme, SwitchKeys,
 };
 
 use super::RenderSettings;
@@ -114,6 +114,9 @@ pub struct RouterConfig {
 
     /// 组句中按需调用 AI 的快捷键（`[shortcut] predict`）。
     pub predict: KeyCombo,
+
+    /// 组句时上屏高亮候选与原样上屏字母的键（`[shortcut] commit_candidate` / `commit_raw`）。
+    pub commit_keys: CommitKeys,
 
     /// 简繁切换快捷键；与选区翻译相同时不登记，保留翻译行为。
     pub toggle_traditional: Option<KeyCombo>,
@@ -229,6 +232,7 @@ impl From<&Config> for RouterConfig {
             },
             translate_selection: config.shortcut.translate_selection,
             predict: config.shortcut.predict,
+            commit_keys: config.shortcut.commit_keys(),
             toggle_traditional: config
                 .shortcut
                 .toggle_traditional
