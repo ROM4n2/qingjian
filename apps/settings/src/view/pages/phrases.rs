@@ -1,4 +1,4 @@
-//! 「自定义短语」页：每条一行（开关、输入码、权重、内容的开头、编辑），末尾新增；macOS 另有「也用系统的文本替换」。
+//! 「自定义短语」页：每条一行（开关、输入码、权重、内容的开头、编辑），末尾新增与导入导出；macOS 另有「也用系统的文本替换」。
 //! 新增、编辑在对话框里改，保存时整张表校验。
 
 use bamboo_slip::taffy::{
@@ -39,6 +39,25 @@ pub fn phrases(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, RenderE
             .info("输入码敲全后，短语排在普通候选前面，空格或数字键上屏；同一个输入码有几条时权重大的在前")
             .control(add),
         "phrases",
+    )?);
+    let import = Button::new("导入…").build(ui, theme, "import-phrases", Message::ImportPhrases)?;
+    let export = Button::new("导出…").build(ui, theme, "export-phrases", Message::ExportPhrases)?;
+    let buttons = ui.scene().node(
+        Style {
+            flex_direction: FlexDirection::Row,
+            gap: page.gap(8.0),
+            ..Style::default()
+        },
+        Visual::Group,
+        &[import, export],
+    )?;
+    rows.push(with_notice(
+        ui,
+        page,
+        SettingRow::new("导入、导出")
+            .info("导出成一个文件，在另一台电脑导入；导入时与已有的合并，同一输入码下相同的短语不重复加。也能直接导入另一台电脑的配置文件")
+            .control(buttons),
+        "phrases-transfer",
     )?);
     out.push(section_title(ui, theme, "短语")?);
     out.push(group(ui, theme, &rows)?);
@@ -187,6 +206,7 @@ fn editor(ui: &mut Ui<Message>, page: &Page) -> Result<(), RenderError> {
         .placeholder("原样上屏的文字，可以换行")
         .width(DIALOG_WIDTH - 40.0)
         .rows(4)
+        .max_rows(12)
         .build(
             ui,
             theme,

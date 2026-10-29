@@ -63,6 +63,7 @@ pub use model::{LocalModel, LocalModelConfig, ZhiyiTier};
 pub use modifiers::Modifiers;
 pub use numpad_digit::NumpadDigit;
 pub use page_keys::PageKeys;
+pub use phrases::{export_phrases, import_phrases};
 pub use preedit_mode::PreeditMode;
 pub use scheme::{Scheme, scheme_label, scheme_name};
 pub use shift_letter::ShiftLetter;

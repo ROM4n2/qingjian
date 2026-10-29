@@ -26,7 +26,8 @@ pub use config::{
     FontSize, GeneralConfig, HighlightKeys, KeyCombo, KeyHintMode, LEARNING_LANGUAGE_OFF,
     LayoutMode, LocalModel, LocalModelConfig, LogLevel, MAX_PAGE_SIZE, Modifiers, NumpadDigit,
     PAGE_KEY_OPTIONS, PageKeys, PreeditMode, Scheme, ShiftLetter, ShortcutConfig, SwitchKey,
-    SwitchKeys, UpdateChannel, UpdateConfig, ZhiyiTier, scheme_label, scheme_name,
+    SwitchKeys, UpdateChannel, UpdateConfig, ZhiyiTier, export_phrases, import_phrases,
+    scheme_label, scheme_name,
 };
 pub use error::ConfigError;
 pub use scheme::{SchemeMeta, SchemeSlot};

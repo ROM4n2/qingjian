@@ -1,24 +1,36 @@
 ---
 title: Custom phrases
 order: 3
-description: "Typing a fixed phrase, address or long reply with a short input code, ordered by weight under the same code; on macOS, the system's text replacements work too."
+description: "Typing a fixed phrase, address or long reply with a short input code, ordered by weight under the same code; phrases can be imported and exported; on macOS, the system's text replacements work too."
 ---
 
 In 设置 → 自定义短语 (Settings → Custom phrases), give a piece of text you use often an input code; when you type that code, the text comes first among the candidates.
 
 ## Adding and editing
 
-Each phrase is a row on the page: an on/off switch (labelled with the input code), its weight, the first line of its content, and 编辑 (Edit); the last row is 新增… (Add…).
+Each phrase is a row on the page: an on/off switch (labelled with the input code), its weight, the first line of its content, and 编辑 (Edit); the last two rows are 新增… (Add…) and 导入、导出 (Import, export).
 
 Adding and editing happen in a card that pops up:
 
 - **输入码 (Input code)**: 1–32 lowercase English letters, such as `dz`.
 - **权重 (Weight)**: a whole number from 1 to 999, 10 for a new phrase. Under the same input code, heavier phrases come first; weights can be equal, and equal ones keep their order on the page.
-- **内容 (Content)**: can span several lines and contain spaces, addresses, long replies or punctuation, and is committed exactly as written; the candidate window shows only a short preview of long text.
+- **内容 (Content)**: can span several lines and contain spaces, addresses, long replies or punctuation, and is committed exactly as written. The box wraps to its width; for very long content it grows to at most 12 lines and then shows the lines around the cursor.
 
 Click 保存 (Save) to apply; `Esc` or 取消 (Cancel) discards the changes. When editing, the card has 删除 (Delete) on its left, which needs two clicks to confirm.
 
 For example, add two phrases for `ee`: `：` with weight 20 and `；` with weight 10. Type `ee` and press Space to get ：, or press 2 to get ；.
+
+In the candidate window, a multi-line phrase is shown on one line (line breaks drawn as `↵`), and a very long one shows only its first 30 or so Chinese-character widths followed by …; the full content is still what gets committed.
+
+## Importing and exporting
+
+To move to another computer or keep a backup, click 导出… (Export…) in the 导入、导出 row to save all phrases (including switched-off ones) as a `.toml` file; on the other computer, click 导入… (Import…) and pick that file.
+
+- Imported phrases are added after your existing ones, keeping the weights and switches from the file; a phrase whose content already exists under the same input code is not added again, so importing the same file twice is harmless.
+- You can also pick the other computer's configuration file `config.toml` directly (see [Data files](../advanced/data-files.md)); only its custom phrases are taken, other settings stay as they are.
+- Entries written wrongly in the file are skipped; afterwards the row says how many were added, how many already existed and how many were wrong.
+
+The exported file uses the same `[[custom_phrases]]` format as the configuration file, so you can also edit it in a text editor.
 
 ## Ordering rules
 

@@ -3,6 +3,7 @@
 //! 一个模板节点可能产出零个（条件不成立、绑定为空）或多个（`repeat`）场景节点，所以都往 `out` 里推。
 
 mod cell;
+mod clip;
 mod context;
 mod frame;
 mod layout_style;
@@ -63,7 +64,7 @@ impl Builder<'_> {
             Layout::Horizontal => &windows.horizontal,
             Layout::Strip => &windows.strip,
         };
-        self.root(spec, Context::new(frame))
+        self.root(spec, Context::new(&clip::shown(frame)))
     }
 
     /// 状态条的根节点（主题写了 `status.root`）：格子按 `cells` 展开，各格的盒子记在 [`Self::cell_nodes`]。

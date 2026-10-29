@@ -40,6 +40,8 @@ impl App for Settings {
                 | Message::DownloadModel(_)
                 | Message::Import(_)
                 | Message::VocabularyExport(_)
+                | Message::ImportPhrases
+                | Message::ExportPhrases
         ) {
             self.notice = None;
         }
@@ -100,6 +102,8 @@ impl App for Settings {
                     });
                 }
             }
+            Message::ImportPhrases => self.import_phrases(),
+            Message::ExportPhrases => self.export_phrases(),
             Message::Import(kind) => {
                 match self
                     .import

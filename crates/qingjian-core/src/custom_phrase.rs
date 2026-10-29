@@ -123,6 +123,26 @@ pub fn merge_replacements<'a>(
     phrases
 }
 
+/// 导入的短语并进现有列表：原样接在后面（保留权重与开关），已有同码同文本的跳过。返回合并结果与新加了几条。
+pub fn merge_imported(
+    base: &[CustomPhrase],
+    imported: impl IntoIterator<Item = CustomPhrase>,
+) -> (Vec<CustomPhrase>, usize) {
+    let mut phrases = base.to_vec();
+    let mut added = 0;
+    for phrase in imported {
+        if phrases
+            .iter()
+            .any(|p| p.code == phrase.code && p.text == phrase.text)
+        {
+            continue;
+        }
+        phrases.push(phrase);
+        added += 1;
+    }
+    (phrases, added)
+}
+
 /// 候选菜单里的「置顶」：让 `text` 成为输入码 `code` 下排第一的短语。权重取这个码别的短语里最高的加一
 /// （封顶 999，没有别的就用缺省权重），并挪到同码短语的最前面，权重打平也是它先。已有同码同文本的就改那条。
 /// 已经是唯一最高的返回 `false`，列表不动。
@@ -202,9 +222,35 @@ impl CustomPhrase {
 #[cfg(test)]
 mod tests {
     use super::{
-        CustomPhrase, DEFAULT_WEIGHT, merge_replacements, parse_weight, pin, unpin,
+        CustomPhrase, DEFAULT_WEIGHT, merge_imported, merge_replacements, parse_weight, pin, unpin,
         validate_phrases,
     };
+
+    #[test]
+    fn imports_keep_weights_and_skip_what_is_already_there() {
+        let base = vec![
+            CustomPhrase::new("ee", "："),
+            CustomPhrase::new("dz", "地址"),
+        ];
+        let imported = vec![
+            CustomPhrase {
+                weight: 50,
+                enabled: false,
+                ..CustomPhrase::new("ee", "；")
+            },
+            CustomPhrase {
+                weight: 99,
+                ..CustomPhrase::new("dz", "地址")
+            },
+        ];
+        let (merged, added) = merge_imported(&base, imported.clone());
+        assert_eq!(added, 1);
+        assert_eq!(
+            merged,
+            vec![base[0].clone(), base[1].clone(), imported[0].clone()]
+        );
+        validate_phrases(&merged).unwrap();
+    }
 
     #[test]
     fn replacements_follow_the_users_phrases() {

@@ -222,6 +222,12 @@ const LINKS: &[(PageId, &str, &str, &str)] = &[
     (PageId::Phrases, "权重", "personalize/phrases", "排列规则"),
     (
         PageId::Phrases,
+        "导入、导出",
+        "personalize/phrases",
+        "导入与导出",
+    ),
+    (
+        PageId::Phrases,
         "也用系统的文本替换",
         "personalize/phrases",
         "系统的文本替换（macOS）",

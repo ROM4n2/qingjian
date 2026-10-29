@@ -195,3 +195,28 @@ fn old_positions_are_saved_as_weights_in_place() {
     assert_eq!(Config::load(&path).unwrap().custom_phrases, phrases);
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn exported_phrases_import_back_and_whole_configs_import_too() {
+    let phrases = vec![
+        CustomPhrase {
+            weight: 30,
+            enabled: false,
+            ..CustomPhrase::new("dz", "第一行\n第二行 \"引号\" $(Year)")
+        },
+        CustomPhrase::new("ee", "；"),
+    ];
+    let exported = qingjian_platform::export_phrases(&phrases);
+    assert_eq!(
+        qingjian_platform::import_phrases(&exported).unwrap(),
+        (phrases, 0)
+    );
+    let config = "[general]\npage_size = 5\n\n[[custom_phrases]]\ncode = 'ee'\ntext = '：'\n\n\
+                  [[custom_phrases]]\ncode = 'A1'\ntext = '写错的'\n\n\
+                  [[custom_phrases]]\ncode = 'ee'\ntext = '：'\n";
+    let (read, skipped) = qingjian_platform::import_phrases(config).unwrap();
+    assert_eq!(read, vec![CustomPhrase::new("ee", "：")]);
+    assert_eq!(skipped, 2);
+    assert!(qingjian_platform::import_phrases("[general]\n").is_err());
+    assert!(qingjian_platform::import_phrases("不是 toml").is_err());
+}
