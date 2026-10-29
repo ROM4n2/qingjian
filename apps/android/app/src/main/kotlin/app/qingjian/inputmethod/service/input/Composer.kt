@@ -418,6 +418,13 @@ class Composer(private val engine: Engine, private val host: Host) {
         }
     }
 
+    /** 数字类输入框（电话、数字、日期时间）：直接换到数字键盘，「返回」仍可回字母。 */
+    fun showNumbers() {
+        if (page == Page.NUMBERS) return
+        page = Page.NUMBERS
+        host.showKeyboard()
+    }
+
     /** 引擎刚装好：补上输入方案与繁体开关。 */
     fun onEngineReady() {
         engine.setPrivate(privateInput)

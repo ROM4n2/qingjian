@@ -41,6 +41,7 @@ import app.qingjian.inputmethod.service.input.Composer
 import app.qingjian.inputmethod.service.input.Language
 import app.qingjian.inputmethod.service.input.enterLabel
 import app.qingjian.inputmethod.service.input.wantsDirectInput
+import app.qingjian.inputmethod.service.input.wantsNumbers
 import app.qingjian.inputmethod.service.input.wantsPrivacy
 import app.qingjian.inputmethod.settings.BottomAction
 import app.qingjian.inputmethod.settings.Settings
@@ -194,6 +195,7 @@ class QingjianInputMethodService :
         enterLabel = attribute.enterLabel()
         panel?.keyboard?.enterLabel = enterLabel
         composer.abandon()
+        if (attribute.wantsNumbers()) composer.showNumbers()
     }
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
