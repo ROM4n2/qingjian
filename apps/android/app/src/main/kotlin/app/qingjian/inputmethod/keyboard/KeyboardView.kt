@@ -94,11 +94,12 @@ class KeyboardView(
     private val longPress = Runnable { openChoices() }
 
     /**
-     * 按着空格的那根手指；横着滑开就进挪光标，按住不动到点进语音（关着「长按空格说话」或语音开不起来时进挪光标），
+     * 按着空格的那根手指；横着滑开就进挪光标（「空格滑动移动光标」开着时），按住不动到点进语音（关着「长按空格说话」或语音开不起来时进挪光标），
      * 这两种抬手都不出空格。
      */
     private var spacePointer = -1
     private var spaceAnchorX = 0f
+    private var spaceAnchorY = 0f
     private var cursorMode = false
     private var voiceMode = false
     private val spaceHold = Runnable { onSpaceHold() }
@@ -246,6 +247,7 @@ class KeyboardView(
                     slot.key is Key.Space -> {
                         spacePointer = pointer
                         spaceAnchorX = event.getX(index)
+                        spaceAnchorY = event.getY(index)
                         cursorMode = false
                         voiceMode = false
                         timer.postDelayed(spaceHold, if (settings.voiceHoldSpace) VOICE_HOLD_MS else LONG_PRESS_MS)
@@ -414,7 +416,7 @@ class KeyboardView(
         )
     }
 
-    /** 按住空格不动到点：开着「长按空格说话」先试语音，开不起来（还不能用、没权限）退回挪光标。 */
+    /** 按住空格不动到点：开着「长按空格说话」先试语音，开不起来（还不能用、没权限）退回挪光标（挪光标也关着就当普通空格）。 */
     private fun onSpaceHold() {
         if (spacePointer < 0 || cursorMode || voiceMode) return
         if (settings.voiceHoldSpace && listener.onVoiceHold()) {
@@ -423,7 +425,7 @@ class KeyboardView(
             invalidate()
             return
         }
-        enterCursorMode()
+        if (settings.spaceCursor) enterCursorMode()
     }
 
     /** 按着空格说话：手指挪到哪儿交给语音面板（它盖在键盘上，按屏幕坐标对）。 */
@@ -441,14 +443,15 @@ class KeyboardView(
         Haptics.hold(context)
     }
 
-    /** 按着空格横着滑：滑开一段就进挪光标，之后每 [CURSOR_STEP_DP] 挪一格。 */
+    /** 按着空格横着滑：横向滑开一段（比竖向多）就进挪光标，之后每 [CURSOR_STEP_DP] 挪一格。 */
     private fun trackCursor(event: MotionEvent) {
         if (voiceMode) return trackVoice(event)
         val at = event.findPointerIndex(spacePointer)
         if (at < 0) return
         val dx = event.getX(at) - spaceAnchorX
         val step = metrics.density * CURSOR_STEP_DP
-        if (!cursorMode && abs(dx) > step) enterCursorMode()
+        val dy = event.getY(at) - spaceAnchorY
+        if (!cursorMode && settings.spaceCursor && abs(dx) > step && abs(dx) > abs(dy)) enterCursorMode()
         if (!cursorMode) return
         val steps = (dx / step).toInt()
         if (steps == 0) return

@@ -31,6 +31,8 @@ data class Settings(
     val swipeInput: Boolean,
     /** 在键上往上一划上屏键上角标的数字或符号（缺省开），不用长按出气泡。 */
     val flickSymbols: Boolean,
+    /** 按住空格左右滑逐字挪光标（缺省开）；关了空格上横滑不响应。 */
+    val spaceCursor: Boolean,
     /** 键位排法：缺省是 [Arrangement.STANDARD]，另一套挪动了几个键的位置，见 [Arrangement]。 */
     val arrangement: Arrangement,
     /** 双拼方案（Core 的方案名，同 PC 的 `[general] shuangpin`），键盘选「双拼」时用。 */
@@ -88,6 +90,7 @@ data class Settings(
         const val KEY_VOICE_HOLD_SPACE = "voice_hold_space"
         const val KEY_SWIPE_INPUT = "swipe_input"
         const val KEY_FLICK_SYMBOLS = "flick_symbols"
+        const val KEY_SPACE_CURSOR = "space_cursor"
         const val KEY_ARRANGEMENT = "arrangement"
         const val KEY_SHUANGPIN = "shuangpin_scheme"
         const val KEY_SHUANGPIN_RAW = "shuangpin_raw_preedit"
@@ -152,6 +155,7 @@ data class Settings(
                 voiceHoldSpace = prefs.getBoolean(KEY_VOICE_HOLD_SPACE, true),
                 swipeInput = prefs.getBoolean(KEY_SWIPE_INPUT, false),
                 flickSymbols = prefs.getBoolean(KEY_FLICK_SYMBOLS, true),
+                spaceCursor = prefs.getBoolean(KEY_SPACE_CURSOR, true),
                 arrangement = Arrangement.entries.firstOrNull { it.name == prefs.getString(KEY_ARRANGEMENT, null) }
                     ?: Arrangement.STANDARD,
                 shuangpinScheme = prefs.getString(KEY_SHUANGPIN, null) ?: DEFAULT_SHUANGPIN,

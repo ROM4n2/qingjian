@@ -79,6 +79,10 @@ class KeyboardSettingsActivity : PageActivity() {
                     prefs.edit().putBoolean(Settings.KEY_VOICE_HOLD_SPACE, it).apply()
                 },
                 ui.divider(),
+                ui.toggle(R.string.space_cursor_title, R.string.space_cursor_note, settings.spaceCursor) {
+                    prefs.edit().putBoolean(Settings.KEY_SPACE_CURSOR, it).apply()
+                },
+                ui.divider(),
                 ui.toggle(R.string.swipe_input_title, R.string.swipe_input_note, settings.swipeInput) {
                     prefs.edit().putBoolean(Settings.KEY_SWIPE_INPUT, it).apply()
                 },

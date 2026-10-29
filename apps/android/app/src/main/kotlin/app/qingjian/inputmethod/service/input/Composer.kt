@@ -375,10 +375,10 @@ class Composer(private val engine: Engine, private val host: Host) {
         }
     }
 
-    /** 长按空格左右滑：不在组句时按方向键挪光标；组句中先把敲的字母原样落下再挪。 */
+    /** 按住空格左右滑：不在组句时按方向键挪光标。 */
     fun moveCursor(steps: Int) {
-        if (steps == 0) return
-        if (composing) settle()
+        // 组句中不响应：会话没接 Core 的拼音光标、候选条也不画光标，落下拼音再挪会把没选的字母上屏
+        if (steps == 0 || composing) return
         val code = if (steps < 0) KeyEvent.KEYCODE_DPAD_LEFT else KeyEvent.KEYCODE_DPAD_RIGHT
         repeat(abs(steps)) { host.sendKey(code) }
     }
