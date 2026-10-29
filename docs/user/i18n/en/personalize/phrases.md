@@ -22,6 +22,20 @@ For example, add two phrases for `ee`: `：` with weight 20 and `；` with weigh
 
 In the candidate window, a multi-line phrase is shown on one line (line breaks drawn as `↵`), and a very long one shows only its first 30 or so Chinese-character widths followed by …; the full content is still what gets committed.
 
+## Time variables
+
+The content can contain time variables, replaced with the current time when the candidate appears, so what you see in the candidate window is what gets committed:
+
+| Write | Becomes | Example |
+|---|---|---|
+| `{year}` | Year, four digits | 2026 |
+| `{month}` `{day}` `{hour}` | Month, day, hour, no leading zero | 3, 8, 9 |
+| `{minute}` `{second}` | Minute, second, two digits | 05, 07 |
+| `{weekday}` | Day of the week, 一 to 日 | 日 |
+
+For example, give `jt` the content 今天是{year}年{month}月{day}日，星期{weekday} and typing `jt` gives 今天是2026年3月8日，星期日; `{weekday}` is a single character, so you can put 星期 or 周 in front of it.
+To output braces as they are, double them: `{{year}}` gives `{year}`. Anything not recognized (such as `{abc}`) stays as written. These variables are also replaced in macOS system text replacements.
+
 ## Importing and exporting
 
 To move to another computer or keep a backup, click 导出… (Export…) in the 导入、导出 row to save all phrases (including switched-off ones) as a `.toml` file; on the other computer, click 导入… (Import…) and pick that file.

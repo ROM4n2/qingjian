@@ -203,7 +203,7 @@ fn editor(ui: &mut Ui<Message>, page: &Page) -> Result<(), RenderError> {
         .control(weight)
         .build(ui, theme)?;
     let content = TextField::new(text)
-        .placeholder("原样上屏的文字，可以换行")
+        .placeholder("原样上屏的文字，可以换行；{year} {month} {day} 这类写法换成当前时间")
         .width(DIALOG_WIDTH - 40.0)
         .rows(4)
         .max_rows(12)

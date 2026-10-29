@@ -1,6 +1,10 @@
 //! 自定义短语配置及共享校验、预览；由 Core 匹配，平台负责编辑与展示。
 
+use std::borrow::Cow;
 use std::ops::RangeInclusive;
+
+use jiff::Zoned;
+use jiff::civil::Weekday;
 
 use serde::{Deserialize, Serialize};
 
@@ -62,6 +66,69 @@ impl TryFrom<StoredPhrase> for CustomPhrase {
 
 fn enabled() -> bool {
     true
+}
+
+/// 短语里的时间变量（#800），出候选时按当时的本地时间换掉，候选窗里显示的就是要上屏的：
+/// `{year}` 四位年；`{month}` `{day}` `{hour}` 不补零；`{minute}` `{second}` 补到两位（读成「9 时 05 分」）；
+/// `{weekday}` 是「一」到「日」（写成「星期{weekday}」）。`{{` `}}` 输出花括号本身，认不出的 `{…}` 原样留着。
+pub fn expand_variables<'a>(text: &'a str, now: &Zoned) -> Cow<'a, str> {
+    if !text.contains(['{', '}']) {
+        return Cow::Borrowed(text);
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(i) = rest.find(['{', '}']) {
+        out.push_str(&rest[..i]);
+        let tail = &rest[i..];
+        if let Some(after) = tail.strip_prefix("{{") {
+            out.push('{');
+            rest = after;
+            continue;
+        }
+        if let Some(after) = tail.strip_prefix("}}") {
+            out.push('}');
+            rest = after;
+            continue;
+        }
+        let value = tail
+            .strip_prefix('{')
+            .and_then(|body| body.split_once('}'))
+            .and_then(|(name, after)| Some((variable(name, now)?, after)));
+        match value {
+            Some((value, after)) => {
+                out.push_str(&value);
+                rest = after;
+            }
+            None => {
+                out.push_str(&tail[..1]);
+                rest = &tail[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    Cow::Owned(out)
+}
+
+fn variable(name: &str, now: &Zoned) -> Option<String> {
+    Some(match name {
+        "year" => now.year().to_string(),
+        "month" => now.month().to_string(),
+        "day" => now.day().to_string(),
+        "hour" => now.hour().to_string(),
+        "minute" => format!("{:02}", now.minute()),
+        "second" => format!("{:02}", now.second()),
+        "weekday" => match now.weekday() {
+            Weekday::Monday => "一",
+            Weekday::Tuesday => "二",
+            Weekday::Wednesday => "三",
+            Weekday::Thursday => "四",
+            Weekday::Friday => "五",
+            Weekday::Saturday => "六",
+            Weekday::Sunday => "日",
+        }
+        .to_owned(),
+        _ => return None,
+    })
 }
 
 /// 设置界面里填的权重：去掉首尾空白后须是 [`WEIGHTS`] 里的整数。
@@ -222,9 +289,29 @@ impl CustomPhrase {
 #[cfg(test)]
 mod tests {
     use super::{
-        CustomPhrase, DEFAULT_WEIGHT, merge_imported, merge_replacements, parse_weight, pin, unpin,
-        validate_phrases,
+        CustomPhrase, DEFAULT_WEIGHT, expand_variables, merge_imported, merge_replacements,
+        parse_weight, pin, unpin, validate_phrases,
     };
+
+    #[test]
+    fn time_variables_expand_and_braces_escape() {
+        let now: jiff::Zoned = "2026-03-08T09:05:07+08:00[Asia/Shanghai]".parse().unwrap();
+        assert_eq!(
+            expand_variables(
+                "今天是{year}年{month}月{day}日 {hour}:{minute}:{second}，星期{weekday}",
+                &now
+            ),
+            "今天是2026年3月8日 9:05:07，星期日"
+        );
+        assert_eq!(
+            expand_variables("{{year}} {unknown} }", &now),
+            "{year} {unknown} }"
+        );
+        assert!(matches!(
+            expand_variables("没有变量", &now),
+            std::borrow::Cow::Borrowed(_)
+        ));
+    }
 
     #[test]
     fn imports_keep_weights_and_skip_what_is_already_there() {

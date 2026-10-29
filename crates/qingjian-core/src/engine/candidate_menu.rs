@@ -7,6 +7,12 @@ use crate::{Language, Sense, Translation};
 impl Engine {
     /// 这个候选存进学习数据与自定义短语时用的写法：繁体输出开着时换回简体。
     pub(super) fn stored_text(&self, candidate: &Candidate) -> String {
+        // 短语候选显示的是换过时间变量的文字，存的是带 `{year}` 这类变量的原文：按位置找回原文，取消置顶才认得
+        if let CandidateKind::Custom(position) = candidate.kind
+            && let Some(phrase) = self.scope_phrases().get(position.wrapping_sub(1))
+        {
+            return phrase.text.clone();
+        }
         self.traditional
             .restore(&candidate.text)
             .unwrap_or_else(|| candidate.text.clone())
