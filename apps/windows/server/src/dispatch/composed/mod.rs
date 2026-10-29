@@ -289,9 +289,17 @@ impl Router {
     }
 
     /// 整页翻 `step`，高亮落到目标页第一个候选；矩阵展开着时一次翻一屏（与 macOS 壳的 `turn_page` 一致）。
+    /// 开了「翻页键展开」（`RouterConfig::page_keys_expand`）时单行先展开，高亮移到上 / 下一行，与 `↓` 展开同一套。
     pub(super) fn page(&mut self, step: isize) {
-        if self.grid.is_some() {
-            if self.move_screens(step) {
+        let moved = if self.grid.is_some() {
+            Some(self.move_screens(step))
+        } else if self.config.page_keys_expand() {
+            Some(self.shift_grid_rows(step))
+        } else {
+            None
+        };
+        if let Some(moved) = moved {
+            if moved {
                 self.engine.note_page_turn();
             }
             return;
@@ -338,6 +346,11 @@ impl Router {
         self.grid = Some(Grid::at(layout, 0));
         self.navigated = true;
         true
+    }
+
+    /// 方向键按矩阵那套走：开了「横排时 ↑ / ↓ 展开」，或者矩阵已经展开着（翻页键展开的也算，不然展开后方向键会按单行移、走出视口）。
+    pub(super) fn grid_keys(&self) -> bool {
+        self.config.grid_keys() || self.grid.is_some()
     }
 
     /// 给 `arrows::route` 的矩阵状态：没开「横排时展开成多行」、单行、展开后高亮在不在第一行。

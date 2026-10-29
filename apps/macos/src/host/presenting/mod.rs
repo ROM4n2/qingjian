@@ -120,9 +120,16 @@ impl Host {
         }
     }
 
-    /// 横排矩阵这套按键是否生效：开关开着（`[general] horizontal_grid`）、排布是横排。
+    /// 横排矩阵这套按键是否生效：开关开着（`[general] horizontal_grid`）、排布是横排；或者矩阵已经展开着
+    /// （翻页键展开的也算，不然展开后方向键会按单行移、走出视口）。
     pub fn grid_keys(&self) -> bool {
-        self.horizontal_grid && self.layout == LayoutMode::Horizontal
+        (self.horizontal_grid && self.layout == LayoutMode::Horizontal)
+            || self.session.grid.is_some()
+    }
+
+    /// 翻页键展开矩阵是否生效：开关开着（`[general] grid_page_keys`）、排布是横排。
+    pub fn page_keys_expand(&self) -> bool {
+        self.grid_page_keys && self.layout == LayoutMode::Horizontal
     }
 
     /// `←` / `→` 归候选：横排矩阵开着，或高亮移动键选了 `←` / `→`。

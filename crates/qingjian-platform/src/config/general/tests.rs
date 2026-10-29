@@ -7,6 +7,9 @@ fn horizontal_grid_is_off_unless_switched_on() {
     assert!(!general.horizontal_grid);
     let general: GeneralConfig = toml::from_str("horizontal_grid = true\n").unwrap();
     assert!(general.horizontal_grid);
+    assert!(!GeneralConfig::default().grid_page_keys);
+    let general: GeneralConfig = toml::from_str("grid_page_keys = true\n").unwrap();
+    assert!(general.grid_page_keys);
 }
 
 #[test]

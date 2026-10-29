@@ -181,7 +181,7 @@ impl Router {
             codes::DOWN if self.config.two_area_arrows() => self.two_area_key(Arrow::Down),
             codes::DOWN => {
                 // 横排矩阵开着：↓ 展开成矩阵 / 往下换行；否则按 highlight_keys 移高亮
-                if self.config.grid_keys() {
+                if self.grid_keys() {
                     self.move_rows(1);
                     Effect::Navigated
                 } else {
@@ -198,7 +198,7 @@ impl Router {
             }
             codes::UP if self.config.two_area_arrows() => self.two_area_key(Arrow::Up),
             codes::UP => {
-                if self.config.grid_keys() {
+                if self.grid_keys() {
                     // ↑ 顶在第一排再往上：回到第一个候选（不是毫无动作）
                     if !self.move_rows(-1) {
                         self.jump_to_first();
@@ -275,7 +275,7 @@ impl Router {
     /// 把「拼音行 + 候选栏」当成一条从左到右的序列走——拼音行在左边，所以 `→` 先走光标、
     /// 到末位溢出成选词，`←` 先退候选、到首位回光标（macOS 壳的 `move_cells` 是同一套规则）。
     fn horizontal_key(&mut self, step: isize) -> Effect {
-        if self.config.highlight_keys == HighlightKeys::UpDown && !self.config.grid_keys() {
+        if self.config.highlight_keys == HighlightKeys::UpDown && !self.grid_keys() {
             self.move_caret(step);
             return Effect::Changed(None);
         }

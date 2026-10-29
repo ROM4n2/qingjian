@@ -181,6 +181,7 @@ pub fn init(mtm: MainThreadMarker, info: &BundleInfo) -> Result<(), HostError> {
             translation_pos: true,
             layout: LayoutMode::default(),
             horizontal_grid: false,
+            grid_page_keys: false,
             highlight_keys: HighlightKeys::default(),
             english_candidates: true,
             text_replacements: Vec::new(),

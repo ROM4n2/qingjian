@@ -57,6 +57,17 @@ pub fn appearance(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Rend
             )?;
         layout = layout.below(grid);
     }
+    if Feature::GridPageKeys.here() {
+        let paging = Checkbox::new(general.grid_page_keys, "横排时翻页键也展开成多行")
+            .disabled(general.layout != LayoutMode::Horizontal)
+            .build(
+                ui,
+                theme,
+                "grid-page-keys",
+                Message::set("general", "grid_page_keys", !general.grid_page_keys),
+            )?;
+        layout = layout.below(paging);
+    }
     let layout = layout.build(ui, theme)?;
     let preedit = choice(
         ui,

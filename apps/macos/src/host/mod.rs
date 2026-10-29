@@ -205,6 +205,9 @@ pub struct Host {
     /// 横排时上下键展开成矩阵的开关（配置 `[general] horizontal_grid`，缺省关）。
     pub horizontal_grid: bool,
 
+    /// 横排时翻页键也把单行展开成矩阵（配置 `[general] grid_page_keys`，缺省关）。
+    pub grid_page_keys: bool,
+
     /// 候选高亮由哪对方向键移动（配置 `[shortcut] highlight_keys`）。
     pub highlight_keys: HighlightKeys,
 

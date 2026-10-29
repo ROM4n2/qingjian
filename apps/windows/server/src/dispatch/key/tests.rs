@@ -389,6 +389,43 @@ fn horizontal_grid_page_keys_turn_screens() {
     assert_eq!((frame.highlight, frame.page), (0, 0));
 }
 
+/// 开了「翻页键展开」（`[general] grid_page_keys`，#805）：横排单行时翻页键展开成矩阵、高亮移到下一行，展开后方向键按矩阵走、
+/// 翻页键一次翻一屏；数字键选高亮所在那一行。
+#[test]
+fn page_keys_expand_the_grid() {
+    let mut router = router(2);
+    let normal = KeyModifiers::default();
+    router.config.layout = LayoutMode::Horizontal;
+    router.config.page_keys = ('-', '=');
+    router.config.grid_page_keys = true;
+    compose(&mut router, "qq", normal);
+    let frame = key(&mut router, 0xBB, Some('='), normal).2;
+    assert_eq!((frame.columns, frame.highlight, frame.page), (2, 2, 1));
+    let frame = key(&mut router, 0x22, None, normal).2;
+    assert_eq!((frame.columns, frame.highlight, frame.page), (2, 8, 4));
+    let frame = key(&mut router, 0x26, None, normal).2;
+    assert_eq!((frame.highlight, frame.page), (6, 3));
+    assert_eq!(
+        key(&mut router, 0x32, Some('2'), normal).1.as_deref(),
+        Some("第8项")
+    );
+}
+
+/// 「翻页键展开」关着（缺省）：横排下翻页键照旧整页翻、不展开。
+#[test]
+fn page_keys_without_the_switch_still_turn_pages() {
+    let mut router = router(2);
+    let normal = KeyModifiers::default();
+    router.config.layout = LayoutMode::Horizontal;
+    compose(&mut router, "qq", normal);
+    let frame = key(&mut router, 0x22, None, normal).2;
+    assert_eq!((frame.columns, frame.highlight, frame.page), (0, 0, 1));
+    assert_eq!(
+        key(&mut router, 0x0D, None, normal).1.as_deref(),
+        Some("qq")
+    );
+}
+
 /// 开关关着时横排按键与以前一样：↑ ↓ 逐个移高亮（不展开），← → 移拼音光标，Alt + ← 归应用。
 #[test]
 fn horizontal_grid_off_keeps_old_keys() {

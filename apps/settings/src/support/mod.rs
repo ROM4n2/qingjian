@@ -30,6 +30,8 @@ pub enum Feature {
     StatusBar,
     /// 横排时 ↑ / ↓ 展开成多行。
     HorizontalGrid,
+    /// 横排时翻页键也展开成多行。
+    GridPageKeys,
     ExtraPageKeys,
     HighlightKeys,
     TogglePunctuation,
@@ -56,7 +58,7 @@ pub enum Feature {
 
 impl Feature {
     #[cfg(test)]
-    pub const ALL: [Self; 24] = [
+    pub const ALL: [Self; 25] = [
         Self::AuxCode,
         Self::Schemes,
         Self::SwitchKeys,
@@ -68,6 +70,7 @@ impl Feature {
         Self::AutoSpace,
         Self::StatusBar,
         Self::HorizontalGrid,
+        Self::GridPageKeys,
         Self::ExtraPageKeys,
         Self::HighlightKeys,
         Self::TogglePunctuation,
@@ -116,6 +119,7 @@ impl Feature {
             // macOS 看菜单栏图标，Linux 看 Fcitx5 的托盘
             Self::StatusBar => [No, Yes, No],
             Self::HorizontalGrid => [Yes, Yes, Todo],
+            Self::GridPageKeys => [Yes, Yes, Todo],
             Self::ExtraPageKeys => [Yes, Yes, Todo],
             Self::HighlightKeys => [Yes, Yes, Todo],
             Self::TogglePunctuation => [Yes, Yes, Todo],
@@ -151,6 +155,7 @@ impl Feature {
             Self::AutoSpace => "中文与英文、数字之间自动加空格",
             Self::StatusBar => "悬浮状态条",
             Self::HorizontalGrid => "横排时 ↑ / ↓ 展开成多行",
+            Self::GridPageKeys => "横排时翻页键展开成多行",
             Self::ExtraPageKeys => "额外翻页键",
             Self::HighlightKeys => "高亮移动键",
             Self::TogglePunctuation => "Ctrl + . 切换全半角标点",
@@ -202,6 +207,7 @@ impl Feature {
             | Self::EnglishPunctuation
             | Self::StatusBar
             | Self::HorizontalGrid
+            | Self::GridPageKeys
             | Self::ApiUsage
             | Self::ExperimentalModels => &[],
         }

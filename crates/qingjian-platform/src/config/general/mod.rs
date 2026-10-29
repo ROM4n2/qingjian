@@ -61,6 +61,10 @@ pub struct GeneralConfig {
     /// 横排时上 / 下键把单行展开成多行矩阵（左 / 右键改为移动候选高亮，Esc 第一下先收回）。缺省关：横排下的按键与以前一样。
     pub horizontal_grid: bool,
 
+    /// 横排时翻页键（主翻页键、额外翻页键、PageUp / PageDown、Tab）也把单行展开成矩阵，与 `↓` 展开同一套。
+    /// 缺省关：翻页键照旧整页翻（#805）。
+    pub grid_page_keys: bool,
+
     /// 候选窗口由青简渲染器还是系统原生绘制。
     pub renderer: CandidateRenderer,
 
@@ -229,6 +233,7 @@ impl Default for GeneralConfig {
             theme: DEFAULT_THEME.to_owned(),
             layout: LayoutMode::default(),
             horizontal_grid: false,
+            grid_page_keys: false,
             renderer: CandidateRenderer::default(),
             font: String::new(),
             candidate_font_size: FontSize::default(),
