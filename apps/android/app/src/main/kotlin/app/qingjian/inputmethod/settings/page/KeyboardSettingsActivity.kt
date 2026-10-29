@@ -145,6 +145,10 @@ class KeyboardSettingsActivity : PageActivity() {
             },
             ui.note(R.string.fuzzy_note),
             ui.divider(),
+            ui.toggle(R.string.spelling_correction_title, R.string.spelling_correction_note, options.spellingCorrection) {
+                prefs.edit().putBoolean(Settings.KEY_SPELLING_CORRECTION, it).apply()
+            },
+            ui.divider(),
             ui.toggle(R.string.full_width_title, R.string.full_width_note, options.fullWidthPunctuation) {
                 prefs.edit().putBoolean(Settings.KEY_FULL_WIDTH, it).apply()
             },
