@@ -67,13 +67,16 @@ class InputPanel(
         addView(main)
     }
 
+    /** 建视图时量到的导航栏高度；用户换导航方式（手势 ↔ 三键）后会过时，见 [stale]。 */
+    private val bottomInset = navigationBarHeight(context)
+
     private val root = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         setBackgroundColor(palette.board)
         clipChildren = false
         clipToPadding = false
         addView(stack)
-        val inset = navigationBarHeight(context)
+        val inset = bottomInset
         if (settings.fullscreenAdapt) {
             addView(BottomActionsView(context, palette, inset, settings.bottomLeft, settings.bottomRight, onBottomAction))
         } else {
@@ -152,6 +155,12 @@ class InputPanel(
             setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), main.measuredHeight)
         }
     }
+
+    /**
+     * 导航栏高度变了（换了手势 / 三键导航）：输入法进程不一定重建视图，留着旧的底边，三键的导航栏会盖住最下一排键。
+     * 服务每次弹键盘时问一次，变了就重建。
+     */
+    fun stale(): Boolean = navigationBarHeight(context) != bottomInset
 
     /** 系统导航栏 / 手势条的高度。输入法窗口自己收不到这份 inset，从窗口度量里取。 */
     private fun navigationBarHeight(context: Context): Int {

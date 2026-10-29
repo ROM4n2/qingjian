@@ -201,6 +201,7 @@ class QingjianInputMethodService :
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        if (panel?.stale() == true) setInputView(onCreateInputView())
         // 网络可能换了（「只在 Wi-Fi 下使用」）
         syncCloud()
         clipboardWatcher.capture()
