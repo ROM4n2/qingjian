@@ -87,7 +87,14 @@ class CandidateBarView(
     private val expandable: Boolean get() = strip.candidates.isNotEmpty()
 
     /** 显示的是工具栏：横滑滑的是它中间那排图标，不是整条。 */
-    private val toolbarShown: Boolean get() = !resizing && strip.isEmpty
+    /** 工具栏位置上的一句提示与点它要做的事；null 是没有提示。几秒后、出候选或点过就收起。 */
+    private var notice: Pair<String, () -> Unit>? = null
+    private val clearNotice = Runnable {
+        notice = null
+        invalidate()
+    }
+
+    private val toolbarShown: Boolean get() = !resizing && strip.isEmpty && notice == null
 
     /** 候选能用的宽度：有 ⌄ 时让出那一格。 */
     private val stripWidth: Int get() = if (expandable) width - expandSlot.toInt() else width
@@ -144,10 +151,19 @@ class CandidateBarView(
     /** 拼音行右侧的提示（删候选的结果）由渲染器从 Rust 那边的帧里取，这里只要拼音和候选。 */
     fun show(preedit: String, candidates: List<Candidate>) {
         closePopup()
+        if (preedit.isNotEmpty() || candidates.isNotEmpty()) clearNotice.run()
         strip.show(preedit, candidates)
         scroller.forceFinished(true)
         scrollTo(0, 0)
         repaint()
+    }
+
+    /** 在工具栏的位置放一句提示 [message]，点它执行 [action]（打开对应的设置页）。 */
+    fun showNotice(message: String, action: () -> Unit) {
+        notice = message to action
+        removeCallbacks(clearNotice)
+        postDelayed(clearNotice, NOTICE_MS)
+        invalidate()
     }
 
     /** 进入拖动调高度（功能面板里点「键盘高度」）。 */
@@ -174,6 +190,7 @@ class CandidateBarView(
 
     override fun onDraw(canvas: Canvas) = when {
         resizing -> resizeHandle.draw(canvas, width)
+        strip.isEmpty && notice != null -> toolbar.drawNotice(canvas, width, notice!!.first)
         strip.isEmpty -> toolbar.draw(canvas, width)
         else -> {
             strip.draw(canvas, scrollX, stripWidth)
@@ -207,6 +224,11 @@ class CandidateBarView(
         }
         if (!strip.isEmpty) {
             strip.indexAt(x + scrollX).takeIf { it >= 0 }?.let(listener::onSelect)
+            return
+        }
+        notice?.let { (_, action) ->
+            clearNotice.run()
+            action()
             return
         }
         when {
@@ -277,4 +299,8 @@ class CandidateBarView(
     }
 
     private fun maxScroll(): Int = (strip.contentWidth - stripWidth).toInt().coerceAtLeast(0)
+
+    private companion object {
+        const val NOTICE_MS = 5000L
+    }
 }

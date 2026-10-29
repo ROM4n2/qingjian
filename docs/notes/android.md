@@ -154,7 +154,7 @@ PC 设置程序的「高级」页（配置文件、日志、输入日志）在�
 
 ## 语音输入
 
-设计见 [design/voice-and-swipe.md](../design/voice-and-swipe.md)。现在的识别方是 Rust 侧的火山引擎豆包流式识别（`crates/qingjian-voice`）；「语音识别」页没配好时退回占位的 `UnavailableRecognizer`，三处入口都提示「还不能用」。
+设计见 [design/voice-and-swipe.md](../design/voice-and-swipe.md)。现在的识别方是 Rust 侧的火山引擎豆包流式识别（`crates/qingjian-voice`）；「语音识别」页没配好时退回占位的 `UnavailableRecognizer`，三处入口都在工具栏的位置放一行可点的提示（`CandidateBarView.showNotice`，5 秒或出候选后收起），点了进设置页；快捷翻译没配云端同样。原来只弹 toast，一闪就过、也没有去设置的路，用户反馈像点了没反应。
 
 - 入口都进 `voice/VoiceInput`：`KeyboardView` 按住空格 400 ms 不动问 `onVoiceHold`（开着「长按空格说话」时），开不起来退回挪光标；横向滑开一格（14 dp）先到就是挪光标。工具栏话筒与全面屏底栏语音键是点按进。
 - 识别方式是 `VoiceRecognizer`（是否可用、要不要录音权限、开始、说完、取消，回调中间结果、最终结果、出错、音量）。现有 Rust 侧识别方 `EngineRecognizer`：`AudioRecord`（`VOICE_RECOGNITION` 源）录 16 kHz 单声道，每 100 ms 一截经 `Native.voiceFeed` 交 Rust、每 100 ms `pollVoice` 取结果；`voiceAvailable` 为真（配好了）时 `VoiceInput` 才选它。收尾（说完、出错、取消）一律在 `stop()` 里停录音线程，出错时也得停，不然麦克风一直开着。以后可加系统 `SpeechRecognizer`、切到系统语音输入法。

@@ -47,6 +47,7 @@ import app.qingjian.inputmethod.settings.BottomAction
 import app.qingjian.inputmethod.settings.Settings
 import app.qingjian.inputmethod.settings.ToolbarTool
 import app.qingjian.inputmethod.settings.page.KeyboardSettingsActivity
+import app.qingjian.inputmethod.settings.page.VoiceSettingsActivity
 import app.qingjian.inputmethod.theme.Palette
 import app.qingjian.inputmethod.translate.QuickTranslate
 import app.qingjian.inputmethod.translate.TranslateBar
@@ -448,6 +449,20 @@ class QingjianInputMethodService :
 
     override fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
+    override fun voiceNeedsSetup() = needsSetup(getString(R.string.voice_needs_setup), VoiceSettingsActivity::class.java)
+
+    /**
+     * 要先配好才能用的功能（语音、快捷翻译）：在工具栏的位置放一句提示，点它打开 [page]；
+     * 不只弹 toast：toast 一闪就过，也没有去设置的路。键盘没建起来时退回 toast。
+     */
+    private fun needsSetup(message: String, page: Class<*>) {
+        val bar = panel?.bar ?: return toast(message)
+        closePanel()
+        bar.showNotice(message) {
+            startActivity(Intent(this, page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
     override fun composeText(text: String) {
         currentInputConnection?.setComposingText(text, 1)
     }
@@ -522,7 +537,7 @@ class QingjianInputMethodService :
             return
         }
         if (!syncCloud(translate = true)) {
-            toast(getString(R.string.translate_no_cloud))
+            needsSetup(getString(R.string.translate_needs_setup), KeyboardSettingsActivity::class.java)
             return
         }
         closeEditor()

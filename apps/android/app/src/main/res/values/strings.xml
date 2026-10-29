@@ -129,6 +129,8 @@
     <string name="process_text_replace">替换</string>
     <string name="process_text_copied">已复制译文</string>
     <string name="translate_no_cloud">快捷翻译要先在「键盘设置 → 云端大模型」里填好接口和密钥</string>
+    <string name="translate_needs_setup">快捷翻译要先填写云端大模型，点这里去设置</string>
+    <string name="voice_needs_setup">语音输入要先选好识别服务，点这里去设置</string>
     <string name="clipboard_limit_value">%1$d 条</string>
     <string name="section_size">尺寸</string>
     <string name="height_title">键盘高度</string>

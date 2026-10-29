@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.text.TextPaint
+import android.text.TextUtils
 import app.qingjian.inputmethod.R
 import app.qingjian.inputmethod.panel.base.PanelIcons
 import app.qingjian.inputmethod.panel.base.PanelIcons.Icon
@@ -28,6 +30,7 @@ class Toolbar(
     private val line = Paint().apply { color = palette.faint }
     private val card = Paint(Paint.ANTI_ALIAS_FLAG)
     private val cardRect = RectF()
+    private val noticeText = TextPaint(Paint.ANTI_ALIAS_FLAG)
 
     /** 中间那排滑过去的距离（像素）。 */
     var offset = 0f
@@ -63,6 +66,22 @@ class Toolbar(
         cardRect.offset(0f, -density)
         card.color = palette.surface
         canvas.drawRoundRect(cardRect, radius, radius, card)
+    }
+
+    /** 工具栏位置上临时放的一句提示（功能要先去设置里配好）：左边提示图标，中间一行字，右边 ›，整条可点。 */
+    fun drawNotice(canvas: Canvas, viewWidth: Int, message: String) {
+        val cy = barHeight / 2
+        drawCard(canvas, viewWidth)
+        stroke.color = palette.brand
+        PanelIcons.draw(canvas, Icon.INFO, 30 * density, cy, 22 * density, stroke)
+        noticeText.color = palette.text
+        noticeText.textSize = 13 * density
+        val left = 52 * density
+        val right = viewWidth - 44 * density
+        val shown = TextUtils.ellipsize(message, noticeText, right - left, TextUtils.TruncateAt.END).toString()
+        canvas.drawText(shown, left, cy - (noticeText.descent() + noticeText.ascent()) / 2, noticeText)
+        stroke.color = palette.gloss
+        PanelIcons.draw(canvas, Icon.CHEVRON, viewWidth - 26 * density, cy, 20 * density, stroke)
     }
 
     fun draw(canvas: Canvas, viewWidth: Int) {
