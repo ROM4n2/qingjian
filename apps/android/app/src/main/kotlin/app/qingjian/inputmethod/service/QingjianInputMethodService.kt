@@ -16,7 +16,6 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import app.qingjian.inputmethod.R
 import app.qingjian.inputmethod.candidates.CandidateBarView
-import app.qingjian.inputmethod.candidates.Toolbar
 import app.qingjian.inputmethod.clipboard.ClipboardImageProvider
 import app.qingjian.inputmethod.clipboard.ClipboardWatcher
 import app.qingjian.inputmethod.cloud.CloudConfig
@@ -45,6 +44,7 @@ import app.qingjian.inputmethod.service.input.wantsDirectInput
 import app.qingjian.inputmethod.service.input.wantsPrivacy
 import app.qingjian.inputmethod.settings.BottomAction
 import app.qingjian.inputmethod.settings.Settings
+import app.qingjian.inputmethod.settings.ToolbarTool
 import app.qingjian.inputmethod.settings.page.KeyboardSettingsActivity
 import app.qingjian.inputmethod.theme.Palette
 import app.qingjian.inputmethod.translate.QuickTranslate
@@ -330,17 +330,20 @@ class QingjianInputMethodService :
 
     override fun openSymbolPanel() = openPanel(PanelKind.SYMBOLS)
 
-    override fun onToolbar(action: Toolbar.Action) = when (action) {
-        Toolbar.Action.FUNCTIONS -> openPanel(PanelKind.FUNCTIONS)
-        Toolbar.Action.EMOJI -> openPanel(PanelKind.EMOJI)
-        Toolbar.Action.KEYBOARDS -> openPanel(PanelKind.KEYBOARDS)
-        Toolbar.Action.VOICE -> voiceInput()
-        Toolbar.Action.SYMBOLS -> openPanel(PanelKind.SYMBOLS)
-        Toolbar.Action.CLIPBOARD -> clipboard()
-        Toolbar.Action.TRANSLATE -> toggleTranslate()
-        Toolbar.Action.RESIZE -> startResize()
-        Toolbar.Action.HIDE_KEYBOARD -> onHideKeyboard()
+    override fun onToolbar(tool: ToolbarTool) = when (tool) {
+        ToolbarTool.EMOJI -> openPanel(PanelKind.EMOJI)
+        ToolbarTool.KEYBOARDS -> openPanel(PanelKind.KEYBOARDS)
+        ToolbarTool.VOICE -> voiceInput()
+        ToolbarTool.SYMBOLS -> openPanel(PanelKind.SYMBOLS)
+        ToolbarTool.CLIPBOARD -> clipboard()
+        ToolbarTool.TRANSLATE -> toggleTranslate()
+        ToolbarTool.RESIZE -> startResize()
+        ToolbarTool.PHRASES -> openPanel(PanelKind.PHRASES)
+        ToolbarTool.SWITCH_INPUT_METHOD -> switchInputMethod()
+        ToolbarTool.SETTINGS -> openSettings()
     }
+
+    override fun openFunctions() = openPanel(PanelKind.FUNCTIONS)
 
     override fun openPanel(kind: PanelKind) {
         panel?.open(kind)

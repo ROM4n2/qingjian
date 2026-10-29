@@ -19,6 +19,7 @@ import app.qingjian.inputmethod.panel.FunctionPanel
 import app.qingjian.inputmethod.panel.KeyboardPickerPanel
 import app.qingjian.inputmethod.panel.PanelActions
 import app.qingjian.inputmethod.panel.PanelKind
+import app.qingjian.inputmethod.panel.ToolbarPanel
 import app.qingjian.inputmethod.panel.VoicePanel
 import app.qingjian.inputmethod.panel.clipboard.ClipboardPanel
 import app.qingjian.inputmethod.panel.clipboard.PiecesPanel
@@ -42,7 +43,7 @@ class InputPanel(
 ) {
     private val palette = Palette.of(settings.theme, settings.appearance.dark(context))
 
-    val bar = CandidateBarView(context, palette, settings.textSize.scale, stripSource, barListener)
+    val bar = CandidateBarView(context, palette, settings.textSize.scale, stripSource, settings.toolbar, barListener)
     val keyboard = KeyboardView(context, palette, settings, keyboardListener)
 
     /** 开着的面板；null 是键盘。 */
@@ -87,6 +88,7 @@ class InputPanel(
         val panel = when (kind) {
             PanelKind.FUNCTIONS -> FunctionPanel(context, palette, actions, header, settings)
             PanelKind.KEYBOARDS -> KeyboardPickerPanel(context, palette, actions, header, settings.layout)
+            PanelKind.TOOLBAR -> ToolbarPanel(context, palette, actions, header, settings.toolbar)
             PanelKind.SYMBOLS, PanelKind.EMOJI -> CatalogPanel(
                 context, palette, actions, header, kind,
                 leftThumb = settings.arrangement == Settings.Arrangement.LEFT_THUMB,

@@ -62,6 +62,8 @@ data class Settings(
     val appearance: Appearance,
     /** 候选字号档。 */
     val textSize: TextSize,
+    /** 工具栏中间那排放的工具，按勾的先后排（#777）。 */
+    val toolbar: List<ToolbarTool>,
 ) {
     enum class Layout { QWERTY, NINE_KEY, ZHUYIN, SHUANGPIN, WUBI }
 
@@ -111,6 +113,7 @@ data class Settings(
         const val KEY_THEME = "theme"
         const val KEY_APPEARANCE = "appearance"
         const val KEY_TEXT_SIZE = "text_size"
+        const val KEY_TOOLBAR = "toolbar"
 
         /** 没选过时的主题，同 PC 的缺省主题。 */
         const val DEFAULT_THEME = "qingjian"
@@ -178,6 +181,7 @@ data class Settings(
                 theme = prefs.getString(KEY_THEME, null) ?: DEFAULT_THEME,
                 appearance = Appearance.of(prefs.getString(KEY_APPEARANCE, null)),
                 textSize = TextSize.of(prefs.getString(KEY_TEXT_SIZE, null)),
+                toolbar = ToolbarTool.parse(prefs.getString(KEY_TOOLBAR, null)),
             )
         }
     }

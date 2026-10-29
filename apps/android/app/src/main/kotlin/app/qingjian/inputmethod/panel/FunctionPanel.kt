@@ -46,6 +46,7 @@ class FunctionPanel(
             setChoice(Settings.KEY_ARRANGEMENT, next.name)
         },
         Feature(Icon.RESIZE, "键盘高度") { startResize() },
+        Feature(Icon.TUNE, "定制工具栏") { openPanel(PanelKind.TOOLBAR) },
         Feature(Icon.GLOBE, "切换输入法") { switchInputMethod() },
         Feature(Icon.SETTINGS, "设置") { openSettings() },
     )

@@ -13,6 +13,7 @@ import app.qingjian.inputmethod.core.frame.Candidate
 import app.qingjian.inputmethod.keyboard.Haptics
 import app.qingjian.inputmethod.panel.base.PanelIcons
 import app.qingjian.inputmethod.popup.ChoicePopup
+import app.qingjian.inputmethod.settings.ToolbarTool
 import app.qingjian.inputmethod.theme.Palette
 
 /**
@@ -26,6 +27,8 @@ class CandidateBarView(
     /** 候选字号档的倍数：调大时条跟着高，候选不被截。 */
     textScale: Float,
     private val source: StripSource,
+    /** 工具栏中间那排放的工具（用户定制的）。 */
+    tools: List<ToolbarTool>,
     private val listener: Listener,
 ) : View(context) {
     interface Listener {
@@ -37,8 +40,14 @@ class CandidateBarView(
         /** 长按气泡里选了「删除」：删第 [index] 个候选（用户词、学习记录）。 */
         fun onForget(index: Int)
 
-        /** 工具栏上点了一个图标；调高度在这里自己处理，不会传出去。 */
-        fun onToolbar(action: Toolbar.Action)
+        /** 工具栏中间那排点了一个工具；调高度在这里自己处理，不会传出去。 */
+        fun onToolbar(tool: ToolbarTool)
+
+        /** 工具栏左端的 logo：进功能面板。 */
+        fun openFunctions()
+
+        /** 工具栏右端：收起键盘。 */
+        fun hideKeyboard()
 
         /** 拖动调高度：[deltaPx] 是手指相对按下处往上走的距离，[done] 表示手指抬起。 */
         fun onResizeDrag(deltaPx: Float, done: Boolean)
@@ -50,7 +59,7 @@ class CandidateBarView(
     private val density = resources.displayMetrics.density
     val barHeight = 62f * density * maxOf(1f, textScale)
     private val strip = CandidateStrip(density, barHeight, textScale)
-    private val toolbar = Toolbar(context, palette, density, barHeight)
+    private val toolbar = Toolbar(context, palette, density, barHeight, tools)
     private val resizeHandle = ResizeHandle(
         palette, density, barHeight,
         onDrag = listener::onResizeDrag,
@@ -200,9 +209,14 @@ class CandidateBarView(
             strip.indexAt(x + scrollX).takeIf { it >= 0 }?.let(listener::onSelect)
             return
         }
-        when (val action = toolbar.actionAt(x, width)) {
-            Toolbar.Action.RESIZE -> resizing = true
-            else -> listener.onToolbar(action)
+        when {
+            toolbar.onLogo(x) -> listener.openFunctions()
+            toolbar.onHide(x, width) -> listener.hideKeyboard()
+            else -> when (val tool = toolbar.toolAt(x, width)) {
+                null -> Unit
+                ToolbarTool.RESIZE -> resizing = true
+                else -> listener.onToolbar(tool)
+            }
         }
     }
 
