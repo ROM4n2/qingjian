@@ -1,3 +1,7 @@
+//! OpenAI 兼容聊天客户端：请求、接口能力降级与回复解析。
+
+mod parameters;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, LazyLock};
@@ -19,6 +23,7 @@ use crate::error::PredictError;
 use crate::prompt::{self, Reply};
 use crate::reply::{self, ReplyFormat, ReplySchema};
 use crate::usage::ApiUsageStats;
+use parameters::RequestParameters;
 
 /// 联想回复的 token 上限：几条短句足够，防止模型长篇大论。
 const MAX_TOKENS: u32 = 200;
@@ -54,6 +59,9 @@ pub struct ChatClient {
     /// 回复格式降到了哪一级（[`ReplyFormat::index`]）：接口拒过一次就记住，免得每次请求都先挨拒再重试。
     reply_format: Arc<AtomicU8>,
 
+    /// 这个客户端已被接口拒绝的可选参数。
+    parameters: Arc<RequestParameters>,
+
     /// 壳选择累计用量的本机文件；None 时保持原有无统计行为。
     usage_path: Option<PathBuf>,
 }
@@ -72,6 +80,7 @@ impl ChatClient {
             reasoning_effort: parse_reasoning_effort(&config.reasoning_effort),
             thinking_switch: ThinkingSwitch::for_url(&config.base_url),
             reply_format: Arc::new(AtomicU8::new(ReplyFormat::JsonObject.index())),
+            parameters: Arc::default(),
             usage_path: None,
         }
     }
@@ -106,14 +115,18 @@ impl ChatClient {
         let mut format = ReplyFormat::from_index(self.reply_format.load(Ordering::Relaxed));
         let mut body = self.request_body(system, user, max_tokens)?;
         format.apply(&mut body, schema);
-        // 两种退路都有尽头：思考参数去掉就没了，回复格式降到最低就不再降，循环必然结束
+        // 参数只删或改名，回复格式只降级；每次重试都必须改变请求，循环必然结束。
         let raw = loop {
             match self.send(&body).await {
                 Ok(raw) => break raw,
+                Err(PredictError::Api(error)) if self.parameters.reject(&error, &mut body) => {
+                    tracing::info!(model = %self.model, "Retrying after optional parameter rejection");
+                }
                 // 「始终思考」的模型（如 GLM-5 系列）会拒绝关思考参数；去掉它按模型默认重试
                 Err(PredictError::Api(error))
                     if rejects_thinking_control(&error) && strip_thinking_params(&mut body) =>
                 {
+                    self.parameters.disable_thinking();
                     tracing::info!(model = %self.model, error = %error, "模型拒绝关思考，去掉该参数重试");
                 }
                 // 接口不认这一级的 response_format（LM Studio 不认 json_object）：降一级重试并记住
@@ -156,6 +169,7 @@ impl ChatClient {
         if matches!(self.reasoning_effort, Some(ReasoningEffort::None)) {
             self.thinking_switch.disable(&mut body);
         }
+        self.parameters.apply(&mut body);
         Ok(body)
     }
 
@@ -296,7 +310,16 @@ fn strip_thinking_params(body: &mut serde_json::Value) -> bool {
 /// 报错是不是「模型始终思考，不支持关闭」类：去掉关思考参数重试或许能通。
 /// 智谱的报错是中文（「该模型始终思考，不支持关闭思考」），z.ai 国际站可能给英文；温度之类的 1210 不能误伤。
 fn rejects_thinking_control(error: &async_openai::error::OpenAIError) -> bool {
-    let message = error.to_string();
+    let async_openai::error::OpenAIError::ApiError(response) = error else {
+        return false;
+    };
+    if !matches!(
+        response.status_code,
+        reqwest::StatusCode::BAD_REQUEST | reqwest::StatusCode::UNPROCESSABLE_ENTITY
+    ) {
+        return false;
+    }
+    let message = &response.api_error.message;
     message.contains("思考") || message.to_lowercase().contains("always think")
 }
 
