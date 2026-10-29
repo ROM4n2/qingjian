@@ -31,6 +31,8 @@ data class Settings(
     val swipeInput: Boolean,
     /** 在键上往上一划上屏键上角标的数字或符号（缺省开），不用长按出气泡。 */
     val flickSymbols: Boolean,
+    /** 键位排法：缺省是 [Arrangement.STANDARD]，另一套挪动了几个键的位置，见 [Arrangement]。 */
+    val arrangement: Arrangement,
     /** 双拼方案（Core 的方案名，同 PC 的 `[general] shuangpin`），键盘选「双拼」时用。 */
     val shuangpinScheme: String,
     /** 双拼的 preedit 显示敲的键，不展开成全拼（同 PC 的 `shuangpin_raw_preedit`）。 */
@@ -63,6 +65,12 @@ data class Settings(
 ) {
     enum class Layout { QWERTY, NINE_KEY, ZHUYIN, SHUANGPIN, WUBI }
 
+    /**
+     * 键位排法。改了按键位置的放进另一套，缺省那套一直不变（肌肉记忆）：
+     * [LEFT_THUMB] 让左手大拇指顺手：符号面板分类列放左边、「返回」在左下角。
+     */
+    enum class Arrangement { STANDARD, LEFT_THUMB }
+
     companion object {
         const val KEY_LAYOUT = "layout"
         const val KEY_HEIGHT = "height_percent"
@@ -78,6 +86,7 @@ data class Settings(
         const val KEY_VOICE_HOLD_SPACE = "voice_hold_space"
         const val KEY_SWIPE_INPUT = "swipe_input"
         const val KEY_FLICK_SYMBOLS = "flick_symbols"
+        const val KEY_ARRANGEMENT = "arrangement"
         const val KEY_SHUANGPIN = "shuangpin_scheme"
         const val KEY_SHUANGPIN_RAW = "shuangpin_raw_preedit"
         const val KEY_SHUANGPIN_HINTS = "shuangpin_hints"
@@ -140,6 +149,8 @@ data class Settings(
                 voiceHoldSpace = prefs.getBoolean(KEY_VOICE_HOLD_SPACE, true),
                 swipeInput = prefs.getBoolean(KEY_SWIPE_INPUT, false),
                 flickSymbols = prefs.getBoolean(KEY_FLICK_SYMBOLS, true),
+                arrangement = Arrangement.entries.firstOrNull { it.name == prefs.getString(KEY_ARRANGEMENT, null) }
+                    ?: Arrangement.STANDARD,
                 shuangpinScheme = prefs.getString(KEY_SHUANGPIN, null) ?: DEFAULT_SHUANGPIN,
                 shuangpinRawPreedit = prefs.getBoolean(KEY_SHUANGPIN_RAW, false),
                 shuangpinHints = prefs.getBoolean(KEY_SHUANGPIN_HINTS, true),

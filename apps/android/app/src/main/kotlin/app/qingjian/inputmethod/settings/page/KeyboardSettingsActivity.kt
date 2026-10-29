@@ -13,7 +13,7 @@ import app.qingjian.inputmethod.settings.Settings
 import kotlin.concurrent.thread
 import org.json.JSONObject
 
-/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、按键反馈、长按空格说话、滑行与上滑输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
+/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、键位排法、按键反馈、长按空格说话、滑行与上滑输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
 class KeyboardSettingsActivity : PageActivity() {
     override val title = R.string.page_keyboard
 
@@ -60,6 +60,9 @@ class KeyboardSettingsActivity : PageActivity() {
             ),
             ui.sectionTitle(R.string.section_keys),
             ui.card(
+                arrangementPicker(settings),
+                ui.note(R.string.arrangement_note),
+                ui.divider(),
                 ui.toggle(R.string.haptic_title, null, settings.haptic) {
                     prefs.edit().putBoolean(Settings.KEY_HAPTIC, it).apply()
                 },
@@ -327,6 +330,16 @@ class KeyboardSettingsActivity : PageActivity() {
         )
 
         else -> emptyArray()
+    }
+
+    /** 键位排法：默认一套不动，另一套改了几个键的位置（见 [Settings.Arrangement]），键盘功能面板里也能切。 */
+    private fun arrangementPicker(settings: Settings): View {
+        val names = listOf(R.string.arrangement_standard, R.string.arrangement_left_thumb).map(::getString)
+        val selected = settings.arrangement.ordinal
+        return ui.picker(R.string.arrangement_title, names[selected], names, selected) {
+            prefs.edit().putString(Settings.KEY_ARRANGEMENT, Settings.Arrangement.entries[it].name).apply()
+            rebuild()
+        }
     }
 
     private fun setLayout(layout: Settings.Layout) {

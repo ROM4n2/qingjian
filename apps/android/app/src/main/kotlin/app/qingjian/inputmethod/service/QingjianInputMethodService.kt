@@ -389,6 +389,11 @@ class QingjianInputMethodService :
         Settings.preferences(this).edit().putBoolean(key, on).apply()
     }
 
+    override fun setChoice(key: String, value: String) {
+        reopenPanel = panel?.openPanel
+        Settings.preferences(this).edit().putString(key, value).apply()
+    }
+
     /** 面板开着时系统返回键先关面板。 */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.repeatCount == 0 && panel?.openPanel != null) {

@@ -87,7 +87,10 @@ class InputPanel(
         val panel = when (kind) {
             PanelKind.FUNCTIONS -> FunctionPanel(context, palette, actions, header, settings)
             PanelKind.KEYBOARDS -> KeyboardPickerPanel(context, palette, actions, header, settings.layout)
-            PanelKind.SYMBOLS, PanelKind.EMOJI -> CatalogPanel(context, palette, actions, header, kind)
+            PanelKind.SYMBOLS, PanelKind.EMOJI -> CatalogPanel(
+                context, palette, actions, header, kind,
+                leftThumb = settings.arrangement == Settings.Arrangement.LEFT_THUMB,
+            )
             PanelKind.CANDIDATES -> CandidateGrid(context, palette, actions, header, settings.textSize.scale)
             PanelKind.CLIPBOARD, PanelKind.PHRASES -> ClipboardPanel(context, palette, actions, header, phrasesFirst = kind == PanelKind.PHRASES)
             PanelKind.PIECES -> PiecesPanel(context, palette, actions, header, text)
