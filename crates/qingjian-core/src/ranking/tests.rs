@@ -235,3 +235,22 @@ fn a_single_syllable_keeps_the_ranked_order() {
     let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
     assert_eq!(texts, ["你", "尼", "妮"]);
 }
+
+#[test]
+fn a_single_syllable_puts_fuzzy_chars_after_the_first_typed_chars() {
+    let fuzzy = |text| Scored {
+        penalty: FUZZY_PENALTY,
+        ..candidate(text, 2, false)
+    };
+    let typed = ["子", "字", "自", "兹", "仔", "紫", "姊", "资", "滋"];
+    let mut items = vec![fuzzy("只"), fuzzy("之"), fuzzy("知")];
+    items.extend(typed.iter().map(|text| candidate(text, 2, false)));
+    items.push(candidate("孖", 2, false));
+    // 这个输入串下选过的 知 不等
+    arrange(&mut items, 2, 2, 2, true, |item| item.hit.text == "知");
+    let texts: Vec<&str> = items.iter().map(|s| s.hit.text).collect();
+    let mut expected = vec!["知"];
+    expected.extend(typed);
+    expected.extend(["只", "之", "孖"]);
+    assert_eq!(texts, expected);
+}

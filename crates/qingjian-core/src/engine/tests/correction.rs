@@ -319,9 +319,9 @@ fn fuzzy_rules_add_homophones_behind_exact_hits() {
         ..FuzzyRules::default()
     });
     let after = texts_of(&engine);
-    // ha 是前缀，换成 fa 前缀后 开放（词频更高）与 开发 都出，覆盖更多字母排在 开 前面
-    assert_eq!(after[0], "开放");
-    assert!(after.contains(&"开发".to_owned()));
+    // ha 读成 fa 的 开发 末音节对得上，排在按前缀扩展出的 开放（词频更高）前面；都覆盖更多字母排在 开 前面
+    assert_eq!(after[0], "开发");
+    assert!(after.contains(&"开放".to_owned()));
     assert!(after.contains(&"开".to_owned()));
     // 整句转换走同一套写法：xiangkaiha → 想开发
     engine.set_input("xiangkaiha");
@@ -333,6 +333,32 @@ fn fuzzy_rules_add_homophones_behind_exact_hits() {
     let all = texts_of(&engine);
     assert_eq!(all[0], "开发");
     assert_eq!(all.iter().filter(|t| *t == "开发").count(), 1);
+}
+
+#[test]
+fn fuzzy_single_chars_follow_the_first_page_of_typed_chars_and_precede_rare_ones() {
+    // `zi` 开 z-zh：只、知 比 zi 的字常用得多，也排在原样读音的头一页之后；但在 孖、秭 这类生僻字之前
+    let typed = ["子", "字", "自", "兹", "仔", "紫", "姊", "资", "滋"];
+    let mut source: String = typed
+        .iter()
+        .enumerate()
+        .map(|(index, text)| format!("{text}\tzi\t{}\n", 9000 - index * 500))
+        .collect();
+    source.push_str("孖\tzi\t5\n秭\tzi\t3\n只\tzhi\t99999\n知\tzhi\t50000\n");
+    // `fan` 开 an-ang：放 按前缀也查得到，同样当模糊音命中排
+    source.push_str("饭\tfan\t9000\n翻\tfan\t8000\n放\tfang\t99999\n");
+    let mut engine = Engine::new(Dictionary::parse(&source).unwrap());
+    engine.set_fuzzy(FuzzyRules {
+        z_zh: true,
+        an_ang: true,
+        ..FuzzyRules::default()
+    });
+    engine.set_input("zi");
+    let all = texts_of(&engine);
+    assert_eq!(&all[..9], typed);
+    assert_eq!(&all[9..13], ["只", "知", "孖", "秭"]);
+    engine.set_input("fan");
+    assert_eq!(texts_of(&engine), ["饭", "翻", "放"]);
 }
 
 /// 原样读不通（`gan` 一个字都没有，只能拿拼音占位）时敲错边照旧排第一：`meiganxi` → 没关系。

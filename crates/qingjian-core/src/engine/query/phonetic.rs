@@ -10,7 +10,7 @@ use crate::engine::query::chinese_candidate;
 use crate::engine::{
     Learner, MAX_CANDIDATES, abbreviated_count, choice_key, pattern_key, segment_longest_prefix,
 };
-use crate::ranking::Scored;
+use crate::ranking::{FUZZY_PENALTY, Scored};
 use crate::{
     Candidate, CandidateKind, CandidateList, Engine, ParseError, Query, Segmentation, Timings,
     correction, parser, ranking,
@@ -126,17 +126,36 @@ impl Engine {
             // 没有替代写法时每条命中都是敲的原音节，`penalty` 直接给 0（单字母简拼能命中几万条）
             let hits = self.lookup_all(&positions);
             let whole_split = clean && segmentation.syllables.iter().any(|x| !x.complete);
+            // 末音节读成它的模糊音写法（`zi` 开 z-zh 读成 zhi）也算打完的末音节：否则模糊音命中的常用字
+            // 全排在原样读音的几百个生僻字之后，预选还会把它们砍掉（`li` 开 n-l 的 你 进不了前 500）
+            let last_readings = if last.complete {
+                self.fuzzy.readings(&last.text)
+            } else {
+                Vec::new()
+            };
             scored.reserve(hits.len());
             for hit in hits {
-                let full_last = last.complete
-                    && hit.syllables().nth(count - 1) == Some(patterns[count - 1].text);
+                let last_syllable = hit.syllables().nth(count - 1);
+                let typed_last = last.complete && last_syllable == Some(patterns[count - 1].text);
+                let fuzzy_last = last.complete
+                    && !typed_last
+                    && last_syllable
+                        .is_some_and(|syllable| last_readings.iter().any(|r| r == syllable));
+                let mut penalty = expanded.penalty(hit.syllables());
+                // `fan` 是 `fang` 的前缀，按前缀查到的 放 不带模糊音的扣分；当作 an-ang 的读法就该扣
+                if fuzzy_last
+                    && let Some(syllable) = last_syllable
+                    && expanded.cost(count - 1, syllable) == 0.0
+                {
+                    penalty += FUZZY_PENALTY;
+                }
                 scored.push(Scored {
                     hit,
-                    full_last,
+                    full_last: typed_last || fuzzy_last,
                     coverage: segmentation.letters(),
                     abbreviated,
                     weight: self.learner.weight(hit.text),
-                    penalty: expanded.penalty(hit.syllables()),
+                    penalty,
                     tone_cost: crate::zhuyin::tone::cost(hit.text, hit.syllables(), &tones),
                     split: whole_split,
                 });

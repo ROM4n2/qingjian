@@ -47,6 +47,10 @@ pub const WORDS_BEFORE_SINGLE_CHARS: usize = 6;
 /// 有整词时拆开音节的读法排在首音节的几个单字之后（一页）。
 pub const SINGLE_CHARS_BEFORE_SPLIT: usize = 9;
 
+/// 模糊音命中的单字排在原样读音的头几个单字之后（一页）。模糊音只扣 ln 2，单字之间词频差得远，
+/// 光靠扣分 `zi` 开 z-zh 首选会是 只 而不是 子；不排在这里则沉到原样读音的几百个生僻字之后。
+pub const SINGLE_CHARS_BEFORE_FUZZY: usize = 9;
+
 /// 用户选择次数换算成得分加成，词级排序与整句路径共用，见 [`WEIGHT_BONUS`]。
 pub fn weight_bonus(count: u32) -> f64 {
     WEIGHT_BONUS * (1.0 + f64::from(count.min(WEIGHT_CAP))).ln()
@@ -91,6 +95,27 @@ pub fn rank(
     );
 }
 
+/// 模糊音命中的单字等原样读音的头 [`SINGLE_CHARS_BEFORE_FUZZY`] 个单字之后再出，其余顺序不变；选过的（`chosen`）不等。
+fn defer_altered_chars(items: &mut Vec<Scored<'_>>, chosen: impl Fn(&Scored<'_>) -> bool) {
+    let mut typed_chars = 0;
+    let mut waiting = Vec::new();
+    for item in std::mem::take(items) {
+        let single = item.hit.text.chars().count() == 1;
+        if typed_chars < SINGLE_CHARS_BEFORE_FUZZY && single && item.altered() && !chosen(&item) {
+            waiting.push(item);
+            continue;
+        }
+        items.push(item);
+        if single && !item.altered() {
+            typed_chars += 1;
+            if typed_chars == SINGLE_CHARS_BEFORE_FUZZY {
+                items.append(&mut waiting);
+            }
+        }
+    }
+    items.append(&mut waiting);
+}
+
 /// 排好序之后按类别重排一次，各类内部保持 [`rank`] 的顺序。输入不止一个音节时：
 /// 1. 词，至多 [`WORDS_BEFORE_SINGLE_CHARS`] 个：先是盖住整段、读音就是敲的那几个音节的词（主词库的在前），再是至多
 ///    [`COMPLETIONS_BEFORE_PREFIXES`] 条猜测（比敲的多出音节的长词 `shishan` → 时尚潮流、把打完的末音节读成更长音节的词：
@@ -105,7 +130,8 @@ pub fn rank(
 /// `whole` 是整段输入的字母数；`complete` 是其中完整音节的字母数（末尾没打完的音节不算：`woganj` 是 5），盖住它的词（我敢）
 /// 也算整词；`first` 是最好那种切法首音节的字母数（`daoshih` 是 `dao` 的 3，不是简拼 `d` 的 1）。
 /// 这个输入串下选过的（`chosen`）留在第 1 类里 [`rank`] 给的位置，不算进名额，也不被挤到单字后面。
-/// 输入只有一个音节时单字就是整词，顺序与 [`rank`] 一样，只把多出来的猜测排到后面。
+/// 输入只有一个音节时单字就是整词，顺序与 [`rank`] 一样，只把多出来的猜测排到后面、模糊音命中的单字排到原样读音的
+/// 头 [`SINGLE_CHARS_BEFORE_FUZZY`] 个单字之后（多个音节时模糊音命中的词照得分排，`lihao` 开 n-l 首选仍是 你好）。
 pub fn arrange(
     items: &mut Vec<Scored<'_>>,
     whole: usize,
@@ -118,6 +144,9 @@ pub fn arrange(
         .iter()
         .any(|item| !item.split && item.coverage >= whole);
     let several = whole > first;
+    if !several {
+        defer_altered_chars(items, &chosen);
+    }
     let single =
         |item: &Scored<'_>| several && item.coverage == first && item.hit.text.chars().count() == 1;
     // 选过的（第二项为真）照 `rank` 的位置留在整词里：不提到最前面，也不被名额挤到单字后面
