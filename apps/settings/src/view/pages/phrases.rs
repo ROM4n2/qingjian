@@ -55,7 +55,7 @@ pub fn phrases(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, RenderE
         ui,
         page,
         SettingRow::new("导入、导出")
-            .info("导出成一个文件，在另一台电脑导入；导入时与已有的合并，同一输入码下相同的短语不重复加。也能直接导入另一台电脑的配置文件")
+            .info("导出成一个文件，在另一台电脑导入；导入时与已有的合并，同一输入码下相同的短语不重复加。也认「文字、Tab、输入码」一行一条的文本（如 Rime 的 custom_phrase.txt）")
             .control(buttons),
         "phrases-transfer",
     )?);

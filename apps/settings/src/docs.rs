@@ -261,6 +261,12 @@ const LINKS: &[(PageId, &str, &str, &str)] = &[
     ),
     (PageId::Cloud, "API 密钥", "cloud/index", "会发送什么"),
     (PageId::Cloud, "连接", "cloud/index", "开启"),
+    (
+        PageId::Advanced,
+        "导入、导出设置",
+        "advanced/data-files",
+        "搬到另一台电脑",
+    ),
     (PageId::Advanced, "详细日志", "help/privacy", "运行日志"),
     (PageId::Advanced, "记录输入日志", "help/privacy", "输入日志"),
     (PageId::About, "自动检查更新", "help/privacy", "检查更新"),

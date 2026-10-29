@@ -1,7 +1,7 @@
 ---
 title: Data files and logs
 order: 2
-description: "Where Qingjian's data folder is, what each file records, where the runtime logs are, and using your own local sentence model."
+description: "Where Qingjian's data folder is, what each file records, moving to another computer, where the runtime logs are, and using your own local sentence model."
 ---
 
 What Qingjian records is summarized in [Privacy](../help/privacy.md#What-it-records-on-your-device); this page lists the actual files.
@@ -45,6 +45,14 @@ Where the data folder is:
 These files are replaced whole each time, so even if the input method crashes it never leaves a half-written file.
 
 To start your typing habits over, delete the tables whose names start with `user` (except `user-glossary-*` and `user-vocab.tsv`); clear the vocabulary book on the 生词本 (Vocabulary book) page in Settings.
+
+## Moving to another computer
+
+导入、导出设置 (Import, export settings) under 设置 → 高级 (Settings → Advanced) saves your settings as a `.toml` file to import on the other computer:
+
+- The exported file leaves out custom phrases (imported and exported separately on the 自定义短语 page), the AI service key and the floating status bar's position on screen; importing keeps this computer's own values for those.
+- Importing replaces the rest of the settings, and first saves the old configuration as `config.before-import.toml` in the same folder so you can copy it back. If the file's settings can't be read, nothing changes.
+- Typing habits, your own words, imported dictionaries and other data files aren't included; to move them too, fully quit Qingjian on both computers and copy the whole data folder (between the same version).
 
 ## Runtime logs
 

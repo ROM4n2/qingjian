@@ -351,6 +351,8 @@ Common Crawl、CSL、SkyPile、C4 的统计），可按 GPL-3.0-or-later 使用�
 
 上屏键 `[shortcut] commit_candidate` / `commit_raw`（`config::commit_key`）：`CommitKey` 只收空格、回车（可带 Shift）与一个符号键——Windows 的 TSF DLL 组句时只把不带 Ctrl / Alt / Win 的键送进 Server；
 `CommitKeys::route` 给 Windows 与 Linux 的 Router 共用，缺省的那个键返回 `Keep` 走原路径（直输段、只剩一个 `?` 的细节都在那里），换过的键直接上屏，让出去又没配的空格 / 回车组句中吃掉；注音不经过它，macOS 还没接。
+设置的导出导入（`config::transfer`，设置程序「高级」页用）：导出去掉 `[[custom_phrases]]`、`predict.api_key`、`status_bar.x/y`，导入时这几项保留本机原值，合并前后都当 `Config` 读一遍；短语的导入导出在 `config::phrases`，导入不收整份配置、读不成 TOML 时按 Rime `custom_phrase.txt` 的 TSV 读。
+
 
 输入方案是**两条独立的轴**：`Scheme`（拼音侧：全拼 / 双拼九套 / 用户双拼 `Scheme::Custom` / 大千注音 / 关，`[general] scheme`；
 认不出的写法能当方案 id 就是 `Custom`，id 由 `GeneralConfig::custom_shuangpin` 给，找不到时壳按全拼跑）

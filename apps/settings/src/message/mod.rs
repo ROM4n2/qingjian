@@ -59,6 +59,10 @@ pub enum Message {
     ImportPhrases,
     /// 把短语存成一个文件。
     ExportPhrases,
+    /// 选文件导入设置（短语、密钥、状态条位置不动）。
+    ImportConfig,
+    /// 把设置存成一个文件（不含短语、密钥与状态条位置）。
+    ExportConfig,
     /// 选文件导入词库或码表。
     Import(Kind),
     /// 移除用户导入的一本（文件名不含扩展名）。

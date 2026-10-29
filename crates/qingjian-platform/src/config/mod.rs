@@ -27,6 +27,7 @@ mod shift_letter;
 mod shortcut;
 mod status_bar;
 mod switch_key;
+mod transfer;
 mod update;
 
 use std::collections::BTreeMap;
@@ -72,6 +73,7 @@ pub use shift_letter::ShiftLetter;
 pub use shortcut::ShortcutConfig;
 pub use status_bar::StatusBarConfig;
 pub use switch_key::{SwitchKey, SwitchKeys};
+pub use transfer::{export_settings, import_settings};
 pub use update::{UpdateChannel, UpdateConfig};
 
 /// 用户配置文件（TOML）。所有平台同一份格式，缺省值全部在各分节的 `Default` 里。

@@ -197,7 +197,7 @@ fn old_positions_are_saved_as_weights_in_place() {
 }
 
 #[test]
-fn exported_phrases_import_back_and_whole_configs_import_too() {
+fn exported_phrases_import_back_and_configs_are_refused() {
     let phrases = vec![
         CustomPhrase {
             weight: 30,
@@ -211,12 +211,41 @@ fn exported_phrases_import_back_and_whole_configs_import_too() {
         qingjian_platform::import_phrases(&exported).unwrap(),
         (phrases, 0)
     );
-    let config = "[general]\npage_size = 5\n\n[[custom_phrases]]\ncode = 'ee'\ntext = '：'\n\n\
-                  [[custom_phrases]]\ncode = 'A1'\ntext = '写错的'\n\n\
-                  [[custom_phrases]]\ncode = 'ee'\ntext = '：'\n";
-    let (read, skipped) = qingjian_platform::import_phrases(config).unwrap();
+    let bad = "[[custom_phrases]]\ncode = 'ee'\ntext = '：'\n\n\
+               [[custom_phrases]]\ncode = 'A1'\ntext = '写错的'\n\n\
+               [[custom_phrases]]\ncode = 'ee'\ntext = '：'\n";
+    let (read, skipped) = qingjian_platform::import_phrases(bad).unwrap();
     assert_eq!(read, vec![CustomPhrase::new("ee", "：")]);
     assert_eq!(skipped, 2);
+    // 设置与短语各自导入：整份配置文件不收
+    let config = format!("[general]\npage_size = 5\n\n{bad}");
+    assert!(
+        qingjian_platform::import_phrases(&config)
+            .unwrap_err()
+            .contains("配置文件")
+    );
     assert!(qingjian_platform::import_phrases("[general]\n").is_err());
-    assert!(qingjian_platform::import_phrases("不是 toml").is_err());
+    assert!(qingjian_platform::import_phrases("").is_err());
+}
+
+/// Rime `custom_phrase.txt`：文字<Tab>输入码<Tab>权重，文件头与注释跳过，权重夹到 1–999。
+#[test]
+fn rime_style_tsv_imports() {
+    let source = "# Rime table\n---\nname: custom_phrase\n...\n\n地址\tdz\t1\n青简输入法\tqj\t5000\n没码\n你好\tnh\n";
+    let (read, skipped) = qingjian_platform::import_phrases(source).unwrap();
+    assert_eq!(
+        read,
+        vec![
+            CustomPhrase {
+                weight: 1,
+                ..CustomPhrase::new("dz", "地址")
+            },
+            CustomPhrase {
+                weight: 999,
+                ..CustomPhrase::new("qj", "青简输入法")
+            },
+            CustomPhrase::new("nh", "你好"),
+        ]
+    );
+    assert_eq!(skipped, 1);
 }

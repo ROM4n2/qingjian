@@ -81,11 +81,11 @@ impl Settings {
         })
     }
 
-    /// 选一个导出的文件（或另一台电脑的整份配置文件），短语并进现有的；同码同文本的不重复加。
+    /// 选一个导出的短语文件（或「文字、Tab、输入码」一行一条的文本），短语并进现有的；同码同文本的不重复加。
     pub(super) fn import_phrases(&mut self) {
         let Some(source) = rfd::FileDialog::new()
             .set_title("导入自定义短语")
-            .add_filter("自定义短语或配置文件", &["toml"])
+            .add_filter("自定义短语", &["toml", "txt", "tsv"])
             .add_filter("所有文件", &["*"])
             .pick_file()
         else {

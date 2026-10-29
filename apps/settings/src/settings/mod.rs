@@ -8,6 +8,7 @@ mod library;
 mod phrases;
 mod search;
 mod shortcuts;
+mod transfer;
 mod vocabulary;
 
 #[cfg(test)]

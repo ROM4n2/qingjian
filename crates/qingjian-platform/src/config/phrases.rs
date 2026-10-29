@@ -2,7 +2,7 @@
 //! 读配置与偏好设置保存走同一套判定，保存时写错的条目原样留在文件里。
 
 use qingjian_core::CustomPhrase;
-use qingjian_core::custom_phrase::validate_phrases;
+use qingjian_core::custom_phrase::{DEFAULT_WEIGHT, WEIGHTS, validate_phrases};
 use serde::Deserialize;
 
 /// 按顺序判定每一条：读不成短语、输入码或权重不合法、与前面的条目同码同文本的，给出原因。
@@ -47,8 +47,8 @@ pub(super) fn deserialize<'de, D: serde::Deserializer<'de>>(
         .collect())
 }
 
-/// 导出的文件：只有 `[[custom_phrases]]` 的一份 TOML，与配置文件里的写法相同，
-/// 所以 [`import_phrases`] 既能读它，也能直接读另一台电脑的整份配置文件。
+/// 导出的文件：只有 `[[custom_phrases]]` 的一份 TOML，与配置文件里的写法相同（能存多行短语，TSV 存不了），
+/// 用文本编辑器打开也能改；[`import_phrases`] 读回。
 pub fn export_phrases(phrases: &[CustomPhrase]) -> String {
     let mut tables = toml_edit::ArrayOfTables::new();
     for phrase in phrases {
@@ -65,20 +65,75 @@ pub fn export_phrases(phrases: &[CustomPhrase]) -> String {
         "# 青简自定义短语，在设置程序「自定义短语」页导入；写法与配置文件里的 [[custom_phrases]] 相同\n\n{document}"
     )
 }
-
+/// 读导出的短语文件里的 `[[custom_phrases]]`：返回读得出的短语与写错跳过了几条。
 /// 读导出的文件或整份配置文件里的 `[[custom_phrases]]`：返回读得出的短语与写错跳过了几条。
-/// 文件不是 TOML、或里面没有自定义短语时报错。
+/// 读不成 TOML 的按「文字、Tab、输入码、Tab、权重」一行一条读（Rime `custom_phrase.txt` 的写法，方便从别的输入法搬）。
+/// 整份配置文件不收：设置与短语各自导入，免得用户以为导了短语、设置也跟着变了。
 pub fn import_phrases(source: &str) -> Result<(Vec<CustomPhrase>, usize), String> {
-    let mut table = source
-        .parse::<toml::Table>()
-        .map_err(|e| format!("读不了这个文件：{}", e.message()))?;
-    let Some(toml::Value::Array(items)) = table.remove("custom_phrases") else {
-        return Err("文件里没有自定义短语".to_owned());
+    let Ok(mut table) = source.parse::<toml::Table>() else {
+        return import_tsv(source);
     };
+    let items = match table.remove("custom_phrases") {
+        Some(toml::Value::Array(items)) => items,
+        _ if table.is_empty() => return import_tsv(source),
+        _ => return Err("文件里没有自定义短语".to_owned()),
+    };
+    if !table.is_empty() {
+        return Err(
+            "这是配置文件，不是短语文件；设置在「高级」页导入，短语请先在另一台电脑上导出"
+                .to_owned(),
+        );
+    }
     let checked = check(items.into_iter().map(|item| {
         item.try_into::<CustomPhrase>()
             .map_err(|e| e.message().to_owned())
     }));
+    let skipped = checked.iter().filter(|item| item.is_err()).count();
+    Ok((
+        checked.into_iter().filter_map(Result::ok).collect(),
+        skipped,
+    ))
+}
+
+/// 「文字、Tab、输入码、Tab、权重」一行一条，权重可省；`#` 开头的行与 Rime 文件头（`---` 到 `...`）跳过。
+/// 权重夹到 [`WEIGHTS`] 里（Rime 的权重常上千），没写用缺省；一行里换行写不进去，多行短语请用导出的 TOML。
+fn import_tsv(source: &str) -> Result<(Vec<CustomPhrase>, usize), String> {
+    let mut header = false;
+    let mut items = Vec::new();
+    for line in source.lines() {
+        let line = line.trim_end_matches('\r');
+        if line == "---" {
+            header = true;
+            continue;
+        }
+        if header {
+            header = line != "...";
+            continue;
+        }
+        if line.trim().is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut fields = line.split('\t');
+        let (text, code, weight) = (fields.next(), fields.next(), fields.next());
+        items.push(match (text, code) {
+            (Some(text), Some(code)) => Ok(CustomPhrase {
+                weight: weight
+                    .and_then(|weight| weight.trim().parse::<u64>().ok())
+                    .map_or(DEFAULT_WEIGHT, |weight| {
+                        weight.clamp(u64::from(*WEIGHTS.start()), u64::from(*WEIGHTS.end())) as u32
+                    }),
+                ..CustomPhrase::new(code.trim(), text)
+            }),
+            _ => Err("not text<Tab>code".to_owned()),
+        });
+    }
+    if items.is_empty() {
+        return Err(
+            "读不了这个文件：既不是青简导出的短语文件，也不是「文字<Tab>输入码」一行一条的文本"
+                .to_owned(),
+        );
+    }
+    let checked = check(items);
     let skipped = checked.iter().filter(|item| item.is_err()).count();
     Ok((
         checked.into_iter().filter_map(Result::ok).collect(),

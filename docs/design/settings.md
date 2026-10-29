@@ -157,7 +157,7 @@ Windows 旧设置程序里「翻译选中文字」只能改修饰键，这里整
 新增、编辑在对话框里：输入码、权重（输入框，1–999，新增时 10）、内容（多行，回车换行，按框宽折行、最多 12 行高），「取消」「保存」，编辑时左边多一个「删除」（点两下）。
 保存时整张表交给 `Config::set_custom_phrases` 校验（输入码 1–32 个小写字母、权重在范围内、同码同内容不能重复），不过就在卡片里说原因、草稿留着；
 打开编辑后这条在别处被改了，保存不覆盖。Esc 或「取消」扔掉草稿，换页也关掉卡片。
-导入导出的文件是只含 `[[custom_phrases]]` 的 TOML（`qingjian_platform::export_phrases` / `import_phrases`），导入也认整份 `config.toml`；
+导入导出的文件是只含 `[[custom_phrases]]` 的 TOML（`qingjian_platform::export_phrases` / `import_phrases`）（导出用它，能存多行短语）；导入也认「文字<Tab>输入码[<Tab>权重]」的文本（Rime `custom_phrase.txt`），整份配置文件不收——设置在「高级」页另导；
 合并按 `custom_phrase::merge_imported`：接在后面、保留权重与开关，同码同文本的跳过，写错的条目跳过并计数。安卓的短语另存在 `PhraseBook`，还没接（见 todo）。
 表下面一行开关「也用系统的文本替换」（只 macOS，`general.system_text_replacements`）。
 
@@ -233,6 +233,7 @@ Windows 和 Linux 以前没有这一页，这次都有了。
 |---|---|---|
 | 配置文件 | 在编辑器中打开 | 按钮 |
 | 配置文件 | 打开数据目录 | 按钮 |
+| 配置文件 | 导入、导出设置（ⓘ：不含短语、密钥与状态条位置） | 两个按钮；规则在 `qingjian_platform::export_settings` / `import_settings`：导出去掉 `[[custom_phrases]]`、`predict.api_key`、`status_bar.x/y`，导入保留本机这几项、先当配置读一遍，写之前把原配置存成 `config.before-import.toml` |
 | 日志 | 详细日志（ⓘ：会记下敲的内容，排查完关掉） | 开关 `general.log_level` |
 | 日志 | 打开日志目录、打包到桌面 | 两个按钮排一行，做完的结果显示在按钮下面 |
 | 输入日志 | 记录输入日志（ⓘ：只存在这台电脑上） | 开关 `general.input_log` |

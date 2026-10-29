@@ -1,7 +1,7 @@
-//! 「高级」页：配置文件与数据目录，日志，输入日志。
+//! 「高级」页：配置文件与数据目录、设置的导入导出，日志，输入日志。
 
-use bamboo_slip::taffy::NodeId;
-use bamboo_slip::{Button, RenderError, SettingRow, Switch, Ui, group, section_title};
+use bamboo_slip::taffy::{FlexDirection, NodeId, Style};
+use bamboo_slip::{Button, RenderError, SettingRow, Switch, Ui, Visual, group, section_title};
 use qingjian_platform::LogLevel;
 
 use crate::message::Message;
@@ -26,8 +26,27 @@ pub fn advanced(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Render
     let row = SettingRow::new("配置文件")
         .control(buttons)
         .build(ui, theme)?;
+    let import = Button::new("导入…").build(ui, theme, "import-config", Message::ImportConfig)?;
+    let export = Button::new("导出…").build(ui, theme, "export-config", Message::ExportConfig)?;
+    let transfer = ui.scene().node(
+        Style {
+            flex_direction: FlexDirection::Row,
+            gap: page.gap(8.0),
+            ..Style::default()
+        },
+        Visual::Group,
+        &[import, export],
+    )?;
+    let transfer = with_notice(
+        ui,
+        page,
+        SettingRow::new("导入、导出设置")
+            .info("换电脑或备份时把设置存成一个文件；不含自定义短语（在「自定义短语」页另行导入导出）、云服务密钥与状态条位置")
+            .control(transfer),
+        "config-transfer",
+    )?;
     out.push(section_title(ui, theme, "配置")?);
-    out.push(group(ui, theme, &[row])?);
+    out.push(group(ui, theme, &[row, transfer])?);
 
     let verbose = general.log_level == LogLevel::Debug;
     let next = if verbose {

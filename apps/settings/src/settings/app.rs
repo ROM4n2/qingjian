@@ -35,6 +35,8 @@ impl App for Settings {
         if !matches!(
             message,
             Message::Run(_)
+                | Message::ImportConfig
+                | Message::ExportConfig
                 | Message::TestCloud
                 | Message::CheckUpdate
                 | Message::DownloadModel(_)
@@ -104,6 +106,8 @@ impl App for Settings {
             }
             Message::ImportPhrases => self.import_phrases(),
             Message::ExportPhrases => self.export_phrases(),
+            Message::ImportConfig => self.import_config(),
+            Message::ExportConfig => self.export_config(),
             Message::Import(kind) => {
                 match self
                     .import

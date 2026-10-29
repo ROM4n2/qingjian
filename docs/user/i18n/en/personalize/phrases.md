@@ -27,7 +27,8 @@ In the candidate window, a multi-line phrase is shown on one line (line breaks d
 To move to another computer or keep a backup, click 导出… (Export…) in the 导入、导出 row to save all phrases (including switched-off ones) as a `.toml` file; on the other computer, click 导入… (Import…) and pick that file.
 
 - Imported phrases are added after your existing ones, keeping the weights and switches from the file; a phrase whose content already exists under the same input code is not added again, so importing the same file twice is harmless.
-- You can also pick the other computer's configuration file `config.toml` directly (see [Data files](../advanced/data-files.md)); only its custom phrases are taken, other settings stay as they are.
+- Plain text with one phrase per line as text, Tab, input code, Tab, weight (such as Rime's `custom_phrase.txt`) also works, for bringing phrases over from another input method; the weight is optional, and values outside 1–999 count as 1 or 999. This kind of text can't hold line breaks, so use the exported `.toml` for multi-line phrases.
+- The configuration file `config.toml` can't be imported here: settings and phrases are imported and exported separately, settings on the 高级 (Advanced) page; see [Moving to another computer](../advanced/data-files.md#moving-to-another-computer).
 - Entries written wrongly in the file are skipped; afterwards the row says how many were added, how many already existed and how many were wrong.
 
 The exported file uses the same `[[custom_phrases]]` format as the configuration file, so you can also edit it in a text editor.
