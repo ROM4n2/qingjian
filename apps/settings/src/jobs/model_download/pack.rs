@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use qingjian_platform::LocalModel;
 
+use crate::i18n::{tr, tr_args};
+
 /// 一个能在「实验功能」里下载的模型：从模型仓库的哪个 Release 取，解到用户目录的哪里。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pack {
@@ -72,8 +74,9 @@ impl Pack {
 
     /// 删掉装好的整个模型目录。
     pub fn remove(self) -> Result<(), String> {
-        let dir = crate::system::paths::user_dir().ok_or("找不到数据目录")?;
-        std::fs::remove_dir_all(self.install_path(&dir)).map_err(|error| format!("删不掉：{error}"))
+        let dir = crate::system::paths::user_dir().ok_or(tr("common.no_data_dir"))?;
+        std::fs::remove_dir_all(self.install_path(&dir))
+            .map_err(|error| tr_args("download.cant_remove", &[("error", &error)]))
     }
 
     pub fn installed(self) -> bool {

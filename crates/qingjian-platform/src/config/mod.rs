@@ -54,7 +54,8 @@ pub use emoji_count::EmojiCount;
 pub use font_size::FontSize;
 pub use general::{
     DEFAULT_KEY_HINT_OPACITY, DEFAULT_PAGE_KEYS, DEFAULT_THEME, GeneralConfig,
-    LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS,
+    LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS, UI_LANGUAGE_DEFAULT,
+    UI_LANGUAGE_SYSTEM,
 };
 pub use highlight_keys::HighlightKeys;
 pub use key_combo::KeyCombo;
@@ -585,6 +586,8 @@ impl Config {
         if let Some(key) = config.predict.resolve_api_key() {
             crate::logs::secrets::register(&key);
         }
+        // 界面语言同理：输入法进程里的候选菜单、提示与设置程序都按这一项
+        bamboo_slip_i18n::set_locale(config.general.ui_locale());
         Ok(config)
     }
 

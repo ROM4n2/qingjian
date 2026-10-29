@@ -5,6 +5,8 @@ use toml_edit::{DocumentMut, Item};
 
 use super::Config;
 
+use crate::i18n::tr_args;
+
 /// 只属于这台电脑、导出时去掉、导入时保留本机原值的项（分节，键）；`custom_phrases` 是整张表。
 const LOCAL: &[(&str, &str)] = &[
     ("predict", "api_key"),
@@ -34,7 +36,7 @@ pub fn export_settings(source: &str) -> Result<String, String> {
 pub fn import_settings(current: &str, imported: &str) -> Result<String, String> {
     let mut document = parse(imported)?;
     toml::from_str::<Config>(imported)
-        .map_err(|e| format!("这个文件里的设置有错：{}", e.message()))?;
+        .map_err(|e| tr_args("settings_file.invalid", &[("error", &e.message())]))?;
     let current = parse(current)?;
     document.remove(PHRASES);
     if let Some(phrases) = current.get(PHRASES) {
@@ -60,14 +62,14 @@ pub fn import_settings(current: &str, imported: &str) -> Result<String, String> 
     }
     let merged = document.to_string();
     toml::from_str::<Config>(&merged)
-        .map_err(|e| format!("合并后的设置读不了：{}", e.message()))?;
+        .map_err(|e| tr_args("settings_file.merge_failed", &[("error", &e.message())]))?;
     Ok(merged)
 }
 
 fn parse(source: &str) -> Result<DocumentMut, String> {
     source
         .parse::<DocumentMut>()
-        .map_err(|e| format!("读不了这个文件：{}", e.message()))
+        .map_err(|e| tr_args("settings_file.unreadable", &[("error", &e.message())]))
 }
 
 #[cfg(test)]

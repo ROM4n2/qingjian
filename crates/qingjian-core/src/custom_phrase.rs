@@ -8,6 +8,8 @@ use jiff::civil::Weekday;
 
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::{tr, tr_args};
+
 /// 输入码最长几个字母。
 pub const MAX_CODE_LEN: usize = 32;
 
@@ -52,7 +54,7 @@ impl TryFrom<StoredPhrase> for CustomPhrase {
         let weight = match (stored.weight, stored.position) {
             (Some(weight), _) => weight,
             (None, Some(position @ 1..=9)) => DEFAULT_WEIGHT + 1 - position,
-            (None, Some(_)) => return Err("候选位置须为 1–9".into()),
+            (None, Some(_)) => return Err(tr("phrases.position").into()),
             (None, None) => DEFAULT_WEIGHT,
         };
         Ok(Self {
@@ -142,7 +144,10 @@ pub fn parse_weight(input: &str) -> Result<u32, String> {
 }
 
 fn weight_error() -> String {
-    format!("权重须为 {}–{} 的整数", WEIGHTS.start(), WEIGHTS.end())
+    tr_args(
+        "phrases.weight",
+        &[("min", WEIGHTS.start()), ("max", WEIGHTS.end())],
+    )
 }
 
 /// 保存和加载使用同一校验，不覆盖冲突条目。
@@ -150,16 +155,16 @@ pub fn validate_phrases(phrases: &[CustomPhrase]) -> Result<(), String> {
     let mut seen = std::collections::BTreeSet::new();
     for phrase in phrases {
         if !valid_code(&phrase.code) {
-            return Err(format!("输入码须为 1–{MAX_CODE_LEN} 个小写英文字母"));
+            return Err(tr_args("phrases.code", &[("max", &MAX_CODE_LEN)]));
         }
         if !WEIGHTS.contains(&phrase.weight) {
             return Err(weight_error());
         }
         if phrase.text.is_empty() {
-            return Err("自定义短语不能为空".into());
+            return Err(tr("phrases.empty").into());
         }
         if !seen.insert((&phrase.code, &phrase.text)) {
-            return Err(format!("输入码 {} 下已经有这条短语", phrase.code));
+            return Err(tr_args("phrases.duplicate", &[("code", &phrase.code)]));
         }
     }
     Ok(())

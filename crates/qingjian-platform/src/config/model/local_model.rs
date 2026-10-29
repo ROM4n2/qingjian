@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::tr;
+
 /// 用哪个本地模型，两个只开一个。都在设置的「实验功能」里下载（Linux 随包带通变）。
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -26,8 +28,8 @@ impl LocalModel {
     /// 界面上的名字。
     pub fn label(self) -> &'static str {
         match self {
-            Self::Tongbian => "含章·通变",
-            Self::Zhiyi => "知意",
+            Self::Tongbian => tr("model.tongbian"),
+            Self::Zhiyi => tr("model.zhiyi"),
         }
     }
 }

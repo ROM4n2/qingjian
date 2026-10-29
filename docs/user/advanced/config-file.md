@@ -93,6 +93,7 @@ Linux 有青简设置程序，也可以直接改配置文件。几个常用写�
 - 繁体：`[general]` 下 `traditional_variant = "taiwan"`；从 0.2.1 及以前升级上来的配置里没有这一行，在 `[general]` 下加上即可。
 - 翻页键：`[general]` 下 `page_keys = "-="`。修改 Fcitx5 的全局候选翻页热键不会替代它。
 - 不显示译词：`[general]` 下 `learning_language = "off"`。
+- 界面语言：`[general]` 下 `ui_language = "en"`，可选 `zh-Hans`、`zh-Hant`、`en`、`ja`、`es`、`vi`、`de`，`system` 跟随系统；不写时是简体中文。
 - 不想留下任何输入记录（例如 Fcitx4 认不出私密输入框时）：`[general]` 下 `input_log = false`、`learning = false`，改完重启青简。
 
 ```toml

@@ -18,6 +18,7 @@ use bamboo_slip::{
     WidgetTheme, paragraph,
 };
 
+use crate::i18n::{tr, tr_args};
 use crate::message::Message;
 use crate::page_id::PageId;
 use crate::search::Entry;
@@ -52,7 +53,7 @@ pub fn view(
         content_width: width as f32 - (sidebar::WIDTH + CONTENT_PADDING * 2.0) * scale,
     };
     let current = settings.page;
-    ui.info_links("点一下 ⓘ 打开文档", move |title| {
+    ui.info_links(tr("common.info_hint"), move |title| {
         crate::docs::link(current, title).map(Message::OpenDoc)
     });
     let sidebar = sidebar::sidebar(ui, &page)?;
@@ -156,9 +157,7 @@ fn content(ui: &mut Ui<Message>, page: &Page) -> Result<NodeId, RenderError> {
     let mut children = Vec::new();
     // 配置文件读不了时每页顶上都说一声：界面这时是缺省值，不是文件里写的
     if let Some(error) = &page.settings.config_error {
-        let text = format!(
-            "配置文件有错误，下面先按缺省值显示；在这里改一项只写那一项，文件里别的内容不动，文件修好之前改动可能存不进去。\n{error}"
-        );
+        let text = tr_args("common.config_error", &[("error", error)]);
         children.push(paragraph(ui, &page.theme, &text, None)?);
     }
     children.extend(page_children(ui, page, page.settings.page)?);

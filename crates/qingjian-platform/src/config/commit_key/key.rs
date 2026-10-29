@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::tr;
 use crate::protocol::KeyEvent;
 
 /// Windows 的虚拟键码 `VK_SPACE`。
@@ -78,8 +79,8 @@ impl CommitKey {
             }
         };
         match self {
-            Self::Space { shift } => named(shift, "空格"),
-            Self::Enter { shift } => named(shift, "回车"),
+            Self::Space { shift } => named(shift, tr("commit_key.space")),
+            Self::Enter { shift } => named(shift, tr("commit_key.enter")),
             Self::Symbol(symbol) => symbol.to_string(),
         }
     }

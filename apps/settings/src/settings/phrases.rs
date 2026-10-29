@@ -6,6 +6,7 @@ use qingjian_core::custom_phrase::{DEFAULT_WEIGHT, merge_imported, parse_weight}
 use qingjian_platform::{Config, export_phrases, import_phrases};
 
 use super::Settings;
+use crate::i18n::{tr, tr_args};
 use crate::message::FieldId;
 use crate::phrase_editor::PhraseEditor;
 
@@ -84,15 +85,15 @@ impl Settings {
     /// 选一个导出的短语文件（或「文字、Tab、输入码」一行一条的文本），短语并进现有的；同码同文本的不重复加。
     pub(super) fn import_phrases(&mut self) {
         let Some(source) = rfd::FileDialog::new()
-            .set_title("导入自定义短语")
-            .add_filter("自定义短语", &["toml", "txt", "tsv"])
-            .add_filter("所有文件", &["*"])
+            .set_title(tr("phrases.import_title"))
+            .add_filter(tr("phrases.file_filter"), &["toml", "txt", "tsv"])
+            .add_filter(tr("import.all_files"), &["*"])
             .pick_file()
         else {
             return;
         };
         let result = std::fs::read_to_string(&source)
-            .map_err(|error| format!("读不了这个文件：{error}"))
+            .map_err(|error| tr_args("phrases.cant_read", &[("error", &error)]))
             .and_then(|text| import_phrases(&text))
             .and_then(|(imported, skipped)| {
                 let total = imported.len();
@@ -100,12 +101,12 @@ impl Settings {
                 if added > 0 {
                     self.write_phrases(&list)?;
                 }
-                let mut summary = format!("新加 {added} 条");
+                let mut summary = tr_args("phrases.added", &[("n", &added)]);
                 if total > added {
-                    summary.push_str(&format!("，{} 条已经有了", total - added));
+                    summary.push_str(&tr_args("phrases.existing", &[("n", &(total - added))]));
                 }
                 if skipped > 0 {
-                    summary.push_str(&format!("，{skipped} 条写错跳过"));
+                    summary.push_str(&tr_args("phrases.skipped", &[("n", &skipped)]));
                 }
                 Ok(summary)
             });
@@ -116,21 +117,27 @@ impl Settings {
     pub(super) fn export_phrases(&mut self) {
         let phrases = &self.config.custom_phrases;
         if phrases.is_empty() {
-            self.notice = Some(("phrases-transfer", "还没有短语可导出".to_owned()));
+            self.notice = Some((
+                "phrases-transfer",
+                tr("phrases.nothing_to_export").to_owned(),
+            ));
             return;
         }
-        let name = format!("青简自定义短语-{}.toml", jiff::Zoned::now().date());
+        let name = tr_args("phrases.file_name", &[("date", &jiff::Zoned::now().date())]);
         let Some(target) = rfd::FileDialog::new()
-            .set_title("导出自定义短语")
+            .set_title(tr("phrases.export_title"))
             .set_file_name(&name)
-            .add_filter("自定义短语", &["toml"])
+            .add_filter(tr("phrases.file_filter"), &["toml"])
             .save_file()
         else {
             return;
         };
         let notice = match std::fs::write(&target, export_phrases(phrases)) {
-            Ok(()) => format!("已导出 {} 条到 {}", phrases.len(), target.display()),
-            Err(error) => format!("写不进去：{error}"),
+            Ok(()) => tr_args(
+                "phrases.exported",
+                &[("n", &phrases.len()), ("path", &target.display())],
+            ),
+            Err(error) => tr_args("phrases.cant_write", &[("error", &error)]),
         };
         self.notice = Some(("phrases-transfer", notice));
     }

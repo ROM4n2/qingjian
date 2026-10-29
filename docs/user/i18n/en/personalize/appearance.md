@@ -1,7 +1,7 @@
 ---
 title: Appearance and themes
 order: 1
-description: "The candidate window's seven built-in themes and light/dark modes, vertical and horizontal layouts, expanding horizontal layout into several rows (with arrow or paging keys), pinyin position and tones, fonts and sizes, transition animations."
+description: "The candidate window's seven built-in themes and light/dark modes, vertical and horizontal layouts, expanding horizontal layout into several rows (with arrow or paging keys), pinyin position and tones, fonts and sizes, transition animations, and the interface language of Settings."
 ---
 
 Change how the candidate window looks under 设置 → 外观 (Settings → Appearance); the top of the page shows a preview drawn with your current settings. A theme looks the same on macOS and Windows.
@@ -60,3 +60,8 @@ For candidates whose reading doesn't match the input (fuzzy pinyin, corrections,
 ## Motion
 
 With 过渡动画 (Transition animation) off, the highlight jumps straight into place and decorations that keep moving in a theme stop too. Animations also don't play when the system's Reduce Motion is on.
+
+## Interface language
+
+The “文A” item at the bottom left of the Settings window (showing the current language in its own name) sets the language of Settings and of the candidate window's menus and messages: Simplified Chinese, Traditional Chinese, English, Japanese, Spanish, Vietnamese or German, Simplified Chinese by default; choose 跟随系统 (Follow system) to use the system language (English if the system language isn't one of these).
+It only changes the interface text, not typing, candidates or translations.

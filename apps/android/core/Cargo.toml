@@ -27,6 +27,10 @@ serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 
+[dev-dependencies]
+# 测试里固定界面语言，比对中文选项名
+bamboo-slip-i18n.workspace = true
+
 [lints]
 workspace = true
 

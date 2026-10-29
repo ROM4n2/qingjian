@@ -8,6 +8,7 @@ use bamboo_slip::{
 };
 use qingjian_platform::{LocalModel, ZhiyiTier};
 
+use crate::i18n::{tr, tr_args};
 use crate::jobs::model_download::{Pack, Stage};
 use crate::message::Message;
 use crate::view::Page;
@@ -29,15 +30,15 @@ pub fn experimental(ui: &mut Ui<Message>, page: &Page) -> Result<Vec<NodeId>, Re
 
 fn title(model: LocalModel) -> &'static str {
     match model {
-        LocalModel::Zhiyi => "知意（推荐）",
+        LocalModel::Zhiyi => tr("experimental.zhiyi_recommended"),
         _ => model.label(),
     }
 }
 
 fn description(model: LocalModel) -> &'static str {
     match model {
-        LocalModel::Zhiyi => "按前文挑首选",
-        LocalModel::Tongbian => "按拼音造句",
+        LocalModel::Zhiyi => tr("experimental.zhiyi_description"),
+        LocalModel::Tongbian => tr("experimental.tongbian_description"),
     }
 }
 
@@ -56,7 +57,7 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
     let mut row = SettingRow::new(pack.model.label()).detail(&detail);
     match &stage {
         Some(Stage::Downloading { done, total }) => {
-            let cancel = Button::new("取消").build(
+            let cancel = Button::new(tr("experimental.cancel")).build(
                 ui,
                 theme,
                 ("cancel", pack.tag),
@@ -66,12 +67,9 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
             rows.push(progress(ui, page, *done, *total)?);
         }
         Some(Stage::Installing) => {
-            let waiting = Button::new("正在安装…").disabled(true).build(
-                ui,
-                theme,
-                ("installing", pack.tag),
-                Message::CancelDownload,
-            )?;
+            let waiting = Button::new(tr("experimental.installing"))
+                .disabled(true)
+                .build(ui, theme, ("installing", pack.tag), Message::CancelDownload)?;
             rows.push(row.control(waiting).build(ui, theme)?);
         }
         _ if pack.installed() => {
@@ -84,9 +82,9 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
             )?;
             let armed = settings.remove_armed == Some(pack.model);
             let mut remove = Button::new(if armed {
-                "再点一次删除"
+                tr("experimental.delete_confirm")
             } else {
-                "删除"
+                tr("experimental.delete")
             });
             if armed {
                 remove = remove.primary();
@@ -118,7 +116,11 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
                     ZhiyiTier::label,
                     |tier| Message::set("model", "zhiyi_tier", tier.key()),
                 )?;
-                rows.push(SettingRow::new("档位").control(tiers).build(ui, theme)?);
+                rows.push(
+                    SettingRow::new(tr("experimental.tier"))
+                        .control(tiers)
+                        .build(ui, theme)?,
+                );
             }
         }
         _ => {
@@ -126,7 +128,11 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
                 Some(Stage::Failed(error)) => Some(error.as_str()),
                 _ => None,
             };
-            let label = if failed.is_some() { "重试" } else { "下载" };
+            let label = if failed.is_some() {
+                tr("experimental.retry")
+            } else {
+                tr("experimental.download")
+            };
             let download = Button::new(label).disabled(busy).build(
                 ui,
                 theme,
@@ -134,7 +140,12 @@ fn card(ui: &mut Ui<Message>, page: &Page, pack: Pack) -> Result<Vec<NodeId>, Re
                 Message::DownloadModel(pack.model),
             )?;
             if let Some(error) = failed {
-                row = row.below(paragraph(ui, theme, &format!("下载失败：{error}"), None)?);
+                row = row.below(paragraph(
+                    ui,
+                    theme,
+                    &tr_args("experimental.download_failed", &[("error", &error)]),
+                    None,
+                )?);
             }
             rows.push(row.control(download).build(ui, theme)?);
         }
@@ -156,9 +167,12 @@ fn progress(
         0.0
     };
     let text = if total > 0 {
-        format!("正在下载 {} / {}", megabytes(done), megabytes(total))
+        tr_args(
+            "experimental.downloading",
+            &[("done", &megabytes(done)), ("total", &megabytes(total))],
+        )
     } else {
-        "正在连接…".to_owned()
+        tr("experimental.connecting").to_owned()
     };
     let bar = ProgressBar::new(fraction).build(ui, theme)?;
     SettingRow::new(&text)

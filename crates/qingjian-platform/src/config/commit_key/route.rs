@@ -126,6 +126,7 @@ mod tests {
 
     #[test]
     fn keys_parse_and_round_trip() {
+        bamboo_slip_i18n::pin_locale("zh-Hans");
         for (text, key) in [
             ("space", CommitKey::SPACE),
             ("shift+enter", CommitKey::Enter { shift: true }),

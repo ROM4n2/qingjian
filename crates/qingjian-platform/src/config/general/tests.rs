@@ -244,3 +244,12 @@ fn legacy_shuangpin_and_zhuyin_keys_are_read_but_scheme_wins() {
     assert_eq!(general.scheme(), Scheme::Pinyin);
     assert!(!general.is_zhuyin());
 }
+
+#[test]
+fn ui_language_defaults_to_simplified_chinese_and_system_follows_the_system() {
+    assert_eq!(GeneralConfig::default().ui_locale(), "zh-Hans");
+    let general: GeneralConfig = toml::from_str("ui_language = \"system\"\n").unwrap();
+    assert_eq!(general.ui_locale(), "");
+    let general: GeneralConfig = toml::from_str("ui_language = \"vi\"\n").unwrap();
+    assert_eq!(general.ui_locale(), "vi");
+}

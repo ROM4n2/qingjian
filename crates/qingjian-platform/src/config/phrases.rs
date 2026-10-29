@@ -5,6 +5,8 @@ use qingjian_core::CustomPhrase;
 use qingjian_core::custom_phrase::{DEFAULT_WEIGHT, WEIGHTS, validate_phrases};
 use serde::Deserialize;
 
+use crate::i18n::tr;
+
 /// 按顺序判定每一条：读不成短语、输入码或权重不合法、与前面的条目同码同文本的，给出原因。
 pub(super) fn check(
     items: impl IntoIterator<Item = Result<CustomPhrase, String>>,
@@ -76,13 +78,10 @@ pub fn import_phrases(source: &str) -> Result<(Vec<CustomPhrase>, usize), String
     let items = match table.remove("custom_phrases") {
         Some(toml::Value::Array(items)) => items,
         _ if table.is_empty() => return import_tsv(source),
-        _ => return Err("文件里没有自定义短语".to_owned()),
+        _ => return Err(tr("phrase_file.empty").to_owned()),
     };
     if !table.is_empty() {
-        return Err(
-            "这是配置文件，不是短语文件；设置在「高级」页导入，短语请先在另一台电脑上导出"
-                .to_owned(),
-        );
+        return Err(tr("phrase_file.is_config").to_owned());
     }
     let checked = check(items.into_iter().map(|item| {
         item.try_into::<CustomPhrase>()
@@ -128,10 +127,7 @@ fn import_tsv(source: &str) -> Result<(Vec<CustomPhrase>, usize), String> {
         });
     }
     if items.is_empty() {
-        return Err(
-            "读不了这个文件：既不是青简导出的短语文件，也不是「文字<Tab>输入码」一行一条的文本"
-                .to_owned(),
-        );
+        return Err(tr("phrase_file.unreadable").to_owned());
     }
     let checked = check(items);
     let skipped = checked.iter().filter(|item| item.is_err()).count();

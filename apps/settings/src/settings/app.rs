@@ -8,6 +8,7 @@ use bamboo_slip::{App, FamilyList, FamilyTable, Key, RenderError, TextPainter, U
 
 use super::{SIZES, Settings};
 
+use crate::i18n::tr;
 use crate::jobs::model_download::Pack;
 use crate::library::{self, Library};
 use crate::message::{FieldId, Message, Popup, SizeKind};
@@ -113,7 +114,9 @@ impl App for Settings {
                     .import
                     .start(kind, self.code_target(), self.waker.clone())
                 {
-                    Ok(true) => self.notice = Some((kind.slot(), "正在导入…".to_owned())),
+                    Ok(true) => {
+                        self.notice = Some((kind.slot(), tr("common.importing").to_owned()))
+                    }
                     Ok(false) => {}
                     Err(error) => self.notice = Some((kind.slot(), error)),
                 }
@@ -165,7 +168,9 @@ impl App for Settings {
                     let started = self.update.start(&self.config.update, self.waker.clone());
                     self.notice = Some((
                         "update",
-                        started.err().unwrap_or_else(|| "正在检查…".to_owned()),
+                        started
+                            .err()
+                            .unwrap_or_else(|| tr("about.checking").to_owned()),
                     ));
                 }
             }
@@ -197,7 +202,7 @@ impl App for Settings {
                         .cloud_test
                         .start(&self.config.predict, self.waker.clone())
                     {
-                        Ok(()) => "正在测试…".to_owned(),
+                        Ok(()) => tr("cloud.testing").to_owned(),
                         Err(error) => error,
                     };
                     self.notice = Some(("cloud", text));

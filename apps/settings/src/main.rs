@@ -6,6 +6,7 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
 mod docs;
+mod i18n;
 mod jobs;
 mod library;
 mod message;
@@ -80,7 +81,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let config = config.ok_or("找不到配置文件的位置")?;
     let settings = Settings::load(config);
-    let mut options = WindowOptions::new("青简设置", (900.0, 680.0));
+    let mut options = WindowOptions::new(i18n::tr("common.window_title"), (900.0, 680.0));
     options.min_size = (640.0, 420.0);
     run_window(settings, options)?;
     Ok(())

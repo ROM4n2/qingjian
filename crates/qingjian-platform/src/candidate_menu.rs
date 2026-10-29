@@ -6,6 +6,7 @@ use std::path::Path;
 use qingjian_core::{Candidate, CandidateKind, CustomPhrase, Engine, custom_phrase};
 
 use crate::Config;
+use crate::i18n::{tr, tr_args};
 
 /// 菜单里的一项。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -45,13 +46,13 @@ impl CandidateAction {
 
     pub fn label(self) -> &'static str {
         match self {
-            Self::EditTranslation => "修改译文…",
-            Self::RegenerateTranslation => "模型重新生成译文",
-            Self::Pin => "置顶",
-            Self::Unpin => "取消置顶",
-            Self::Demote => "降权",
-            Self::Undemote => "取消降权",
-            Self::Delete => "删除",
+            Self::EditTranslation => tr("candidate_menu.edit_translation"),
+            Self::RegenerateTranslation => tr("candidate_menu.regenerate_translation"),
+            Self::Pin => tr("candidate_menu.pin"),
+            Self::Unpin => tr("candidate_menu.unpin"),
+            Self::Demote => tr("candidate_menu.demote"),
+            Self::Undemote => tr("candidate_menu.undemote"),
+            Self::Delete => tr("candidate_menu.delete"),
         }
     }
 
@@ -126,11 +127,11 @@ pub fn perform(
     };
     match action {
         CandidateAction::EditTranslation | CandidateAction::RegenerateTranslation => {
-            notice("这项操作需要输入法窗口处理".to_owned())
+            notice(tr("candidate_menu.needs_window").to_owned())
         }
         CandidateAction::Pin | CandidateAction::Unpin => {
             let Some((code, stored)) = engine.pin_target(candidate) else {
-                return notice(format!("「{text}」这里不能置顶"));
+                return notice(tr_args("candidate_menu.cant_pin", &[("text", &text)]));
             };
             let mut list = phrases.to_vec();
             let changed = if action == CandidateAction::Pin {
@@ -139,31 +140,31 @@ pub fn perform(
                 custom_phrase::unpin(&mut list, &code, &stored)
             };
             if !changed {
-                return notice(format!("「{text}」没有要改的"));
+                return notice(tr_args("candidate_menu.unchanged", &[("text", &text)]));
             }
             let Some(path) = config_path else {
-                return notice("没有配置文件，置顶存不下来".to_owned());
+                return notice(tr("candidate_menu.no_config").to_owned());
             };
             if let Err(error) = Config::set_custom_phrases(path, &list) {
                 tracing::warn!(%error, "置顶写配置失败");
-                return notice(format!("没存上：{error}"));
+                return notice(tr_args("candidate_menu.not_saved", &[("error", &error)]));
             }
             ActionOutcome {
                 notice: if action == CandidateAction::Pin {
-                    format!("「{text}」已置顶，输入 {code} 时排第一")
+                    tr_args("candidate_menu.pinned", &[("text", &text), ("code", &code)])
                 } else {
-                    format!("已取消置顶「{text}」")
+                    tr_args("candidate_menu.unpinned", &[("text", &text)])
                 },
                 phrases_changed: true,
             }
         }
         CandidateAction::Demote => {
             engine.demote(candidate);
-            notice(format!("「{text}」已降权，往后挪了一位"))
+            notice(tr_args("candidate_menu.demoted", &[("text", &text)]))
         }
         CandidateAction::Undemote => {
             engine.undemote(candidate);
-            notice(format!("已取消「{text}」的降权"))
+            notice(tr_args("candidate_menu.undemoted", &[("text", &text)]))
         }
         CandidateAction::Delete => notice(engine.forget(candidate).describe(text)),
     }

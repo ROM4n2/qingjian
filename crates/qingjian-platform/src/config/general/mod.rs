@@ -207,6 +207,10 @@ pub struct GeneralConfig {
     /// 简繁快捷键切回繁体时用的字形，快捷键切到简体时记下切走前那一档；读法见 [`Self::last_traditional`]。
     pub last_traditional: String,
 
+    /// 设置程序等界面用的语言（`zh-Hans`、`en`、`vi`…），`system` 跟随系统，空串是缺省的简体中文；读用 [`Self::ui_locale`]。
+    /// 只管界面文字，不影响打字与译文。
+    pub ui_language: String,
+
     /// 日志级别，缺省 info（不含用户敲的内容）。
     pub log_level: LogLevel,
 
@@ -220,6 +224,12 @@ pub struct GeneralConfig {
     /// 把系统的文本替换（macOS「键盘 → 文本替换」）并进自定义短语：输入码敲全后短语排在候选前面，同权重时排在用户自己的短语之后。只有 macOS 用。
     pub system_text_replacements: bool,
 }
+
+/// 界面语言跟随系统的配置写法。
+pub const UI_LANGUAGE_SYSTEM: &str = "system";
+
+/// 配置里没写界面语言时用的语言。
+pub const UI_LANGUAGE_DEFAULT: &str = "zh-Hans";
 
 impl Default for GeneralConfig {
     fn default() -> Self {
@@ -275,6 +285,7 @@ impl Default for GeneralConfig {
             traditional_variant: TraditionalVariant::Off.key().to_owned(),
             traditional: None,
             last_traditional: String::new(),
+            ui_language: String::new(),
             log_level: LogLevel::default(),
             input_log: true,
             learning: true,
@@ -284,6 +295,15 @@ impl Default for GeneralConfig {
 }
 
 impl GeneralConfig {
+    /// 交给 `bamboo_slip_i18n::set_locale` 的界面语言：没写时简体中文（用户多是系统设成英文的中文用户），`system` 跟随系统（空串）。
+    pub fn ui_locale(&self) -> &str {
+        match self.ui_language.trim() {
+            "" => UI_LANGUAGE_DEFAULT,
+            UI_LANGUAGE_SYSTEM => "",
+            tag => tag,
+        }
+    }
+
     /// 繁体输出：`traditional_variant` 优先；没写时看旧键，`true` 是台湾字形（与 0.2.1 的输出相同），字符串按同一套写法读。
     pub fn traditional(&self) -> TraditionalVariant {
         let key = self.traditional_variant.trim();

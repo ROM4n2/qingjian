@@ -422,6 +422,17 @@ Windows Server 自绘候选窗（GDI）按 `Frame.columns` / `column_ems` 画矩
 
 主题预览图（`preview/`）：`preview::write_previews` 用 `sample.rs` 的 nihao 两帧把主题目录画成 2 倍的 `vertical.png` / `horizontal.png`（没锁定外观再加 `vertical-dark.png`），单张失败只记在它的 `Shot` 里；`preview::run` 是两个壳 `--theme-preview <主题目录>` 的入口（mac `main.rs`、Windows Server `main.rs`，Windows release 是 GUI 子系统，直接从 cmd 跑时先 `AttachConsole` 挂父进程控制台），写进 `<主题目录>/preview/`。主题仓库的 `tools/preview.py` 找本机装的青简调它，旧版不认参数会照常起服务，脚本 30 秒超时按版本太旧提示。
 
+## crates/bamboo-slip-i18n
+
+界面文案：每个有界面文字的 crate（设置程序、core、platform）各有 `locales/<语言>.toml`，在自己的 `i18n.rs` 里用 `catalog!` 声明、编译时嵌入，
+代码里写 `tr("节.键")` / `tr_args("节.键", &[("名", &值)])`。简体中文是源语言，所有键都要有；英文是回退链的一环，也要全；其余语言缺的键退到英文再退到中文。
+每个 crate 的 `i18n.rs` 有一条测试核对各语言没有废键、占位参数与源语言一致、英文不缺键。
+
+界面语言是进程级的：`Config::load` 读到 `[general] ui_language` 就 `set_locale`（`GeneralConfig::ui_locale`）。没写时是简体中文：不少中文用户的系统首选语言是英文，跟随系统会让他们一升级就看到英文；写 `system` 才跟随系统（`sys-locale`，中文按简繁归成 `zh-Hans` / `zh-Hant`）。
+比对中文文案的测试先 `pin_locale("zh-Hans")`：测试并行跑，固定之后读配置处的 `set_locale` 不再改它。
+大数的写法也跟着语言走（设置程序 `stats/numbers.rs`）：表里 `numbers.myriad = "true"` 的语言按万 / 亿，其余按 K / M。
+ⓘ 文档链接与支持表里的行名写文案键（`docs.rs` 的 `LINKS`），按当前语言的文字对上界面上的行。
+
 ## crates/qingjian-update
 
 检查更新（设计见 `docs/design/update.md`）：`index/` 是索引的类型、下载（`fetch.rs`，复用 workspace 的 reqwest + 单线程 tokio，20 秒超时、2 MB 上限）与验签
