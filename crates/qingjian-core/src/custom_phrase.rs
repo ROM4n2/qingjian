@@ -295,7 +295,11 @@ mod tests {
 
     #[test]
     fn time_variables_expand_and_braces_escape() {
-        let now: jiff::Zoned = "2026-03-08T09:05:07+08:00[Asia/Shanghai]".parse().unwrap();
+        // 固定偏移不查时区库：CI 的 Linux 容器里没有 tzdata，按 `Asia/Shanghai` 解析会失败
+        let now = jiff::civil::date(2026, 3, 8)
+            .at(9, 5, 7, 0)
+            .to_zoned(jiff::tz::TimeZone::fixed(jiff::tz::offset(8)))
+            .unwrap();
         assert_eq!(
             expand_variables(
                 "今天是{year}年{month}月{day}日 {hour}:{minute}:{second}，星期{weekday}",
