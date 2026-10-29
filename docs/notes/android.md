@@ -67,6 +67,7 @@ PC 上只对实体键盘有意义的项（Shift + 字母、切换键、翻页键
 ## 剪贴板与常用语
 
 - 系统剪贴板复制了文字或图片由 `ClipboardWatcher` 记进历史：默认输入法读剪贴板不要权限；标了敏感的不记；可关、可设最多 100 / 500 / 1000 / 5000 条。
+  监听在输入法没起来时收不到，所以键盘每次弹出也读一遍；同一份剪贴板按 `ClipDescription.timestamp` 只记一次（时间戳存在 `clipboard` prefs，进程重起也认得），不然用户删掉的那条只要还在系统剪贴板里，下次弹键盘又被记回来。
   存取在 Rust 侧 `qingjian_learning::ClipboardHistory`（`clipboard.jsonl`，图片另存 `clipboard-images/`）。
 - 像代码的文字（Core `code::looks_like_code`）用等宽字体原样显示，「代码高亮」按 Core `code::highlight` 上色。
 - 图片走 `commitContent` 发出去（`ClipboardImageProvider` 只读临时授权，`query` 要给 `OpenableColumns`，否则有的应用把 content:// 地址当文字插进去）；输入框不收图片就放回系统剪贴板。
