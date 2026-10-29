@@ -8,12 +8,14 @@ import app.qingjian.inputmethod.cloud.SecretStore
 import app.qingjian.inputmethod.core.store.SettingChoices
 import app.qingjian.inputmethod.core.Native
 import app.qingjian.inputmethod.core.store.Shuangpin
+import app.qingjian.inputmethod.keyboard.HapticStrength
 import app.qingjian.inputmethod.settings.BottomAction
 import app.qingjian.inputmethod.settings.Settings
+import app.qingjian.inputmethod.theme.TextSize
 import kotlin.concurrent.thread
 import org.json.JSONObject
 
-/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、键位排法、按键反馈、长按空格说话、滑行与上滑输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
+/** 键盘设置二级页：拼音键盘布局、学习语言与学习开关、模糊音与标点、繁体字形、词库入口、键盘高度、全面屏适配、键位排法、按键反馈（震动与强度、气泡、键面字号）、长按空格说话、空格挪光标、滑行与上滑输入、剪贴板、云端大模型。改了马上写设置，开着的键盘跟着重建。 */
 class KeyboardSettingsActivity : PageActivity() {
     override val title = R.string.page_keyboard
 
@@ -65,6 +67,29 @@ class KeyboardSettingsActivity : PageActivity() {
                 ui.divider(),
                 ui.toggle(R.string.haptic_title, null, settings.haptic) {
                     prefs.edit().putBoolean(Settings.KEY_HAPTIC, it).apply()
+                    rebuild()
+                },
+                *if (settings.haptic) {
+                    arrayOf(
+                        ui.divider(),
+                        ui.picker(
+                            R.string.haptic_strength_title, getString(settings.hapticStrength.label),
+                            HapticStrength.entries.map { getString(it.label) }, settings.hapticStrength.ordinal,
+                        ) {
+                            prefs.edit().putString(Settings.KEY_HAPTIC_STRENGTH, HapticStrength.entries[it].key).apply()
+                            rebuild()
+                        },
+                    )
+                } else {
+                    emptyArray()
+                },
+                ui.divider(),
+                ui.picker(
+                    R.string.key_text_size_title, getString(settings.keyTextSize.label),
+                    TextSize.entries.map { getString(it.label) }, settings.keyTextSize.ordinal,
+                ) {
+                    prefs.edit().putString(Settings.KEY_KEY_TEXT_SIZE, TextSize.entries[it].key).apply()
+                    rebuild()
                 },
                 ui.divider(),
                 ui.toggle(R.string.popup_title, R.string.popup_note, settings.keyPopup) {

@@ -58,7 +58,7 @@ class KeyboardView(
     }
 
     private val metrics = KeyboardMetrics(resources.displayMetrics.density, settings.heightPercent)
-    private val painter = KeyPainter(palette, metrics)
+    private val painter = KeyPainter(palette, metrics, settings.keyTextSize.scale)
     private val side = SideColumn(metrics.density) { item ->
         tapFeedback()
         listener.onSideItem(item)

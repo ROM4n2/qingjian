@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import app.qingjian.inputmethod.core.InputOptions
 import app.qingjian.inputmethod.core.store.SettingChoices
+import app.qingjian.inputmethod.keyboard.HapticStrength
 import app.qingjian.inputmethod.theme.Appearance
 import app.qingjian.inputmethod.theme.TextSize
 
@@ -17,7 +18,11 @@ data class Settings(
     val bottomLeft: BottomAction,
     val bottomRight: BottomAction,
     val haptic: Boolean,
+    /** 按键震动的轻重（#775）。 */
+    val hapticStrength: HapticStrength,
     val keyPopup: Boolean,
+    /** 键面字号档（#826），与候选字号分开。 */
+    val keyTextSize: TextSize,
     /** 候选出繁体（字形按 [InputOptions.traditionalVariant]）。 */
     val traditional: Boolean,
     /** 上次用的语言与中英键的另一边（[app.qingjian.inputmethod.service.input.Language] 的名字），没记过为 null。 */
@@ -82,7 +87,9 @@ data class Settings(
         const val KEY_BOTTOM_LEFT = "bottom_left"
         const val KEY_BOTTOM_RIGHT = "bottom_right"
         const val KEY_HAPTIC = "haptic"
+        const val KEY_HAPTIC_STRENGTH = "haptic_strength"
         const val KEY_POPUP = "key_popup"
+        const val KEY_KEY_TEXT_SIZE = "key_text_size"
         const val KEY_TRADITIONAL = "traditional"
         const val KEY_LANGUAGE = "language"
         const val KEY_PARTNER = "language_partner"
@@ -148,7 +155,9 @@ data class Settings(
                 bottomLeft = BottomAction.of(prefs.getString(KEY_BOTTOM_LEFT, null), BottomAction.SWITCH_INPUT_METHOD),
                 bottomRight = BottomAction.of(prefs.getString(KEY_BOTTOM_RIGHT, null), BottomAction.VOICE),
                 haptic = prefs.getBoolean(KEY_HAPTIC, true),
+                hapticStrength = HapticStrength.of(prefs.getString(KEY_HAPTIC_STRENGTH, null)),
                 keyPopup = prefs.getBoolean(KEY_POPUP, true),
+                keyTextSize = TextSize.of(prefs.getString(KEY_KEY_TEXT_SIZE, null)),
                 traditional = prefs.getBoolean(KEY_TRADITIONAL, false),
                 language = prefs.getString(KEY_LANGUAGE, null),
                 partner = prefs.getString(KEY_PARTNER, null),

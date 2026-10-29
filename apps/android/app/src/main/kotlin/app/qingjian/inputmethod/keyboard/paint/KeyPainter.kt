@@ -11,7 +11,12 @@ import app.qingjian.inputmethod.keyboard.layout.KeyboardMetrics
 import app.qingjian.inputmethod.theme.Palette
 
 /** 画键与按键气泡。 */
-class KeyPainter(private val palette: Palette, private val metrics: KeyboardMetrics) {
+class KeyPainter(
+    private val palette: Palette,
+    private val metrics: KeyboardMetrics,
+    /** 键面字号档的倍数（键盘设置「键面字号」），键上的主字与气泡一起缩放。 */
+    private val textScale: Float,
+) {
     private val density = metrics.density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
@@ -78,7 +83,7 @@ class KeyPainter(private val palette: Palette, private val metrics: KeyboardMetr
 
             key is Key.Letter && key.hint.isNotEmpty() -> {
                 text(canvas, key.hint, 11f, palette.gloss, bounds.centerX(), bounds.top + bounds.height() * 0.24f)
-                text(canvas, label, 21f, labelColor, bounds.centerX(), bounds.top + bounds.height() * 0.6f)
+                text(canvas, label, 21f, labelColor, bounds.centerX(), bounds.top + bounds.height() * belowHint)
             }
 
             // 中英键：角上写按一下会切到哪种语言，长按换
@@ -89,7 +94,7 @@ class KeyPainter(private val palette: Palette, private val metrics: KeyboardMetr
 
             key is Key.Digit -> {
                 text(canvas, key.digit.toString(), 11f, palette.faint, bounds.centerX(), bounds.top + bounds.height() * 0.24f)
-                text(canvas, label, 18f, palette.text, bounds.centerX(), bounds.top + bounds.height() * 0.6f)
+                text(canvas, label, 18f, palette.text, bounds.centerX(), bounds.top + bounds.height() * belowHint)
             }
 
             else -> {
@@ -150,20 +155,28 @@ class KeyPainter(private val palette: Palette, private val metrics: KeyboardMetr
     }
 
     private fun text(canvas: Canvas, value: String, sp: Float, color: Int, cx: Float, cy: Float) {
-        ink.textSize = sp * density
+        ink.textSize = sp * density * scaleOf(sp)
         ink.color = color
         canvas.drawText(value, cx, cy - (ink.descent() + ink.ascent()) / 2, ink)
     }
 
     /** 同 [text]，放不下 [maxWidth] 就缩小字号（双拼韵母一个键可能有两三个）。 */
     private fun fitted(canvas: Canvas, value: String, sp: Float, color: Int, cx: Float, cy: Float, maxWidth: Float) {
-        ink.textSize = sp * density
+        ink.textSize = sp * density * scaleOf(sp)
         val width = ink.measureText(value)
         text(canvas, value, if (width > maxWidth) sp * maxWidth / width else sp, color, cx, cy)
     }
 
+    /** 带角标的键上主字的纵向位置（占键高的比例）：字放大时往下让一点，不顶到角标。 */
+    private val belowHint = 0.6f + (textScale - 1f).coerceAtLeast(0f) * 0.15f
+
+    /** 键面字号只放大键上的主字；角标、双拼韵母这类小字（[HINT_MAX_SP] 以下）不跟，放大了会和主字挤在一起。 */
+    private fun scaleOf(sp: Float) = if (sp > HINT_MAX_SP) textScale else 1f
+
     private companion object {
         const val PRESSED_BRAND_SHADE = 0x33000000
+
+        const val HINT_MAX_SP = 11f
 
         /** 锁定大写的小点：半径与离键右上角的距离。 */
         const val LOCK_DOT_DP = 3.5f
