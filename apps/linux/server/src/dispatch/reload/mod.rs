@@ -100,6 +100,8 @@ impl Router {
         self.engine.set_learning(config.general.learning);
         self.engine.set_chinese_first(config.general.chinese_first);
         self.engine
+            .set_spelling_correction(config.general.spelling_correction);
+        self.engine
             .set_english_in_chinese(config.general.english_in_chinese);
         self.engine
             .set_english_max_in_chinese(config.general.english_max_in_chinese());

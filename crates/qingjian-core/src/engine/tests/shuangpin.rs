@@ -72,6 +72,51 @@ fn shuangpin_shows_raw_keys_in_preedit_and_decoded_pinyin_in_segments() {
     assert_eq!(segments_text, "k'dfa");
 }
 
+/// 两个开关各管一处：输入框按 `shuangpin_raw_preedit`，候选窗口的拼音行按 `shuangpin_raw_window`。
+#[test]
+fn shuangpin_window_and_preedit_switch_independently() {
+    let window = |query: &Query| {
+        let (segments, cursor) = query.window_segments(None);
+        let text: String = segments.iter().map(|s| s.text.as_str()).collect();
+        (text, cursor)
+    };
+    let mut engine = xiaohe();
+    engine.set_input("kdfa");
+    for (raw_preedit, raw_window, marked, line) in [
+        (false, false, "kai'fa", ("kai'fa", 6)),
+        (true, true, "kdfa", ("kdfa", 4)),
+        (false, true, "kai'fa", ("kdfa", 4)),
+        (true, false, "kdfa", ("kai'fa", 6)),
+    ] {
+        engine.set_shuangpin_raw_preedit(raw_preedit);
+        engine.set_shuangpin_raw_window(raw_window);
+        let query = engine.query().unwrap();
+        assert_eq!(query.marked_text(), marked, "{raw_preedit} {raw_window}");
+        assert_eq!(
+            window(&query),
+            (line.0.to_owned(), line.1),
+            "{raw_preedit} {raw_window}"
+        );
+    }
+
+    // kd|fa：光标前后的键分两段，光标后的那段按 Rest 画
+    engine.set_shuangpin_raw_window(true);
+    engine.move_cursor_left();
+    engine.move_cursor_left();
+    let query = engine.query().unwrap();
+    let (segments, cursor) = query.window_segments(None);
+    let kinds: Vec<(&str, MarkedKind)> =
+        segments.iter().map(|s| (s.text.as_str(), s.kind)).collect();
+    assert_eq!(kinds, [("kd", MarkedKind::Typed), ("fa", MarkedKind::Rest)]);
+    assert_eq!(cursor, 2);
+
+    // 全拼不受影响
+    let mut engine = super::engine();
+    engine.set_shuangpin_raw_window(true);
+    engine.set_input("kaifa");
+    assert_eq!(window(&engine.query().unwrap()).0, "kai'fa");
+}
+
 #[test]
 fn shuangpin_commit_consumes_keys_per_syllable() {
     let mut engine = xiaohe();

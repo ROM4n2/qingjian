@@ -283,7 +283,16 @@ impl QingjianInputController {
     /// 翻页，高亮落到新页第一项。已在首页 / 末页时不动。
     pub(super) fn turn_page(&self, delta: isize, client: TextClient<'_>) -> bool {
         let turned = host::with(|h| {
-            // 矩阵展开着：翻页键一次翻一屏
+            // 矩阵展开着：翻页键一次翻一屏；开了「翻页键展开」（`[general] grid_page_keys`）时单行先展开、高亮移到上 / 下一行
+            if h.session.grid.is_none() && h.page_keys_expand() {
+                let before = h.session.highlighted;
+                // 展开本身也要重画，但高亮没挪就不算翻过页
+                let redraw = h.session.move_rows(delta);
+                if h.session.highlighted != before {
+                    h.engine.note_page_turn();
+                }
+                return redraw;
+            }
             let turned = if h.session.grid.is_some() {
                 h.session.move_screens(delta)
             } else {

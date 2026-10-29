@@ -30,6 +30,10 @@ pub enum Feature {
     StatusBar,
     /// 横排时 ↑ / ↓ 展开成多行。
     HorizontalGrid,
+    /// 横排时翻页键也展开成多行。
+    GridPageKeys,
+    /// 组句时上屏候选与上屏字母的键可以换。
+    CommitKeys,
     ExtraPageKeys,
     HighlightKeys,
     TogglePunctuation,
@@ -46,15 +50,17 @@ pub enum Feature {
     KeyHint,
     /// 拼音行按高亮候选显示带调拼音。
     ShowTones,
-    /// 「实验功能」页：下载、启用知意与含章·知微。
+    /// 「实验功能」页：下载、启用知意与含章·通变。
     ExperimentalModels,
     /// 中文组句中的小键盘数字：选候选还是进组句。
     NumpadDigit,
+    /// 双拼候选窗口的拼音行显示敲的键。
+    ShuangpinRawWindow,
 }
 
 impl Feature {
     #[cfg(test)]
-    pub const ALL: [Self; 23] = [
+    pub const ALL: [Self; 26] = [
         Self::AuxCode,
         Self::Schemes,
         Self::SwitchKeys,
@@ -66,6 +72,8 @@ impl Feature {
         Self::AutoSpace,
         Self::StatusBar,
         Self::HorizontalGrid,
+        Self::GridPageKeys,
+        Self::CommitKeys,
         Self::ExtraPageKeys,
         Self::HighlightKeys,
         Self::TogglePunctuation,
@@ -78,6 +86,7 @@ impl Feature {
         Self::ShowTones,
         Self::ExperimentalModels,
         Self::NumpadDigit,
+        Self::ShuangpinRawWindow,
     ];
 
     /// 当前平台显示这一项。
@@ -113,6 +122,9 @@ impl Feature {
             // macOS 看菜单栏图标，Linux 看 Fcitx5 的托盘
             Self::StatusBar => [No, Yes, No],
             Self::HorizontalGrid => [Yes, Yes, Todo],
+            Self::GridPageKeys => [Yes, Yes, Todo],
+            // macOS 的空格走 insertText、回车走 insertNewline:，要另接
+            Self::CommitKeys => [Todo, Yes, Yes],
             Self::ExtraPageKeys => [Yes, Yes, Todo],
             Self::HighlightKeys => [Yes, Yes, Todo],
             Self::TogglePunctuation => [Yes, Yes, Todo],
@@ -128,6 +140,8 @@ impl Feature {
             // Windows、Linux 的服务进程还没接知意；没有 GPU 时 CPU 上打分要发烫，先只开 macOS（Metal）
             Self::ExperimentalModels => [Yes, Yes, Todo],
             Self::NumpadDigit => [Todo, Yes, Todo],
+            // Fcitx 面板与应用里的行内拼音共用一串，还没分开
+            Self::ShuangpinRawWindow => [Yes, Yes, Todo],
         }
     }
 
@@ -146,6 +160,8 @@ impl Feature {
             Self::AutoSpace => "中文与英文、数字之间自动加空格",
             Self::StatusBar => "悬浮状态条",
             Self::HorizontalGrid => "横排时 ↑ / ↓ 展开成多行",
+            Self::GridPageKeys => "横排时翻页键展开成多行",
+            Self::CommitKeys => "上屏键自定义",
             Self::ExtraPageKeys => "额外翻页键",
             Self::HighlightKeys => "高亮移动键",
             Self::TogglePunctuation => "Ctrl + . 切换全半角标点",
@@ -156,8 +172,9 @@ impl Feature {
             Self::VocabularyTranslation => "生词本整句翻译",
             Self::KeyHint => "双拼键位提示",
             Self::ShowTones => "拼音行显示声调",
-            Self::ExperimentalModels => "实验功能（知意、含章·知微）",
+            Self::ExperimentalModels => "实验功能（知意、含章·通变）",
             Self::NumpadDigit => "小键盘数字",
+            Self::ShuangpinRawWindow => "双拼候选窗显示按键",
         }
     }
 
@@ -166,35 +183,41 @@ impl Feature {
     pub fn rows(self) -> &'static [(PageId, &'static str)] {
         match self {
             Self::AuxCode => &[
-                (PageId::Input, "启用"),
-                (PageId::Input, "触发键"),
-                (PageId::Input, "导入码表"),
+                (PageId::Input, "input.aux_enabled"),
+                (PageId::Input, "shortcut.aux_code_key"),
+                (PageId::Input, "input.import_code_table"),
             ],
-            Self::Schemes => &[(PageId::Input, "形码")],
-            Self::SwitchKeys => &[(PageId::Language, "切换键")],
-            Self::DefaultEnglish => &[(PageId::Language, "默认英文模式")],
-            Self::RememberModePerApp => &[(PageId::Language, "按应用记住中英模式")],
-            Self::AutoSpace => &[(PageId::Language, "中文与英文、数字之间自动加空格")],
-            Self::ExtraPageKeys => &[(PageId::Shortcuts, "额外翻页键")],
-            Self::HighlightKeys => &[(PageId::Shortcuts, "高亮移动键")],
-            Self::TogglePunctuation => &[(PageId::Shortcuts, "Ctrl + . 切换全半角标点")],
-            Self::ToggleTraditional => &[(PageId::Shortcuts, "Ctrl + Shift + F 切换简繁输出")],
-            Self::SystemTextReplacements => &[(PageId::Phrases, "也用系统的文本替换")],
+            Self::Schemes => &[(PageId::Input, "input.code")],
+            Self::SwitchKeys => &[(PageId::Language, "language.switch_keys")],
+            Self::DefaultEnglish => &[(PageId::Language, "language.default_english")],
+            Self::RememberModePerApp => &[(PageId::Language, "language.remember_per_app")],
+            Self::AutoSpace => &[(PageId::Language, "language.auto_space")],
+            Self::ExtraPageKeys => &[(PageId::Shortcuts, "shortcuts.extra_page_keys")],
+            Self::CommitKeys => &[
+                (PageId::Shortcuts, "shortcut.commit_candidate"),
+                (PageId::Shortcuts, "shortcut.commit_raw"),
+            ],
+            Self::HighlightKeys => &[(PageId::Shortcuts, "shortcuts.highlight_keys")],
+            Self::TogglePunctuation => &[(PageId::Shortcuts, "shortcuts.punctuation_width")],
+            Self::ToggleTraditional => &[(PageId::Shortcuts, "shortcuts.traditional")],
+            Self::SystemTextReplacements => &[(PageId::Phrases, "phrases.system_replacements")],
             Self::CloudRequestControls => &[
-                (PageId::Cloud, "自动联想"),
-                (PageId::Cloud, "停键等待"),
-                (PageId::Cloud, "最短请求间隔"),
-                (PageId::Shortcuts, "按需 AI 联想"),
+                (PageId::Cloud, "cloud.auto"),
+                (PageId::Cloud, "cloud.debounce"),
+                (PageId::Cloud, "cloud.min_interval"),
+                (PageId::Shortcuts, "shortcut.predict"),
             ],
-            Self::VocabularyTranslation => &[(PageId::Cloud, "生词本整句翻译")],
-            Self::KeyHint => &[(PageId::Input, "键位提示")],
-            Self::ShowTones => &[(PageId::Candidates, "拼音行显示声调")],
-            Self::NumpadDigit => &[(PageId::Candidates, "小键盘数字")],
+            Self::VocabularyTranslation => &[(PageId::Cloud, "cloud.vocabulary_translation")],
+            Self::KeyHint => &[(PageId::Input, "input.key_hint")],
+            Self::ShowTones => &[(PageId::Candidates, "candidates.show_tones")],
+            Self::NumpadDigit => &[(PageId::Candidates, "candidates.numpad_digit")],
+            Self::ShuangpinRawWindow => &[(PageId::Input, "input.raw_window")],
             Self::SwitchKeyCombos
             | Self::SystemCtrlSpace
             | Self::EnglishPunctuation
             | Self::StatusBar
             | Self::HorizontalGrid
+            | Self::GridPageKeys
             | Self::ApiUsage
             | Self::ExperimentalModels => &[],
         }

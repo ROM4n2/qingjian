@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 bamboo-slip = { workspace = true, features = ["host"] }
+bamboo-slip-i18n.workspace = true
 qingjian-render.workspace = true
 qingjian-platform.workspace = true
 # 模式键的候选字母、辅码触发键的校验

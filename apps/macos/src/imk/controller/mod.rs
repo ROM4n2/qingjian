@@ -82,7 +82,7 @@ define_class!(
         }
 
         /// 声明要收的事件种类。父类缺省只回 `NSKeyDownMask`（Apple 文档原文），所以修饰键事件一直收不到，
-        /// Shift 的按下 / 抬起只能靠轮询采样（见 `host/mode_switch.rs`）；补上 flagsChanged 才有精确边沿。
+        /// Shift 的按下 / 抬起只能靠轮询采样（见 `host/mode/switch.rs`）；补上 flagsChanged 才有精确边沿。
         #[unsafe(method(recognizedEvents:))]
         fn recognized_events(&self, _sender: Option<&AnyObject>) -> NSUInteger {
             (NSEventMask::KeyDown.0 | NSEventMask::FlagsChanged.0) as NSUInteger

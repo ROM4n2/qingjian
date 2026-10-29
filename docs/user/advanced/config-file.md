@@ -38,8 +38,8 @@ description: 青简的全部设置保存在一个文本配置文件里：位置�
 | `[general] english_in_chinese` | 候选 → 打拼音时也给英文词 | `true` / `false` |
 | `[general] english_max_in_chinese` | 候选 → 英文候选最多几个 | `1`–`4`，缺省 `4` |
 | `[general] english_min_position` | 候选 → 英文词最高排到第几位 | `1`–`9`，缺省 `1`（不限） |
-| `[model] enabled` | 候选 → 本地整句模型 | `true` / `false` |
-| `[model] name`、`zhiyi_tier` | 实验功能 → 用哪个模型、知意的档位 | `name`：`tongbian`（缺省）、`zhiwei`、`zhiyi`，选了没下载的按 `tongbian`；`zhiyi_tier`：`saver`、`balanced`（缺省）、`accurate` |
+| `[model] enabled` | 候选 → 本地整句模型 | `true` / `false`（缺省） |
+| `[model] name`、`zhiyi_tier` | 实验功能 → 用哪个模型、知意的档位 | `name`：`tongbian`（缺省）、`zhiyi`，选了没下载的不用模型（旧的 `zhiwei` 按 `tongbian` 读）；`zhiyi_tier`：`saver`、`balanced`（缺省）、`accurate` |
 | `[model] context_memory_seconds` | 只在配置文件里 | 应用不给光标前文时，刚打的字算作前文的时长，缺省 60，0 为一直算 |
 | `[general] english_mode` | 中英文 → 英文模式 | `false` 为固定中文 |
 | `[shortcut] switch_mode` | 中英文 → 切换键 | 列表，如 `["shift", "control"]` |
@@ -79,6 +79,10 @@ api_key = "你的 API 密钥"
 - 在设置窗口里填的密钥另存在数据文件夹的 `.env` 里，不写进 `config.toml`。Linux 上也可以在启动青简之前设置 `QINGJIAN_API_KEY` 环境变量。
 - 改开关、地址、模型或密钥会自动切换并撤销旧请求。
 
+`reasoning_effort` 留空时不发送推理强度。若接口明确拒绝温度或思考参数，青简会省略被拒的参数重试，并在同一客户端的后续请求中沿用兼容写法，无需按模型名配置。
+
+若接口要求替代的 token 上限写法，青简会保留生成上限，并预留有限的推理额度。首次请求可能因兼容重试而等待更久；若提示超时，可增大同一分节的 `timeout_ms`。模型必须思考时仍可能增加等待时间与用量。
+
 从较早版本升级上来的 Linux 配置若仍写着旧的翻译快捷键，改为 `translate_selection = "alt+shift+t"` 并保存；安装更新不会覆盖你写过的设置。
 
 ## Linux
@@ -89,6 +93,7 @@ Linux 有青简设置程序，也可以直接改配置文件。几个常用写�
 - 繁体：`[general]` 下 `traditional_variant = "taiwan"`；从 0.2.1 及以前升级上来的配置里没有这一行，在 `[general]` 下加上即可。
 - 翻页键：`[general]` 下 `page_keys = "-="`。修改 Fcitx5 的全局候选翻页热键不会替代它。
 - 不显示译词：`[general]` 下 `learning_language = "off"`。
+- 界面语言：`[general]` 下 `ui_language = "en"`，可选 `zh-Hans`、`zh-Hant`、`en`、`ja`、`es`、`vi`、`de`，`system` 跟随系统；不写时是简体中文。
 - 不想留下任何输入记录（例如 Fcitx4 认不出私密输入框时）：`[general]` 下 `input_log = false`、`learning = false`，改完重启青简。
 
 ```toml

@@ -3,6 +3,7 @@ mod apps;
 mod aux_code;
 mod candidate_renderer;
 mod code_rules;
+mod commit_key;
 mod dictionaries;
 mod emoji_count;
 mod font_size;
@@ -20,11 +21,13 @@ mod optional_key_combo;
 mod page_keys;
 mod phrases;
 mod preedit_mode;
+mod retired;
 mod scheme;
 mod shift_letter;
 mod shortcut;
 mod status_bar;
 mod switch_key;
+mod transfer;
 mod update;
 
 use std::collections::BTreeMap;
@@ -45,12 +48,14 @@ pub use apps::{
 pub use aux_code::AuxCodeConfig;
 pub use candidate_renderer::CandidateRenderer;
 pub use code_rules::CodeRules;
+pub use commit_key::{CommitKey, CommitKeys, CommitRoute};
 pub use dictionaries::{DEFAULT_DOMAINS, DictionariesConfig};
 pub use emoji_count::EmojiCount;
 pub use font_size::FontSize;
 pub use general::{
     DEFAULT_KEY_HINT_OPACITY, DEFAULT_PAGE_KEYS, DEFAULT_THEME, GeneralConfig,
-    LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS,
+    LEARNING_LANGUAGE_OFF, MAX_PAGE_SIZE, PAGE_KEY_OPTIONS, UI_LANGUAGE_DEFAULT,
+    UI_LANGUAGE_SYSTEM,
 };
 pub use highlight_keys::HighlightKeys;
 pub use key_combo::KeyCombo;
@@ -62,12 +67,14 @@ pub use model::{LocalModel, LocalModelConfig, ZhiyiTier};
 pub use modifiers::Modifiers;
 pub use numpad_digit::NumpadDigit;
 pub use page_keys::PageKeys;
+pub use phrases::{export_phrases, import_phrases};
 pub use preedit_mode::PreeditMode;
 pub use scheme::{Scheme, scheme_label, scheme_name};
 pub use shift_letter::ShiftLetter;
 pub use shortcut::ShortcutConfig;
 pub use status_bar::StatusBarConfig;
 pub use switch_key::{SwitchKey, SwitchKeys};
+pub use transfer::{export_settings, import_settings};
 pub use update::{UpdateChannel, UpdateConfig};
 
 /// 用户配置文件（TOML）。所有平台同一份格式，缺省值全部在各分节的 `Default` 里。
@@ -246,6 +253,9 @@ layout = "vertical"
 # 横排时 ↑ / ↓ 把单行展开成 6 行矩阵并换行（一行一页候选），← / → 改为在候选之间移动（拼音光标用 ⌥←/→、⌘←/→），
 # Esc 第一下先收回单行。缺省 false：横排下 ↑ / ↓ 逐个移动高亮、← / → 移动拼音光标，与以前一样。只有 macOS 用
 horizontal_grid = false
+# 横排时翻页键（主翻页键、额外翻页键、PageUp / PageDown、Tab）也像 ↓ 一样展开成矩阵并换行，展开后一次翻一屏。
+# 缺省 false：翻页键照旧整页翻。macOS 与 Windows 用
+grid_page_keys = false
 # 候选窗口由谁绘制：qingjian 青简渲染器（各平台一致，主题走它）/ system 系统原生绘制（渲染器有问题时的退路）
 renderer = "qingjian"
 # 候选窗口字体（字族名，如 "LXGW WenKai"）；空为系统字体。只对青简渲染器生效，没装这个字体时自动回到系统字体
@@ -265,6 +275,8 @@ english_candidates = true
 traditional_variant = "off"
 # 中文模式下整段输入是英文词时（hello / key）是否让中文候选排第一、英文词第二；缺省 false：拼音不像话的输入英文词排第一
 chinese_first = false
+# 拼写纠错：拼音敲错时给纠正后的候选（nihooma → 你好吗）；敲的拼音照原样读得通时纠正只当备选。false 时只按敲的原样读
+spelling_correction = true
 # 中文模式下整段是英文词或英文词的开头时给英文候选与补全（hello、compa → company）；false 时中文模式只出中文，英文模式不受影响
 english_in_chinese = true
 # 中文模式下英文候选（精确词 + 补全）最多几个，1–4；1 时只留最靠前的一条
@@ -313,6 +325,8 @@ aux_code_keep_empty = true
 scheme = ""
 # 双拼方案下 preedit 显示原始按键（如 ljse）还是展开成全拼（lan'se）；缺省 false（展开成全拼）
 shuangpin_raw_preedit = false
+# 双拼方案下候选窗口的拼音行显示原始按键还是全拼，与上一项各管各的；缺省 false（全拼）；macOS、Windows 用
+shuangpin_raw_window = false
 # 双拼方案下同时接受全拼：开着时打拼音也用全拼，同一段输入里两种打法可以混用（一边双拼一边全拼的人共用一份配置）
 shuangpin_full_pinyin = false
 # 一段拼音分几次选完时，先选的词留在输入框里、整段选完才一起上屏，退格先撤回最后一次选择；false 为选了就上屏
@@ -334,7 +348,7 @@ system_text_replacements = true
 # 自定义短语示例：取消下面各行注释后启用；同一个输入码下按权重从高到低排在普通候选前面。
 # [[custom_phrases]]
 # code = "ww"       # 输入码：1–32 个小写英文字母
-# text = "；"       # 原样上屏的文本，可包含空格与换行
+# text = "；"       # 原样上屏的文本，可包含空格与换行；{year} {month} {day} {hour} {minute} {second} {weekday} 换成当前时间，{{ }} 是花括号本身
 # weight = 10       # 权重：1–999，可以相同，相同的按文件里的先后
 # enabled = true    # 是否启用
 
@@ -355,6 +369,10 @@ question_mark = false
 # 候选高亮由哪对方向键移动：updown 用 ↑ / ↓ 移高亮、← / → 移拼音光标（缺省）；leftright 改用 ← / → 移高亮
 # leftright 时两键把「拼音行 + 候选栏」当成一条从左到右的序列走：→ 到拼音光标末位溢出成选词，← 到候选首位回拼音光标；↑ / ↓ 不做事。只有 Windows 用
 highlight_keys = "updown"
+# 组句时上屏高亮候选的键与原样上屏敲的字母的键：space / enter，都可写成 shift+space、shift+enter，或一个符号键如 ";"
+# 不能用 Ctrl / Alt / Win 组合、字母数字、翻页键；两项不能相同。空格或回车让出去后又没配给另一项，组句时按它不做事。Windows、Linux 用
+commit_candidate = "space"
+commit_raw = "enter"
 "#,
     template_shortcut_keys!(),
     r#"
@@ -390,9 +408,9 @@ enabled = false
 disabled = []
 
 [model]
-# 本地模型：在本机给候选重新排序，全程离线；停顿后几十毫秒生效。关掉只用词库统计
-enabled = true
-# 用哪个：tongbian 含章·通变（随包）/ zhiwei 含章·知微 / zhiyi 知意；后两个先在设置的「实验功能」里下载，没下载就用通变
+# 本地模型：在本机给整句候选重新排序或直接造句，全程离线；停顿后几十毫秒生效。缺省关，只用词库统计
+enabled = false
+# 用哪个：tongbian 含章·通变（按拼音造句）/ zhiyi 知意（按前文挑首选）；先在设置的「实验功能」里下载（Linux 随包带通变），没下载就不用模型
 name = "tongbian"
 # 知意的档位：saver 省电 / balanced 均衡 / accurate 准确（比的候选更多、看的前文更长，也更费电）
 zhiyi_tier = "balanced"
@@ -570,6 +588,8 @@ impl Config {
         if let Some(key) = config.predict.resolve_api_key() {
             crate::logs::secrets::register(&key);
         }
+        // 界面语言同理：输入法进程里的候选菜单、提示与设置程序都按这一项
+        bamboo_slip_i18n::set_locale(config.general.ui_locale());
         Ok(config)
     }
 

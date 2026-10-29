@@ -1,6 +1,6 @@
 //! 提示词与回复解析。模型只输出约定的 JSON，其余一概不信；拼音校验在 Core 里再做一遍。
 
-use qingjian_core::{CloudWord, PredictionKind, PredictionRequest};
+use qingjian_core::{CloudWord, PartOfSpeech, PredictionKind, PredictionRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -58,11 +58,21 @@ text（选中的原文）、target_language（目标语言代码：zh 中文、e
 不要解释、不要加引号、不要加「译文：」之类的前缀。\
 输出 JSON：{\"sentence\": \"译文\"}";
 
+/// 候选译文会写进个人词典，不复用只返回文本的整句翻译提示。
+pub const CANDIDATE_TRANSLATION_SYSTEM_PROMPT: &str = "\
+你是一个输入法的词典编纂助手。用户会给你一个中文词或短语 text，以及目标语言 target_language（en 英语、ja 日语、es 西班牙语、vi 越南语、de 德语）。\
+给出最简短、最常用的目标语言对应词，只要译词，不要解释、例句、引号或「译文：」前缀。\
+pos 是原中文词最主要的词性，只能是 n. v. adj. adv. pron. prep. conj. num. m. part. int. phr. 之一；短语或无法归入其他类别的固定表达写 phr.。\
+英语动词用原形、名词用单数；日语动词用「〜する」形式；西语和德语动词用不定式；越南语使用正确变音符。\
+目标语言是德语时，名词首字母必须大写并使用单数，使用变元音 ä/ö/ü 与 ß，不要写成 ae/oe/ue/ss。\
+输出严格的 JSON：{\"sentence\": \"译词\", \"pos\": \"词性\"}";
+
 pub fn system_prompt(request: &PredictionRequest) -> &'static str {
     match request.kind {
         PredictionKind::Compose => SYSTEM_PROMPT,
         PredictionKind::Question => QUESTION_SYSTEM_PROMPT,
-        PredictionKind::Translate | PredictionKind::CandidateTranslation => TRANSLATE_SYSTEM_PROMPT,
+        PredictionKind::Translate => TRANSLATE_SYSTEM_PROMPT,
+        PredictionKind::CandidateTranslation => CANDIDATE_TRANSLATION_SYSTEM_PROMPT,
     }
 }
 
@@ -85,9 +95,19 @@ pub fn reply_schema(request: &PredictionRequest) -> ReplySchema {
             "question",
             reply::object(json!({ "answers": words }), &["answers"]),
         ),
-        PredictionKind::Translate | PredictionKind::CandidateTranslation => ReplySchema::new(
+        PredictionKind::Translate => ReplySchema::new(
             "translate",
             reply::object(json!({ "sentence": { "type": "string" } }), &["sentence"]),
+        ),
+        PredictionKind::CandidateTranslation => ReplySchema::new(
+            "candidate_translation",
+            reply::object(
+                json!({
+                    "sentence": { "type": "string" },
+                    "pos": { "type": "string" }
+                }),
+                &["sentence"],
+            ),
         ),
     }
 }
@@ -193,6 +213,8 @@ struct RawReply {
 
     sentence: Option<String>,
 
+    pos: Option<String>,
+
     /// 问字模式的答案。
     answers: Vec<RawWord>,
 }
@@ -232,6 +254,18 @@ pub fn parse_reply(content: &str, request: &PredictionRequest) -> Reply {
                     text
                 }
             });
+        let sentence = if request.kind == PredictionKind::CandidateTranslation {
+            let part_of_speech = raw
+                .pos
+                .as_deref()
+                .and_then(|pos| pos.trim().parse::<PartOfSpeech>().ok());
+            sentence.map(|text| match part_of_speech {
+                Some(pos) => format!("{}\t{text}", pos.abbreviation()),
+                None => text,
+            })
+        } else {
+            sentence
+        };
         return Reply {
             words: Vec::new(),
             sentence,
@@ -454,18 +488,41 @@ mod tests {
     }
 
     #[test]
-    fn candidate_translation_uses_the_learning_language_translation_prompt() {
+    fn candidate_translation_uses_a_dictionary_prompt_and_keeps_optional_part_of_speech() {
         let mut translate = request("", false);
         translate.kind = PredictionKind::CandidateTranslation;
         translate.text = "开发".to_owned();
         translate.target_language = "de".to_owned();
 
-        assert_eq!(system_prompt(&translate), TRANSLATE_SYSTEM_PROMPT);
+        assert_eq!(
+            system_prompt(&translate),
+            CANDIDATE_TRANSLATION_SYSTEM_PROMPT
+        );
+        assert!(CANDIDATE_TRANSLATION_SYSTEM_PROMPT.contains("名词首字母必须大写"));
+        assert!(CANDIDATE_TRANSLATION_SYSTEM_PROMPT.contains("ä/ö/ü 与 ß"));
+        assert!(CANDIDATE_TRANSLATION_SYSTEM_PROMPT.contains("ae/oe/ue/ss"));
         let user = user_prompt(&translate);
         assert!(user.contains("\"text\":\"开发\""));
         assert!(user.contains("\"target_language\":\"de\""));
-        let reply = parse_reply(r#"{"sentence":"Entwicklung"}"#, &translate);
-        assert_eq!(reply.sentence.as_deref(), Some("Entwicklung"));
+        let reply = parse_reply(r#"{"sentence":"Entwicklung","pos":"n."}"#, &translate);
+        assert_eq!(reply.sentence.as_deref(), Some("n.\tEntwicklung"));
+        assert_eq!(
+            parse_reply(r#"{"sentence":"Entwicklung"}"#, &translate)
+                .sentence
+                .as_deref(),
+            Some("Entwicklung")
+        );
+        assert_eq!(
+            parse_reply(r#"{"sentence":"Entwicklung","pos":"other"}"#, &translate)
+                .sentence
+                .as_deref(),
+            Some("Entwicklung")
+        );
+        assert!(
+            parse_reply(r#"{"sentence":""}"#, &translate)
+                .sentence
+                .is_none()
+        );
     }
 
     #[test]
@@ -479,10 +536,20 @@ mod tests {
             request.kind = PredictionKind::CandidateTranslation;
             request.text = "我是".to_owned();
             request.target_language = language.to_owned();
-            let content = format!(r#"{{"sentence":"{generated}"}}"#);
+            let content = format!(r#"{{"sentence":"{generated}","pos":"phr."}}"#);
             let reply = parse_reply(&content, &request);
-            assert_eq!(reply.sentence.as_deref(), Some(expected));
+            assert_eq!(
+                reply.sentence.as_deref(),
+                Some(format!("phr.\t{expected}").as_str())
+            );
         }
+
+        let mut request = request("", false);
+        request.kind = PredictionKind::CandidateTranslation;
+        request.text = "开发".to_owned();
+        request.target_language = "de".to_owned();
+        let reply = parse_reply(r#"{"sentence":"Entwicklung","pos":"n."}"#, &request);
+        assert_eq!(reply.sentence.as_deref(), Some("n.\tEntwicklung"));
     }
 
     #[test]

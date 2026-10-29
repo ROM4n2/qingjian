@@ -1,7 +1,7 @@
 ---
 title: Changing keys
 order: 2
-description: "The 快捷键 (Shortcuts) page in Settings: paging keys, extra paging keys, highlight keys, the shortcuts for full-width/half-width punctuation and for Simplified/Traditional, prefix letters for calculations and asking about characters, modifiers for glosses, shortcuts for translation and AI suggestions."
+description: "The 快捷键 (Shortcuts) page in Settings: paging keys, extra paging keys, the keys that commit the candidate or the letters, highlight keys, the shortcuts for full-width/half-width punctuation and for Simplified/Traditional, prefix letters for calculations and asking about characters, modifiers for glosses, shortcuts for translation and AI suggestions."
 ---
 
 All changeable keys are in 设置 → 快捷键 (Settings → Shortcuts), and changes take effect immediately. 恢复默认 (Restore defaults) at the bottom of the page resets the keys on this page, and below it are the keys that are fixed while typing pinyin and can't be changed. The full table of default keys is in the [Key reference](../getting-started/keys.md).
@@ -16,6 +16,15 @@ All changeable keys are in 设置 → 快捷键 (Settings → Shortcuts), and ch
 - With `[` `]` or `,` `.`, the keys still act as paging keys when there's nowhere to page to, and no punctuation is inserted into your text.
 
 macOS and Windows also have 额外翻页键 (Extra paging keys): three sets you can combine, used together with the paging keys above. While typing pinyin these keys page first; operators in calculations, direct English input and the auxiliary code trigger key keep their usual roles.
+
+## Commit keys (Windows, Linux)
+
+While typing pinyin, 上屏高亮候选 (Commit the highlighted candidate) is Space by default and 上屏敲的字母 (Commit the letters as typed) is Enter by default; both can be re-recorded with their buttons in the 候选 (Candidates) group:
+
+- Either can be Space or Enter (each optionally with `Shift`), or one symbol key such as `;` `/`; `Ctrl`, `Alt` and `Win` combinations, letters, digits and the apostrophe can't be used.
+- The two can't be the same key, nor a paging key or the auxiliary-code key; recording tells you which one it clashes with. For example, to make Enter commit the candidate, first record 上屏敲的字母 as `Shift + Enter`, then record 上屏高亮候选 as Enter.
+- If Space or Enter is moved away and not given to the other item, pressing it while typing pinyin does nothing (no space or line break goes into the app). When you're not typing pinyin they go to the app as usual.
+- In Dachen Zhuyin, Space is the first tone and Enter and `Shift + Enter` keep their own rules; these two settings don't affect it.
 
 ## Highlight keys (macOS, Windows)
 

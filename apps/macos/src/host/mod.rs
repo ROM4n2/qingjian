@@ -11,8 +11,7 @@ mod config;
 mod diagnostics;
 mod dictionaries;
 mod init;
-mod mode_osd;
-mod mode_switch;
+mod mode;
 mod model;
 mod presenting;
 mod session;
@@ -55,8 +54,7 @@ use cloud::{CloudTestMonitor, PredictMonitor};
 use config::{ConfigWatch, TextReplacement};
 pub use dictionaries::DictionaryInfo;
 pub use init::init;
-use mode_osd::ModeOsd;
-use mode_switch::ModeSwitch;
+use mode::{ModeOsd, ModeSwitch};
 use model::RescoreMonitor;
 pub use presenting::TranslationJob;
 use presenting::{CandidateTranslation, KeyHintState, Notice};
@@ -206,6 +204,9 @@ pub struct Host {
 
     /// 横排时上下键展开成矩阵的开关（配置 `[general] horizontal_grid`，缺省关）。
     pub horizontal_grid: bool,
+
+    /// 横排时翻页键也把单行展开成矩阵（配置 `[general] grid_page_keys`，缺省关）。
+    pub grid_page_keys: bool,
 
     /// 候选高亮由哪对方向键移动（配置 `[shortcut] highlight_keys`）。
     pub highlight_keys: HighlightKeys,

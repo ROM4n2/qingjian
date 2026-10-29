@@ -154,7 +154,7 @@ impl QingjianInputController {
                     .as_ref()
                     .and_then(|translation| translation.senses().first())
                     .map_or(String::new(), |sense| sense.text.clone());
-                let language = qingjian_core::LEARNING_LANGUAGES
+                let language = qingjian_core::learning_languages()
                     .iter()
                     .find(|(code, _)| *code == h.engine.learning_language().code())
                     .map_or("学习语言", |(_, name)| *name);

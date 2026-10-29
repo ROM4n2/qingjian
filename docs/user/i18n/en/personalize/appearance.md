@@ -1,7 +1,7 @@
 ---
 title: Appearance and themes
 order: 1
-description: "The candidate window's seven built-in themes and light/dark modes, vertical and horizontal layouts, expanding horizontal layout into several rows, pinyin position and tones, fonts and sizes, transition animations."
+description: "The candidate window's seven built-in themes and light/dark modes, vertical and horizontal layouts, expanding horizontal layout into several rows (with arrow or paging keys), pinyin position and tones, fonts and sizes, transition animations, and the interface language of Settings."
 ---
 
 Change how the candidate window looks under 设置 → 外观 (Settings → Appearance); the top of the page shows a preview drawn with your current settings. A theme looks the same on macOS and Windows.
@@ -42,6 +42,9 @@ On macOS and Windows, in horizontal layout, you can tick 横排时 ↑ / ↓ 展
 
 When unticked, keys in horizontal layout work as in vertical layout: `↑` / `↓` move the highlight one at a time and `←` / `→` move the pinyin cursor.
 
+A second tick box, 横排时翻页键也展开成多行 (Paging keys also expand to rows in horizontal layout) (unticked by default), is for people who would rather not reach for the arrow keys: when ticked, in horizontal layout the paging keys (main paging keys such as `-` `=`, any extra paging keys you ticked, `PageUp` / `PageDown`, `Tab` / `Shift + Tab`, clicking the arrows beside the page number, and on Windows scrolling the wheel over the candidates) expand the row into the grid like `↓` and move to the next (or previous) row; once expanded, each press turns a whole screen.
+Once expanded, `↑` `↓` `←` `→` move as in the grid described above, whether or not 横排时 ↑ / ↓ 展开成多行 is ticked.
+
 ## Showing tones on the pinyin line
 
 On macOS and Windows you can turn on 拼音行显示声调 (Show tones on the pinyin line) under 设置 → 候选 (Settings → Candidates): the pinyin at the top of the candidate window is marked with the tones of the highlighted candidate's reading (`ganga` with 尴尬 highlighted shows `gān'gà`), and abbreviated pinyin is replaced with the full reading.
@@ -57,3 +60,8 @@ For candidates whose reading doesn't match the input (fuzzy pinyin, corrections,
 ## Motion
 
 With 过渡动画 (Transition animation) off, the highlight jumps straight into place and decorations that keep moving in a theme stop too. Animations also don't play when the system's Reduce Motion is on.
+
+## Interface language
+
+The “文A” item at the bottom left of the Settings window (showing the current language in its own name) sets the language of Settings and of the candidate window's menus and messages: Simplified Chinese, Traditional Chinese, English, Japanese, Spanish, Vietnamese or German, Simplified Chinese by default; choose 跟随系统 (Follow system) to use the system language (English if the system language isn't one of these).
+It only changes the interface text, not typing, candidates or translations.

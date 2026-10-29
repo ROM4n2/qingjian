@@ -1,6 +1,6 @@
 //! 候选窗口一次绘制的全部内容。窗口记住上一帧，联想结果到了只改一处再重画。
 
-use super::panel_tabs::PanelTabs;
+use super::PanelTabs;
 use super::preedit::Preedit;
 use super::row::Row;
 
