@@ -232,6 +232,26 @@ fn full_pinyin_option_works_with_a_custom_shuangpin_layout() {
 }
 
 #[test]
+fn full_pinyin_option_ignores_partial_readings_and_short_prefixes() {
+    // 混输不能拿「只解出开头一个音节」的读法当家，也不能让别的读法的短前缀把学习记录套到整段输入上
+    let dict = "版本\tban ben\t9000\n吧\tba\t20000\n多\tduo\t20000\n都\tdou\t10000\n";
+    let mut engine = Engine::new(Dictionary::parse(dict).unwrap())
+        .with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    engine.set_shuangpin_full_pinyin(true);
+    // 先选过 ba → 吧，再打 banben：版本 仍是首选
+    engine.set_input("ba");
+    let ba = engine.query().unwrap().candidates.items[0].clone();
+    assert_eq!(ba.text, "吧");
+    engine.commit(&ba);
+    engine.set_input("banben");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "版本");
+    // doubudui 不被只解出 duo 的那半条读法挤成 多
+    engine.set_input("doubudui");
+    assert_ne!(engine.query().unwrap().candidates.items[0].text, "多");
+}
+
+#[test]
 fn full_pinyin_option_commits_consuming_the_typed_keys() {
     let mut engine = mixed_engine();
     engine.set_input("kaifa");

@@ -141,18 +141,35 @@ impl Engine {
         // 混输时同一段键有多条读法，切分覆盖的字母数在不同读法之间不可比（双拼展开比全拼长），
         // 一律换算成敲了多少键来比；选择次数也按敲的键查（读音键仍由 Learner 泛化到全拼）
         let mixed_readings = readings.len() > 1;
-        // 混输：几条读法都能把整串解完时，整句候选按各读法自己的路径分挑一条，
-        // 不固定让双拼读法排前面（纯全拼打「我的名字叫张三」时双拼读法也能解完，但分低）
+        // 每条切分实际吃掉多少个敲的键。`keys_for` 收的是全拼串的字节偏移，音节之间有 `'`，
+        // 所以要把切分里的字母数加上分隔符数量再换算
+        let keys_of = |segmentation: &Segmentation, index: usize| -> usize {
+            match sources
+                .get(index)
+                .and_then(|source| readings.get(*source))
+                .filter(|_| mixed_readings)
+            {
+                Some(reading) => reading.keys_for(
+                    segmentation.letters() + segmentation.syllables.len().saturating_sub(1),
+                ),
+                None => segmentation.letters(),
+            }
+        };
+        // 混输：主切分先看谁盖住的键多（只解出开头一个音节的读法不能当主切分，否则
+        // `doubudui` 会由 `duo` 那半条读法当家、出 多 / 躲 / 朵），键数相同再比整句分数
         if mixed_readings && segmentations.len() > 1 {
             let mut best = 0;
+            let mut best_keys = 0;
             let mut best_score = f64::NEG_INFINITY;
             for (index, segmentation) in segmentations.iter().enumerate() {
-                if let Some(conversion) =
-                    self.convert_sentence(&segmentation.patterns(), correction.is_none())
-                    && conversion.score > best_score
-                {
-                    best_score = conversion.score;
+                let keys = keys_of(segmentation, index);
+                let score = self
+                    .convert_sentence(&segmentation.patterns(), correction.is_none())
+                    .map_or(f64::NEG_INFINITY, |conversion| conversion.score);
+                if keys > best_keys || (keys == best_keys && score > best_score) {
                     best = index;
+                    best_keys = keys;
+                    best_score = score;
                 }
             }
             segmentations.swap(0, best);
@@ -179,10 +196,17 @@ impl Engine {
                 .get(index)
                 .and_then(|source| readings.get(*source))
                 .filter(|_| mixed_readings);
-            let covered_keys = |letters: usize| match reading {
-                Some(reading) => reading.keys_for(letters),
+            let covered_keys = |syllables: usize, letters: usize| match reading {
+                Some(reading) => reading.keys_for(letters + syllables.saturating_sub(1)),
                 None => letters,
             };
+            // 混输：主切分之外的读法只留盖住整段的，解不完的（`doubudui` 的 duo 半条读法）整条跳过
+            if mixed_readings
+                && index != 0
+                && reading.is_some_and(|reading| !reading.tail().is_empty())
+            {
+                continue;
+            }
             let mut patterns = segmentation.patterns();
             let count = patterns.len();
             let last = &segmentation.syllables[count - 1];
@@ -224,7 +248,7 @@ impl Engine {
                 scored.push(Scored {
                     hit,
                     full_last: typed_last || fuzzy_last,
-                    coverage: covered_keys(segmentation.letters()),
+                    coverage: covered_keys(count, segmentation.letters()),
                     abbreviated,
                     weight: self.learner.weight(hit.text),
                     penalty,
@@ -235,29 +259,33 @@ impl Engine {
             // 输入的前缀也出候选（`kaifazhe` → 开发、开），否则长句没法逐词上屏。
             // 只收音节数正好等于前缀长度的词，更长的词会与输入后面的音节冲突。
             // 前缀不含最后一个位置，因此可复用上面的扩展结果。
-            for prefix_len in (1..count).rev() {
-                let prefix = &patterns[..prefix_len];
-                let prefix_letters: usize = prefix.iter().map(|p| p.text.len()).sum();
-                let hits = memo
-                    .entry(pattern_key(prefix))
-                    .or_insert_with(|| self.lookup_exact_all(&positions[..prefix_len]));
-                let abbreviated = abbreviated_count(prefix);
-                for hit in hits.iter().copied() {
-                    scored.push(Scored {
-                        // 对整个输入来说它不是精确命中，只是覆盖了前面一部分
-                        hit: Match {
-                            exact: false,
-                            ..hit
-                        },
-                        full_last: true,
-                        coverage: covered_keys(prefix_letters),
-                        abbreviated,
-                        weight: self.learner.weight(hit.text),
-                        penalty: expanded.penalty(hit.syllables()),
-                        tone_cost: crate::zhuyin::tone::cost(hit.text, hit.syllables(), &tones),
-                        // 拆开的读法的前缀也算拆开的（`shi sha n` 的 是啥）；同一个词从全是完整音节的切法也命中时那条排在前面
-                        split: whole_split,
-                    });
+            // 混输只从主切分产前缀：别的读法的短前缀（`banben` 的 ba）会把学习记录套到整段输入上，
+            // 只读开头一个音节的词就这样越过盖住整段的词（#374）
+            if !mixed_readings || index == 0 {
+                for prefix_len in (1..count).rev() {
+                    let prefix = &patterns[..prefix_len];
+                    let prefix_letters: usize = prefix.iter().map(|p| p.text.len()).sum();
+                    let hits = memo
+                        .entry(pattern_key(prefix))
+                        .or_insert_with(|| self.lookup_exact_all(&positions[..prefix_len]));
+                    let abbreviated = abbreviated_count(prefix);
+                    for hit in hits.iter().copied() {
+                        scored.push(Scored {
+                            // 对整个输入来说它不是精确命中，只是覆盖了前面一部分
+                            hit: Match {
+                                exact: false,
+                                ..hit
+                            },
+                            full_last: true,
+                            coverage: covered_keys(prefix_len, prefix_letters),
+                            abbreviated,
+                            weight: self.learner.weight(hit.text),
+                            penalty: expanded.penalty(hit.syllables()),
+                            tone_cost: crate::zhuyin::tone::cost(hit.text, hit.syllables(), &tones),
+                            // 拆开的读法的前缀也算拆开的（`shi sha n` 的 是啥）；同一个词从全是完整音节的切法也命中时那条排在前面
+                            split: whole_split,
+                        });
+                    }
                 }
             }
         }
