@@ -298,6 +298,21 @@ fn full_pinyin_option_handles_separators_and_keeps_whole_coverage() {
 }
 
 #[test]
+fn full_pinyin_option_keeps_english_words_behind_chinese_sentences() {
+    // `women` / `beijing` 同时是英文词：双拼读法把整段读成半截（wo'me'n…、bei'ji'neng）时，
+    // 不能因此判成「不像拼音」把英文词排到 我们 / 北京 前面
+    let dict = "我们\two men\t9000\n北京\tbei jing\t9000\n";
+    let mut engine = Engine::new(Dictionary::parse(dict).unwrap())
+        .with_english(WordList::parse("women\twomen\t3000\nbeijing\tbeijing\t3000\n").unwrap());
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    engine.set_shuangpin_full_pinyin(true);
+    engine.set_input("women");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "我们");
+    engine.set_input("beijing");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "北京");
+}
+
+#[test]
 fn full_pinyin_option_commits_consuming_the_typed_keys() {
     let mut engine = mixed_engine();
     engine.set_input("kaifa");
