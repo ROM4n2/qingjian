@@ -97,9 +97,18 @@ impl Layout {
     }
 }
 
-/// 整段按全拼切的读法：`parser::segment` 的首选切分。解不动整段时为 `None`。
+/// 整段按全拼切的读法：`parser::segment` 里第一条每个音节都打完（或只有末尾没打完）的切分。
+/// 不含只靠简拼凑出来的切分：双拼键串常能被读成一串声母（`nihc` → `ni'h'c`），那种读法会
+/// 把双拼本身读出的词挤下去（#374）。
 fn full_pinyin(keys: &str) -> Option<Decoded> {
-    let segmentation = parser::segment(keys).ok()?.into_iter().next()?;
+    let segmentations = parser::segment(keys).ok()?;
+    let segmentation = segmentations.into_iter().find(|segmentation| {
+        segmentation
+            .syllables
+            .iter()
+            .enumerate()
+            .all(|(index, syllable)| syllable.complete || index + 1 == segmentation.syllables.len())
+    })?;
     let mut units = Vec::with_capacity(segmentation.syllables.len() * 2);
     let mut chars = keys.chars().peekable();
     for syllable in &segmentation.syllables {
@@ -168,6 +177,21 @@ mod tests {
         let readings = Scheme::Xiaohe.decode_mixed("nihc", FuzzyRules::default());
         assert_eq!(pinyins(&readings)[0], "ni'hao");
         assert!(readings[0].is_complete());
+    }
+
+    #[test]
+    fn does_not_read_double_pinyin_keys_as_abbreviated_full_pinyin() {
+        // `nihc` 按全拼只能读成 ni'h'c 这种一串声母（简拼），不能算第二种读法，
+        // 否则 你还吃 会把 你好 挤下去；`dajx` 同理（打鸡血 vs 大家）。
+        for keys in ["nihc", "dajx", "womf"] {
+            let readings = Scheme::Xiaohe.decode_mixed(keys, FuzzyRules::default());
+            assert_eq!(
+                pinyins(&readings).len(),
+                1,
+                "{keys}: {:?}",
+                pinyins(&readings)
+            );
+        }
     }
 
     #[test]

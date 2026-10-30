@@ -41,7 +41,7 @@ impl Engine {
             .as_ref()
             .is_some_and(|t| !t.competes || self.mixed_beats_plain(keys, t));
         let parsed = match (decoded, &english_tail) {
-            (Some(d), _) => {
+            (Some(_), _) => {
                 // 混输：每条读法各给一条切分（解不动的尾巴留在主读法上）
                 let mut segs: Vec<Segmentation> = Vec::new();
                 let mut sources: Vec<usize> = Vec::new();
@@ -58,7 +58,22 @@ impl Engine {
                 if segs.is_empty() {
                     Err(ParseError::NoSegmentation)
                 } else {
-                    Ok((segs, d.tail(), sources))
+                    // 尾巴：有一条读法把整段解完就没有解不动的键；都解不完时取第一条解出切分的读法
+                    //（双拼方案下打全拼 `beijing`，主读法解不动、全拼读法解完）
+                    let complete = sources.iter().any(|index| {
+                        readings
+                            .get(*index)
+                            .is_some_and(|reading| reading.tail().is_empty())
+                    });
+                    let tail = if complete {
+                        ""
+                    } else {
+                        sources
+                            .first()
+                            .and_then(|index| readings.get(*index))
+                            .map_or("", |reading| reading.tail())
+                    };
+                    Ok((segs, tail, sources))
                 }
             }
             (None, Some(tail)) if head_wins => {
@@ -104,15 +119,21 @@ impl Engine {
                 });
             }
         };
-        // 拼音「不像话」时试拼写纠错；纠正生效则按纠正后的切分查词，原串只用来记学习与显示
-        let unlikely = correction::unlikely_pinyin(segmentations.first(), tail)
-            || correction::trailing_single_letter(segmentations.first());
+        // 拼音「不像话」时试拼写纠错；纠正生效则按纠正后的切分查词，原串只用来记学习与显示。
+        // 混输时按最完整的那条切分判断，别被双拼读法留下的半截音节带偏（`women` 双拼读成
+        // wo'me'n…，会让英文词 women 排到 我们 前面）
+        let judged = segmentations
+            .iter()
+            .find(|segmentation| segmentation.syllables.iter().all(|x| x.complete))
+            .or_else(|| segmentations.first());
+        let unlikely =
+            correction::unlikely_pinyin(judged, tail) || correction::trailing_single_letter(judged);
         let correction = if unlikely {
             self.active_correction(scope)
         } else {
             None
         };
-        let (mut segmentations, tail, sources): (Vec<Segmentation>, &str, Vec<usize>) =
+        let (mut segmentations, tail, mut sources): (Vec<Segmentation>, &str, Vec<usize>) =
             match &correction {
                 Some(c) => (vec![c.segmentation.clone()], "", vec![0]),
                 None => (segmentations, tail, sources),
@@ -135,6 +156,8 @@ impl Engine {
                 }
             }
             segmentations.swap(0, best);
+            // 切分与它来自哪条读法是一对，一起换，否则按索引取读法会错位（覆盖率换算错）
+            sources.swap(0, best);
         }
         let parse = start.elapsed();
         // 注音每个音节敲的声调：词库不带调，查词照旧，只在排序里把对不上的字词往后放。纠错换了切分时不比
