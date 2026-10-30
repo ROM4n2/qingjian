@@ -218,6 +218,20 @@ fn full_pinyin_option_keeps_both_readings_of_xian() {
 }
 
 #[test]
+fn full_pinyin_option_works_with_a_custom_shuangpin_layout() {
+    // 用户方案文件夹读出的键位表与内置方案是同一个 `Layout`：把 ai 挪到 t，混输照样能用
+    let mut layout = Scheme::Xiaohe.layout().clone();
+    layout.set_finals('t', vec!["ai".to_owned()]);
+    let mut engine = engine();
+    engine.set_shuangpin_layout(Some(std::sync::Arc::new(layout)));
+    engine.set_shuangpin_full_pinyin(true);
+    // 自定义键位：ktfa 读成 kai'fa
+    assert_eq!(mixed_texts(&mut engine, "ktfa")[0], "开发");
+    // 全拼照常出候选
+    assert_eq!(mixed_texts(&mut engine, "kaifa")[0], "开发");
+}
+
+#[test]
 fn full_pinyin_option_commits_consuming_the_typed_keys() {
     let mut engine = mixed_engine();
     engine.set_input("kaifa");
