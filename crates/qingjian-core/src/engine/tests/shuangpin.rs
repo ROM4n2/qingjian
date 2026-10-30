@@ -252,6 +252,52 @@ fn full_pinyin_option_ignores_partial_readings_and_short_prefixes() {
 }
 
 #[test]
+fn full_pinyin_option_handles_separators_and_keeps_whole_coverage() {
+    // 显式 `'`、末尾多敲一个 `'`、只解出开头的读法、整段覆盖量的单位，都要与关掉混输时的语义一致
+    let dict = "版本\tban ben\t1000\n坂本\tban ben\t5000\n吧\tba\t2000\n您\tnin\t5000\n嗯\ten\t5000\n多\tduo\t20000\n躲\tduo\t1000\n朵\tduo\t500\n都\tdou\t10000\n产\tchan\t1000\n仓\tcang\t1000\n安\tan\t1000\n";
+    let mut engine = Engine::new(Dictionary::parse(dict).unwrap())
+        .with_learner(Box::new(CountingLearner(HashMap::new())));
+    engine.set_shuangpin(Some(Scheme::Xiaohe));
+    engine.set_shuangpin_full_pinyin(true);
+    // 不带 `'` 时选过 版本，再打带 `'` 的同一段输入，选择记录要照常生效（坂本词频更高）
+    engine.set_input("banben");
+    let version = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .into_iter()
+        .find(|c| c.text == "版本")
+        .unwrap();
+    engine.commit(&version);
+    engine.set_input("ban'ben");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "版本");
+    // 末尾多一个分隔符，全拼读法不少算键，主切分不被双拼读法（吧您嗯）抢走
+    engine.set_input("banben'");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "版本");
+    // 只解出开头一个音节的读法不参与：多 / 躲 / 朵 不进前三
+    engine.set_input("doubudui");
+    let first3: Vec<String> = engine
+        .query()
+        .unwrap()
+        .candidates
+        .items
+        .iter()
+        .take(3)
+        .map(|c| c.text.clone())
+        .collect();
+    assert!(
+        !first3
+            .iter()
+            .any(|text| ["多", "躲", "朵"].contains(&text.as_str())),
+        "{first3:?}"
+    );
+    // 整段能读完整时，全拼读法的覆盖量按敲的键算，不被更长的双拼字母数（cang an）挤进前缀桶
+    engine.set_input("chan");
+    assert_eq!(engine.query().unwrap().candidates.items[0].text, "产");
+}
+
+#[test]
 fn full_pinyin_option_commits_consuming_the_typed_keys() {
     let mut engine = mixed_engine();
     engine.set_input("kaifa");

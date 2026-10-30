@@ -125,6 +125,11 @@ fn full_pinyin(keys: &str) -> Option<Decoded> {
             complete: syllable.complete,
         });
     }
+    // 末尾的分隔符也照原样留着，否则全拼读法比输入少一个键，主切分会被双拼读法抢走
+    while chars.peek() == Some(&'\'') {
+        chars.next();
+        units.push(Unit::separator());
+    }
     Some(Decoded::new(units, String::new()))
 }
 

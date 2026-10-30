@@ -138,33 +138,44 @@ impl Engine {
                 Some(c) => (vec![c.segmentation.clone()], "", vec![0]),
                 None => (segmentations, tail, sources),
             };
-        // 混输时同一段键有多条读法，切分覆盖的字母数在不同读法之间不可比（双拼展开比全拼长），
-        // 一律换算成敲了多少键来比；选择次数也按敲的键查（读音键仍由 Learner 泛化到全拼）
+        // 混输时同一段键有多条读法，切分的全拼长度在不同读法之间不可比（双拼展开与全拼不一定同长），
+        // 覆盖量一律换算成敲了多少键来比；非混输仍是字母数
         let mixed_readings = readings.len() > 1;
-        // 每条切分实际吃掉多少个敲的键。`keys_for` 收的是全拼串的字节偏移，音节之间有 `'`，
-        // 所以要把切分里的字母数加上分隔符数量再换算
-        let keys_of = |segmentation: &Segmentation, index: usize| -> usize {
-            match sources
-                .get(index)
-                .and_then(|source| readings.get(*source))
-                .filter(|_| mixed_readings)
-            {
-                Some(reading) => reading.keys_for(
-                    segmentation.letters() + segmentation.syllables.len().saturating_sub(1),
-                ),
-                None => segmentation.letters(),
-            }
-        };
+        // 第 `index` 条切分的前 `syllables` 个音节吃掉多少覆盖量（混输按键，非混输按字母）。
+        // `keys_for` 收的是全拼串的字节偏移，音节之间有 `'`，所以字母数要加上分隔符数量
+        let span =
+            |segmentations: &[Segmentation], sources: &[usize], index: usize, syllables: usize| {
+                let segmentation = &segmentations[index];
+                let letters: usize = segmentation
+                    .syllables
+                    .iter()
+                    .take(syllables)
+                    .map(|syllable| syllable.text.len())
+                    .sum();
+                match sources
+                    .get(index)
+                    .and_then(|source| readings.get(*source))
+                    .filter(|_| mixed_readings)
+                {
+                    Some(reading) => reading.keys_for(letters + syllables.saturating_sub(1)),
+                    None => letters,
+                }
+            };
         // 混输：主切分先看谁盖住的键多（只解出开头一个音节的读法不能当主切分，否则
         // `doubudui` 会由 `duo` 那半条读法当家、出 多 / 躲 / 朵），键数相同再比整句分数
         if mixed_readings && segmentations.len() > 1 {
             let mut best = 0;
             let mut best_keys = 0;
             let mut best_score = f64::NEG_INFINITY;
-            for (index, segmentation) in segmentations.iter().enumerate() {
-                let keys = keys_of(segmentation, index);
+            for index in 0..segmentations.len() {
+                let keys = span(
+                    &segmentations,
+                    &sources,
+                    index,
+                    segmentations[index].syllables.len(),
+                );
                 let score = self
-                    .convert_sentence(&segmentation.patterns(), correction.is_none())
+                    .convert_sentence(&segmentations[index].patterns(), correction.is_none())
                     .map_or(f64::NEG_INFINITY, |conversion| conversion.score);
                 if keys > best_keys || (keys == best_keys && score > best_score) {
                     best = index;
@@ -301,11 +312,34 @@ impl Engine {
         } else {
             choice_key(scope, scope.len())
         };
+        // 混输的 coverage 是敲的键数，选择记录按去 `'` 的字母串存：先把键偏移换算成字母偏移
+        let letters_before_key: Vec<usize> = if mixed_readings {
+            let mut counts = Vec::with_capacity(keys.len() + 1);
+            let mut count = 0;
+            counts.push(0);
+            for c in keys.chars() {
+                if c != '\'' {
+                    count += 1;
+                }
+                counts.push(count);
+            }
+            counts
+        } else {
+            Vec::new()
+        };
         // 纠错生效时覆盖的是纠正后的字母，换算回原串再查「这个输入串下选过什么」
         let choice = |item: &Scored<'_>| {
             let covered = correction
                 .as_ref()
                 .map_or(item.coverage, |c| c.edit.to_original(item.coverage));
+            let covered = if mixed_readings {
+                letters_before_key
+                    .get(covered)
+                    .copied()
+                    .unwrap_or(letters.len())
+            } else {
+                covered
+            };
             letters
                 .get(..covered)
                 .map_or(0, |input| self.learner.choice_weight(input, item.hit.text))
@@ -313,24 +347,35 @@ impl Engine {
         ranking::rank(&mut scored, MAX_CANDIDATES, |item| {
             (choice(item), self.word_log_prob(&item.hit, log_total))
         });
-        let whole = segmentations
-            .iter()
-            .map(Segmentation::letters)
+        // 覆盖量的单位与 coverage 一致：混输按键算，非混输按字母算
+        let whole = (0..segmentations.len())
+            .map(|index| {
+                span(
+                    &segmentations,
+                    &sources,
+                    index,
+                    segmentations[index].syllables.len(),
+                )
+            })
             .max()
             .unwrap_or(0);
         let first = segmentations
             .first()
-            .and_then(|s| s.syllables.first())
-            .map_or(0, |s| s.text.len());
+            .map_or(0, |_| span(&segmentations, &sources, 0, 1));
         // 末尾只敲了个没打完的音节（`woganj` 的 j）时，盖住前面完整音节的词（我敢）也算整词；
         // 有一种全是完整音节的切法时（`mingtia` 读得成 ming ti a）末尾不算没打完
-        let complete = segmentations.first().filter(|_| !clean).map_or(whole, |s| {
-            if s.last_is_partial() {
-                s.letters() - s.syllables.last().map_or(0, |last| last.text.len())
-            } else {
-                s.letters()
-            }
-        });
+        let complete = if clean {
+            whole
+        } else {
+            segmentations.first().map_or(whole, |segmentation| {
+                let syllables = if segmentation.last_is_partial() {
+                    segmentation.syllables.len().saturating_sub(1)
+                } else {
+                    segmentation.syllables.len()
+                };
+                span(&segmentations, &sources, 0, syllables)
+            })
+        };
         ranking::arrange(&mut scored, whole, complete, first, clean, |item| {
             choice(item) > 0
         });
